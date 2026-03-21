@@ -20,6 +20,7 @@ export interface KombuchaBatch {
   status: BatchStatus;
   currentStage: BatchStage;
   brewStartedAt: string;
+  f2StartedAt?: string;
   totalVolumeMl: number;
   teaType: string;
   sugarG: number;
