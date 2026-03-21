@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { BatchCard } from "@/components/batches/BatchCard";
-import { mockBatches, type BatchStatus } from "@/lib/mock-data";
+import { type BatchStatus, type KombuchaBatch } from "@/lib/mock-data";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, Plus, FlaskConical } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const tabs: { label: string; value: BatchStatus }[] = [
   { label: "Active", value: "active" },
@@ -26,14 +27,93 @@ export default function MyBatches() {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("newest");
   const [showFilters, setShowFilters] = useState(false);
+  const [batches, setBatches] = useState<KombuchaBatch[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  let filtered = mockBatches.filter((b) => b.status === activeTab);
+  useEffect(() => {
+    const loadBatches = async () => {
+      setLoading(true);
+
+      const { data, error } = await supabase
+        .from("kombucha_batches")
+        .select(`
+          id,
+          name,
+          status,
+          current_stage,
+          brew_started_at,
+          total_volume_ml,
+          tea_type,
+          sugar_g,
+          starter_liquid_ml,
+          scoby_present,
+          avg_room_temp_c,
+          vessel_type,
+          target_preference,
+          initial_ph,
+          initial_notes,
+          caution_level,
+          readiness_window_start,
+          readiness_window_end,
+          completed_at,
+          updated_at
+        `)
+        .order("updated_at", { ascending: false });
+
+      if (error) {
+        console.error("Load batches error:", error);
+        alert(error.message);
+        setLoading(false);
+        return;
+      }
+
+      const mapped: KombuchaBatch[] = (data || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        status: row.status,
+        currentStage: row.current_stage,
+        brewStartedAt: row.brew_started_at,
+        totalVolumeMl: row.total_volume_ml,
+        teaType: row.tea_type,
+        sugarG: Number(row.sugar_g),
+        starterLiquidMl: Number(row.starter_liquid_ml),
+        scobyPresent: row.scoby_present,
+        avgRoomTempC: Number(row.avg_room_temp_c),
+        vesselType: row.vessel_type || "Glass jar",
+        targetPreference: row.target_preference || "balanced",
+        initialPh: row.initial_ph ? Number(row.initial_ph) : undefined,
+        initialNotes: row.initial_notes || undefined,
+        cautionLevel: row.caution_level === "elevated" ? "high" : row.caution_level,
+        readinessWindowStart: row.readiness_window_start || undefined,
+        readinessWindowEnd: row.readiness_window_end || undefined,
+        completedAt: row.completed_at || undefined,
+        updatedAt: row.updated_at,
+      }));
+
+      setBatches(mapped);
+      setLoading(false);
+    };
+
+    loadBatches();
+  }, []);
+
+  let filtered = batches.filter((b) => b.status === activeTab);
+
   if (search) {
     filtered = filtered.filter((b) => b.name.toLowerCase().includes(search.toLowerCase()));
   }
-  if (sort === "newest") filtered.sort((a, b) => new Date(b.brewStartedAt).getTime() - new Date(a.brewStartedAt).getTime());
-  if (sort === "oldest") filtered.sort((a, b) => new Date(a.brewStartedAt).getTime() - new Date(b.brewStartedAt).getTime());
-  if (sort === "updated") filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+
+  if (sort === "newest") {
+    filtered.sort((a, b) => new Date(b.brewStartedAt).getTime() - new Date(a.brewStartedAt).getTime());
+  }
+
+  if (sort === "oldest") {
+    filtered.sort((a, b) => new Date(a.brewStartedAt).getTime() - new Date(b.brewStartedAt).getTime());
+  }
+
+  if (sort === "updated") {
+    filtered.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
 
   return (
     <AppLayout>
@@ -47,7 +127,6 @@ export default function MyBatches() {
           </div>
         </ScrollReveal>
 
-        {/* Search */}
         <ScrollReveal delay={0.05}>
           <div className="flex gap-2">
             <div className="relative flex-1">
@@ -69,7 +148,6 @@ export default function MyBatches() {
           </div>
         </ScrollReveal>
 
-        {/* Sort */}
         {showFilters && (
           <div className="flex gap-2 animate-slide-up">
             {sortOptions.map((opt) => (
@@ -86,11 +164,10 @@ export default function MyBatches() {
           </div>
         )}
 
-        {/* Tabs */}
         <ScrollReveal delay={0.08}>
           <div className="flex gap-1 bg-muted rounded-xl p-1">
             {tabs.map((tab) => {
-              const count = mockBatches.filter((b) => b.status === tab.value).length;
+              const count = batches.filter((b) => b.status === tab.value).length;
               return (
                 <button
                   key={tab.value}
@@ -113,9 +190,12 @@ export default function MyBatches() {
           </div>
         </ScrollReveal>
 
-        {/* Batch List */}
         <div className="space-y-3">
-          {filtered.length === 0 ? (
+          {loading ? (
+            <div className="bg-card border border-border rounded-xl p-10 text-center">
+              <p className="text-sm text-muted-foreground">Loading batches...</p>
+            </div>
+          ) : filtered.length === 0 ? (
             <ScrollReveal>
               <div className="bg-card border border-border rounded-xl p-10 text-center">
                 <FlaskConical className="h-8 w-8 mx-auto text-muted-foreground/30 mb-3" />
