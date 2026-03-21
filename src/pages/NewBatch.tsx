@@ -4,6 +4,8 @@ import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { supabase } from "@/integrations/supabase/client";
 import { FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 
 const teaTypes = ["Black tea", "Green tea", "Oolong tea", "White tea", "Black & green blend", "Green & white blend"];
@@ -13,7 +15,11 @@ const preferences = ["sweeter", "balanced", "tart"] as const;
 export default function NewBatch() {
   const navigate = useNavigate();
   const { isBeginner } = useUser();
+  const { user } = useAuth();
+
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+
   const [form, setForm] = useState({
     name: "",
     brewDate: new Date().toISOString().split("T")[0],
@@ -31,8 +37,52 @@ export default function NewBatch() {
 
   const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
 
-  const handleCreate = () => {
-    // In a real app, this would save to DB
+  const handleCreate = async () => {
+    if (!user) {
+      alert("You must be logged in to create a batch.");
+      return;
+    }
+
+    if (!form.name.trim()) {
+      alert("Please enter a batch name.");
+      return;
+    }
+
+    if (!form.brewDate) {
+      alert("Please select a brew date.");
+      return;
+    }
+
+    setIsSaving(true);
+
+    const { error } = await supabase
+      .from("kombucha_batches")
+      .insert({
+        user_id: user.id,
+        name: form.name.trim(),
+        status: "active",
+        current_stage: "f1_active",
+        brew_started_at: new Date(`${form.brewDate}T12:00:00`).toISOString(),
+        total_volume_ml: form.totalVolumeMl,
+        tea_type: form.teaType,
+        sugar_g: form.sugarG,
+        starter_liquid_ml: form.starterLiquidMl,
+        scoby_present: form.scobyPresent,
+        avg_room_temp_c: form.avgRoomTempC,
+        vessel_type: form.vesselType,
+        target_preference: form.targetPreference,
+        initial_ph: form.initialPh ? Number(form.initialPh) : null,
+        initial_notes: form.initialNotes.trim() || null,
+      });
+
+    setIsSaving(false);
+
+    if (error) {
+      console.error("Create batch error:", error);
+      alert(error.message);
+      return;
+    }
+
     navigate("/batches");
   };
 
@@ -64,7 +114,6 @@ export default function NewBatch() {
 
         <ScrollReveal delay={0.08}>
           <div className="space-y-5">
-            {/* Batch Name */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Batch Name *</label>
               <input
@@ -76,7 +125,6 @@ export default function NewBatch() {
               />
             </div>
 
-            {/* Brew Date + Volume */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">Brew Date *</label>
@@ -98,7 +146,6 @@ export default function NewBatch() {
               </div>
             </div>
 
-            {/* Tea Type */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Tea Type *</label>
               <select
@@ -112,7 +159,6 @@ export default function NewBatch() {
               </select>
             </div>
 
-            {/* Sugar + Starter */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">Sugar (g) *</label>
@@ -134,7 +180,6 @@ export default function NewBatch() {
               </div>
             </div>
 
-            {/* Room Temp */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Average Room Temperature (°C) *</label>
               <input
@@ -149,7 +194,6 @@ export default function NewBatch() {
               )}
             </div>
 
-            {/* Vessel + SCOBY */}
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block text-sm font-medium text-foreground mb-1.5">Vessel Type</label>
@@ -169,6 +213,7 @@ export default function NewBatch() {
                   {[true, false].map((val) => (
                     <button
                       key={String(val)}
+                      type="button"
                       onClick={() => update("scobyPresent", val)}
                       className={`flex-1 h-11 rounded-lg text-sm font-medium transition-all ${
                         form.scobyPresent === val
@@ -183,13 +228,13 @@ export default function NewBatch() {
               </div>
             </div>
 
-            {/* Target Preference */}
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Taste Target</label>
               <div className="grid grid-cols-3 gap-2">
                 {preferences.map((p) => (
                   <button
                     key={p}
+                    type="button"
                     onClick={() => update("targetPreference", p)}
                     className={`h-11 rounded-lg text-sm font-medium capitalize transition-all ${
                       form.targetPreference === p
@@ -203,8 +248,8 @@ export default function NewBatch() {
               </div>
             </div>
 
-            {/* Advanced */}
             <button
+              type="button"
               onClick={() => setShowAdvanced(!showAdvanced)}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
@@ -238,14 +283,13 @@ export default function NewBatch() {
               </div>
             )}
 
-            {/* Submit */}
             <Button
               size="xl"
               className="w-full"
-              disabled={!form.name || !form.brewDate}
+              disabled={!form.name || !form.brewDate || isSaving}
               onClick={handleCreate}
             >
-              Create Batch
+              {isSaving ? "Creating..." : "Create Batch"}
             </Button>
           </div>
         </ScrollReveal>
