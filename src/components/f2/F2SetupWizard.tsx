@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { startF2FromWizard } from "@/lib/f2-persistence";
 import type { KombuchaBatch } from "@/lib/batches";
 import type {
   F2BottleGroupDraft,
@@ -17,6 +19,11 @@ import {
 
 type F2SetupWizardProps = {
   batch: KombuchaBatch;
+  userId?: string;
+  onF2Started?: (args: {
+    f2StartedAt: string;
+    nextAction: string;
+  }) => void;
 };
 
 function makeBottleGroup(): F2BottleGroupDraft {
@@ -42,7 +49,12 @@ function makeRecipeItem(): F2RecipeItemDraft {
   };
 }
 
-export default function F2SetupWizard({ batch }: F2SetupWizardProps) {
+export default function F2SetupWizard({
+  batch,
+  userId,
+  onF2Started,
+}: F2SetupWizardProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [step, setStep] = useState(1);
 
   const [reserveForSedimentMl, setReserveForSedimentMl] = useState(200);
@@ -291,6 +303,50 @@ export default function F2SetupWizard({ batch }: F2SetupWizardProps) {
 
   const activeRecipeList =
     recipeSourceTab === "my" ? myRecipes : recipeSourceTab === "presets" ? presetRecipes : [];
+  const handleConfirmAndStartF2 = async () => {
+  if (!userId) {
+    toast.error("You need to be signed in to start F2.");
+    return;
+  }
+
+  if (summary.validationErrors.length > 0) {
+    toast.error("Fix the review errors first.");
+    return;
+  }
+
+  try {
+    setIsSubmitting(true);
+
+    const result = await startF2FromWizard({
+      batch,
+      userId,
+      reserveForSedimentMl,
+      ambientTempC,
+      desiredCarbonationLevel,
+      bottleGroups,
+      recipeSourceTab,
+      guidedMode,
+      selectedRecipeId,
+      recipeName,
+      recipeDescription,
+      saveRecipe,
+      adjustedRecipeItems,
+      summary,
+    });
+
+    onF2Started?.({
+      f2StartedAt: result.f2StartedAt,
+      nextAction: result.nextAction,
+    });
+
+    toast.success("F2 started successfully.");
+  } catch (error) {
+    console.error("Start F2 error:", error);
+    toast.error("Could not start F2.");
+  } finally {
+    setIsSubmitting(false);
+  }
+};
 
   return (
     <div className="space-y-5">
@@ -870,11 +926,20 @@ export default function F2SetupWizard({ batch }: F2SetupWizardProps) {
               </ul>
             </div>
 
-            <div className="pt-2 border-t border-border">
-              <p className="text-sm text-muted-foreground">
-                Persistence and F2 start come next. This stage is now focused on guided planning.
-              </p>
-            </div>
+            <div className="pt-2 border-t border-border space-y-3">
+  <p className="text-sm text-muted-foreground">
+    This will save your setup, create your bottles, save ingredient rows, and start F2 for this batch.
+  </p>
+
+  <Button
+    type="button"
+    onClick={handleConfirmAndStartF2}
+    disabled={isSubmitting || summary.validationErrors.length > 0}
+    className="w-full"
+  >
+    {isSubmitting ? "Starting F2..." : "I bottled this and start F2"}
+  </Button>
+</div>
           </div>
         </div>
       )}
