@@ -22,7 +22,6 @@ export type Database = {
           title: string | null
           updated_at: string
           user_id: string
-          
         }
         Insert: {
           created_at?: string
@@ -31,7 +30,6 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id: string
-          
         }
         Update: {
           created_at?: string
@@ -40,7 +38,6 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
-          
         }
         Relationships: [
           {
@@ -669,6 +666,7 @@ export type Database = {
           current_stage: Database["public"]["Enums"]["batch_stage_enum"]
           discard_reason: string | null
           discarded_at: string | null
+          f2_started_at: string | null
           id: string
           initial_notes: string | null
           initial_observations: string | null
@@ -708,6 +706,7 @@ export type Database = {
           current_stage?: Database["public"]["Enums"]["batch_stage_enum"]
           discard_reason?: string | null
           discarded_at?: string | null
+          f2_started_at?: string | null
           id?: string
           initial_notes?: string | null
           initial_observations?: string | null
@@ -747,6 +746,7 @@ export type Database = {
           current_stage?: Database["public"]["Enums"]["batch_stage_enum"]
           discard_reason?: string | null
           discarded_at?: string | null
+          f2_started_at?: string | null
           id?: string
           initial_notes?: string | null
           initial_observations?: string | null
@@ -800,7 +800,6 @@ export type Database = {
           id: string
           prefers_guided_mode: boolean
           updated_at: string
-          f2_started_at: string | null
         }
         Insert: {
           brewing_goal?: Database["public"]["Enums"]["brewing_goal_enum"] | null
@@ -811,7 +810,6 @@ export type Database = {
           id: string
           prefers_guided_mode?: boolean
           updated_at?: string
-          f2_started_at?: string | null
         }
         Update: {
           brewing_goal?: Database["public"]["Enums"]["brewing_goal_enum"] | null
@@ -822,7 +820,6 @@ export type Database = {
           id?: string
           prefers_guided_mode?: boolean
           updated_at?: string
-          f2_started_at?: string | null
         }
         Relationships: []
       }
