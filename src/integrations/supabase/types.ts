@@ -557,6 +557,87 @@ export type Database = {
           },
         ]
       }
+      batch_phase_outcomes: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by_user_id: string
+          f1_readiness: Database["public"]["Enums"]["f1_readiness_enum"] | null
+          f1_taste_state:
+            | Database["public"]["Enums"]["f1_taste_state_enum"]
+            | null
+          f2_brew_again:
+            | Database["public"]["Enums"]["f2_brew_again_enum"]
+            | null
+          f2_overall_result:
+            | Database["public"]["Enums"]["f2_overall_result_enum"]
+            | null
+          id: string
+          next_time_change: string | null
+          note: string | null
+          phase: Database["public"]["Enums"]["phase_outcome_phase_enum"]
+          selected_tags: string[]
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by_user_id?: string
+          f1_readiness?: Database["public"]["Enums"]["f1_readiness_enum"] | null
+          f1_taste_state?:
+            | Database["public"]["Enums"]["f1_taste_state_enum"]
+            | null
+          f2_brew_again?:
+            | Database["public"]["Enums"]["f2_brew_again_enum"]
+            | null
+          f2_overall_result?:
+            | Database["public"]["Enums"]["f2_overall_result_enum"]
+            | null
+          id?: string
+          next_time_change?: string | null
+          note?: string | null
+          phase: Database["public"]["Enums"]["phase_outcome_phase_enum"]
+          selected_tags?: string[]
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by_user_id?: string
+          f1_readiness?: Database["public"]["Enums"]["f1_readiness_enum"] | null
+          f1_taste_state?:
+            | Database["public"]["Enums"]["f1_taste_state_enum"]
+            | null
+          f2_brew_again?:
+            | Database["public"]["Enums"]["f2_brew_again_enum"]
+            | null
+          f2_overall_result?:
+            | Database["public"]["Enums"]["f2_overall_result_enum"]
+            | null
+          id?: string
+          next_time_change?: string | null
+          note?: string | null
+          phase?: Database["public"]["Enums"]["phase_outcome_phase_enum"]
+          selected_tags?: string[]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_phase_outcomes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_dashboard_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_phase_outcomes_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "kombucha_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_reminders: {
         Row: {
           auto_generated: boolean
@@ -1232,6 +1313,13 @@ export type Database = {
       caution_level_enum: "none" | "low" | "moderate" | "high" | "elevated"
       desired_carbonation_enum: "light" | "balanced" | "strong"
       experience_level_enum: "beginner" | "intermediate" | "advanced"
+      f1_readiness_enum: "yes" | "maybe_early" | "maybe_late" | "no"
+      f1_taste_state_enum:
+        | "too_sweet"
+        | "slightly_sweet"
+        | "balanced"
+        | "tart"
+        | "too_sour"
       flavour_category_enum:
         | "berries"
         | "citrus"
@@ -1242,6 +1330,13 @@ export type Database = {
         | "floral_herbal"
         | "syrup"
         | "other"
+      f2_brew_again_enum: "yes" | "maybe_with_changes" | "no"
+      f2_overall_result_enum:
+        | "excellent"
+        | "good"
+        | "okay"
+        | "disappointing"
+        | "bad"
       guide_category_enum:
         | "kombucha_basics"
         | "f1_process"
@@ -1269,6 +1364,7 @@ export type Database = {
         | "ph_check"
         | "sweetness_check"
         | "carbonation_check"
+        | "phase_outcome"
         | "custom_action"
         | "note_only"
         | "photo_added"
@@ -1284,6 +1380,7 @@ export type Database = {
         | "burp_bottles"
         | "refrigerate_now"
         | "custom"
+      phase_outcome_phase_enum: "f1" | "f2"
       starter_source_type_enum: "manual" | "previous_batch"
       urgency_level_enum: "low" | "medium" | "high" | "critical"
     }
@@ -1444,6 +1541,14 @@ export const Constants = {
       caution_level_enum: ["none", "low", "moderate", "high", "elevated"],
       desired_carbonation_enum: ["light", "balanced", "strong"],
       experience_level_enum: ["beginner", "intermediate", "advanced"],
+      f1_readiness_enum: ["yes", "maybe_early", "maybe_late", "no"],
+      f1_taste_state_enum: [
+        "too_sweet",
+        "slightly_sweet",
+        "balanced",
+        "tart",
+        "too_sour",
+      ],
       flavour_category_enum: [
         "berries",
         "citrus",
@@ -1454,6 +1559,14 @@ export const Constants = {
         "floral_herbal",
         "syrup",
         "other",
+      ],
+      f2_brew_again_enum: ["yes", "maybe_with_changes", "no"],
+      f2_overall_result_enum: [
+        "excellent",
+        "good",
+        "okay",
+        "disappointing",
+        "bad",
       ],
       guide_category_enum: [
         "kombucha_basics",
@@ -1484,6 +1597,7 @@ export const Constants = {
         "ph_check",
         "sweetness_check",
         "carbonation_check",
+        "phase_outcome",
         "custom_action",
         "note_only",
         "photo_added",
@@ -1502,6 +1616,7 @@ export const Constants = {
         "refrigerate_now",
         "custom",
       ],
+      phase_outcome_phase_enum: ["f1", "f2"],
       starter_source_type_enum: ["manual", "previous_batch"],
       urgency_level_enum: ["low", "medium", "high", "critical"],
     },

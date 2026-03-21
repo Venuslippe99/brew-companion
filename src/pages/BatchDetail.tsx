@@ -11,12 +11,28 @@ import {
 import { getBatchStageTiming } from "@/lib/batch-timing";
 import { supabase } from "@/integrations/supabase/client";
 import F2SetupWizard from "@/components/f2/F2SetupWizard";
+import { PhaseOutcomeCard } from "@/components/outcomes/PhaseOutcomeCard";
+import { PhaseOutcomeDrawer } from "@/components/outcomes/PhaseOutcomeDrawer";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import {
+  canLogF1Outcome,
+  canLogF2Outcome,
+  getOutcomeForPhase,
+  loadPhaseOutcomes,
+  savePhaseOutcome,
+  type F1PhaseOutcomeInput,
+  type F2PhaseOutcomeInput,
+  type PhaseOutcomeRow,
+} from "@/lib/phase-outcomes";
+import {
+  loadCurrentF2Setup,
+  type LoadedF2Setup,
+} from "@/lib/f2-current-setup";
 import {
   ArrowLeft,
   ArrowRight,
@@ -120,6 +136,8 @@ function getLogTitle(logType: string) {
       return "Sweetness check";
     case "carbonation_check":
       return "Carbonation check";
+    case "phase_outcome":
+      return "Phase outcome recorded";
     case "custom_action":
       return "Action recorded";
     case "note_only":
@@ -134,12 +152,20 @@ function getLogTitle(logType: string) {
 function OverviewTab({
   batch,
   reminders,
+  outcomes,
+  outcomesLoading,
+  currentF2Setup,
+  onOpenOutcome,
   onStartF2,
   onStillFermenting,
   actionLoading,
 }: {
   batch: KombuchaBatch;
   reminders: BatchReminder[];
+  outcomes: PhaseOutcomeRow[];
+  outcomesLoading: boolean;
+  currentF2Setup: LoadedF2Setup | null;
+  onOpenOutcome: (phase: "f1" | "f2") => void;
   onStartF2: () => Promise<void>;
   onStillFermenting: () => Promise<void>;
   actionLoading: WorkflowAction | null;
@@ -167,6 +193,13 @@ function OverviewTab({
     !!timing &&
     (timing.status === "ready" || timing.status === "overdue") &&
     f1TimingStages.includes(batch.currentStage);
+  const f1Outcome = getOutcomeForPhase(outcomes, "f1");
+  const f2Outcome = getOutcomeForPhase(outcomes, "f2");
+  const showF1OutcomePrompt = canLogF1Outcome(batch);
+  const showF2OutcomePrompt = canLogF2Outcome(batch);
+  const f2ContextSummary = currentF2Setup
+    ? `${currentF2Setup.bottleCount} bottles planned with ${currentF2Setup.desiredCarbonationLevel} carbonation at ${currentF2Setup.ambientTempC}°C.`
+    : undefined;
 
   const actionsDisabled = actionLoading !== null;
 
@@ -292,6 +325,25 @@ function OverviewTab({
           </div>
         )}
       </ScrollReveal>
+
+      <PhaseOutcomeCard
+        phase="f1"
+        outcome={f1Outcome}
+        loading={outcomesLoading}
+        canLogNow={showF1OutcomePrompt}
+        onAdd={() => onOpenOutcome("f1")}
+        onEdit={() => onOpenOutcome("f1")}
+      />
+
+      <PhaseOutcomeCard
+        phase="f2"
+        outcome={f2Outcome}
+        loading={outcomesLoading}
+        canLogNow={showF2OutcomePrompt}
+        contextSummary={f2ContextSummary}
+        onAdd={() => onOpenOutcome("f2")}
+        onEdit={() => onOpenOutcome("f2")}
+      />
 
       {reminders.length > 0 && (
         <ScrollReveal delay={0.08}>
@@ -526,9 +578,38 @@ export default function BatchDetail() {
   const [batch, setBatch] = useState<KombuchaBatch | null>(null);
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [timelineEntries, setTimelineEntries] = useState<BatchTimelineEntry[]>([]);
+  const [phaseOutcomes, setPhaseOutcomes] = useState<PhaseOutcomeRow[]>([]);
+  const [currentF2Setup, setCurrentF2Setup] = useState<LoadedF2Setup | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(true);
+  const [outcomesLoading, setOutcomesLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<WorkflowAction | null>(null);
+  const [activeOutcomePhase, setActiveOutcomePhase] = useState<"f1" | "f2" | null>(null);
+  const [outcomeSaving, setOutcomeSaving] = useState(false);
+
+  const loadPhaseOutcomeRows = async (batchId: string) => {
+    setOutcomesLoading(true);
+
+    try {
+      const rows = await loadPhaseOutcomes(batchId);
+      setPhaseOutcomes(rows);
+    } catch (error) {
+      console.error("Load phase outcomes error:", error);
+      setPhaseOutcomes([]);
+    } finally {
+      setOutcomesLoading(false);
+    }
+  };
+
+  const loadF2SetupSummary = async (batchId: string) => {
+    try {
+      const setup = await loadCurrentF2Setup(batchId);
+      setCurrentF2Setup(setup);
+    } catch (error) {
+      console.error("Load current F2 setup error:", error);
+      setCurrentF2Setup(null);
+    }
+  };
 
   const loadTimelineEntries = async (batchId: string) => {
     setTimelineLoading(true);
@@ -690,6 +771,16 @@ export default function BatchDetail() {
     void loadTimelineEntries(id);
   }, [id]);
 
+  useEffect(() => {
+    if (!id) return;
+    void loadPhaseOutcomeRows(id);
+  }, [id]);
+
+  useEffect(() => {
+    if (!id) return;
+    void loadF2SetupSummary(id);
+  }, [id]);
+
   const applyWorkflowAction = async ({
     action,
     nextStage,
@@ -821,6 +912,47 @@ export default function BatchDetail() {
     });
   };
 
+  const handleSaveOutcome = async (
+    input: F1PhaseOutcomeInput | F2PhaseOutcomeInput
+  ) => {
+    if (!batch || !user?.id) {
+      toast.error("You need to be signed in to save an outcome.");
+      return;
+    }
+
+    setOutcomeSaving(true);
+
+    try {
+      const { outcome, created } = await savePhaseOutcome({
+        batchId: batch.id,
+        userId: user.id,
+        input,
+      });
+
+      setPhaseOutcomes((current) => {
+        const otherOutcomes = current.filter(
+          (existingOutcome) => existingOutcome.phase !== outcome.phase
+        );
+        return [...otherOutcomes, outcome];
+      });
+      setActiveOutcomePhase(null);
+
+      if (created) {
+        toast.success(`${input.phase.toUpperCase()} outcome saved.`);
+        void loadTimelineEntries(batch.id);
+      } else {
+        toast.success(`${input.phase.toUpperCase()} outcome updated.`);
+      }
+    } catch (error) {
+      console.error("Save phase outcome error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not save this outcome."
+      );
+    } finally {
+      setOutcomeSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -925,6 +1057,10 @@ export default function BatchDetail() {
             <OverviewTab
               batch={batch}
               reminders={reminders}
+              outcomes={phaseOutcomes}
+              outcomesLoading={outcomesLoading}
+              currentF2Setup={currentF2Setup}
+              onOpenOutcome={setActiveOutcomePhase}
               onStartF2={handleStartF2}
               onStillFermenting={handleStillFermenting}
               actionLoading={actionLoading}
@@ -960,6 +1096,7 @@ export default function BatchDetail() {
                 );
                 setActiveTab("Overview");
                 void loadTimelineEntries(batch.id);
+                void loadF2SetupSummary(batch.id);
               }}
               onBatchStateChanged={({
                 currentStage,
@@ -981,6 +1118,7 @@ export default function BatchDetail() {
                     : current
                 );
                 void loadTimelineEntries(batch.id);
+                void loadF2SetupSummary(batch.id);
               }}
             />
           )}
@@ -1011,6 +1149,22 @@ export default function BatchDetail() {
           )}
         </div>
       </div>
+
+      <PhaseOutcomeDrawer
+        phase={activeOutcomePhase || "f1"}
+        open={activeOutcomePhase !== null}
+        saving={outcomeSaving}
+        contextSummary={activeOutcomePhase === "f2" ? (currentF2Setup
+          ? `${currentF2Setup.bottleCount} bottles, ${currentF2Setup.desiredCarbonationLevel} carbonation target, saved at ${currentF2Setup.ambientTempC}°C.`
+          : undefined) : undefined}
+        initialOutcome={getOutcomeForPhase(phaseOutcomes, activeOutcomePhase || "f1")}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveOutcomePhase(null);
+          }
+        }}
+        onSave={handleSaveOutcome}
+      />
     </AppLayout>
   );
 }
