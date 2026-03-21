@@ -35,11 +35,14 @@ type StartF2Result = {
 function round2(value: number) {
   return Number(value.toFixed(2));
 }
+
 function toInt(value: number) {
   return Math.round(value);
 }
 
-function isIngredientForm(value?: string): "juice" | "puree" | "whole_fruit" | "syrup" | "herbs_spices" | "other" | null {
+function isIngredientForm(
+  value?: string
+): "juice" | "puree" | "whole_fruit" | "syrup" | "herbs_spices" | "other" | null {
   if (
     value === "juice" ||
     value === "puree" ||
@@ -100,23 +103,26 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
       .single();
 
     if (recipeError || !savedRecipe) {
-throw new Error(
-  `Could not save recipe: ${recipeError?.message || "unknown error"}`
-);    }
+      throw new Error(
+        `Could not save recipe: ${recipeError?.message || "unknown error"}`
+      );
+    }
 
     persistedRecipeId = savedRecipe.id;
 
-    const recipeItemRows: TablesInsert<"f2_recipe_items">[] = adjustedRecipeItems.map((item, index) => ({
-      recipe_id: persistedRecipeId!,
-      flavour_preset_id: item.flavourPresetId || null,
-      custom_ingredient_name: item.customIngredientName?.trim() || null,
-      ingredient_form: isIngredientForm(item.ingredientForm),
-      amount_per_500: item.amountPer500,
-      unit: item.unit,
-      prep_notes: item.prepNotes?.trim() || null,
-      displaces_volume: !!item.displacesVolume,
-      sort_order: index,
-    }));
+    const recipeItemRows: TablesInsert<"f2_recipe_items">[] = adjustedRecipeItems.map(
+      (item, index) => ({
+        recipe_id: persistedRecipeId!,
+        flavour_preset_id: item.flavourPresetId || null,
+        custom_ingredient_name: item.customIngredientName?.trim() || null,
+        ingredient_form: isIngredientForm(item.ingredientForm),
+        amount_per_500: item.amountPer500,
+        unit: item.unit,
+        prep_notes: item.prepNotes?.trim() || null,
+        displaces_volume: !!item.displacesVolume,
+        sort_order: index,
+      })
+    );
 
     const { data: savedRecipeItems, error: recipeItemsError } = await supabase
       .from("f2_recipe_items")
@@ -125,8 +131,8 @@ throw new Error(
 
     if (recipeItemsError) {
       throw new Error(
-  `Could not save recipe items: ${recipeItemsError.message}`
-);
+        `Could not save recipe items: ${recipeItemsError.message}`
+      );
     }
 
     persistedRecipeItemIdsByDraftId = {};
@@ -163,7 +169,8 @@ throw new Error(
   const avgHeadspaceMl =
     bottleGroups.length > 0
       ? Math.round(
-          bottleGroups.reduce((sum, group) => sum + group.headspaceMl, 0) / bottleGroups.length
+          bottleGroups.reduce((sum, group) => sum + group.headspaceMl, 0) /
+            bottleGroups.length
         )
       : null;
 
@@ -174,31 +181,31 @@ throw new Error(
     .eq("is_current", true);
 
   const setupInsert: TablesInsert<"batch_f2_setups"> = {
-  batch_id: batch.id,
-  ambient_temp_c: ambientTempC,
-  desired_carbonation_level: desiredCarbonationLevel,
-  estimated_pressure_risk: summary.riskLevel,
-  reserved_for_sediment_ml: toInt(reserveForSedimentMl),
-  available_f1_volume_ml: toInt(summary.availableF1VolumeMl),
-  bottle_count: toInt(summary.totalBottleCount),
-  bottle_size_ml: toInt(bottleGroups[0]?.bottleSizeMl ?? 500),
-  bottle_type: bottleGroups[0]?.bottleType ?? "swing_top",
-  default_headspace_ml: avgHeadspaceMl,
-  avg_headspace_description:
-    bottleGroups.length <= 1
-      ? `${bottleGroups[0]?.headspaceMl ?? 0} ml`
-      : `Mixed headspace across ${bottleGroups.length} groups`,
-  planned_bottle_volume_ml: toInt(summary.totalPlannedBottleVolumeMl),
-  planned_kombucha_fill_ml: toInt(summary.totalKombuchaNeededMl),
-  additional_sugar_total_g: 0,
-  flavouring_mode: guidedMode ? "guided" : "advanced",
-  selected_recipe_id: persistedRecipeId,
-  recipe_name_snapshot: recipeName.trim() || null,
-  recipe_snapshot_json: recipeSnapshot,
-  burp_reminders_enabled: false,
-  is_current: true,
-  setup_status: "active",
-};
+    batch_id: batch.id,
+    ambient_temp_c: ambientTempC,
+    desired_carbonation_level: desiredCarbonationLevel,
+    estimated_pressure_risk: summary.riskLevel,
+    reserved_for_sediment_ml: toInt(reserveForSedimentMl),
+    available_f1_volume_ml: toInt(summary.availableF1VolumeMl),
+    bottle_count: toInt(summary.totalBottleCount),
+    bottle_size_ml: toInt(bottleGroups[0]?.bottleSizeMl ?? 500),
+    bottle_type: bottleGroups[0]?.bottleType ?? "swing_top",
+    default_headspace_ml: avgHeadspaceMl,
+    avg_headspace_description:
+      bottleGroups.length <= 1
+        ? `${bottleGroups[0]?.headspaceMl ?? 0} ml`
+        : `Mixed headspace across ${bottleGroups.length} groups`,
+    planned_bottle_volume_ml: toInt(summary.totalPlannedBottleVolumeMl),
+    planned_kombucha_fill_ml: toInt(summary.totalKombuchaNeededMl),
+    additional_sugar_total_g: 0,
+    flavouring_mode: guidedMode ? "guided" : "advanced",
+    selected_recipe_id: persistedRecipeId,
+    recipe_name_snapshot: recipeName.trim() || null,
+    recipe_snapshot_json: recipeSnapshot,
+    burp_reminders_enabled: false,
+    is_current: true,
+    setup_status: "active",
+  };
 
   const { data: setupRow, error: setupError } = await supabase
     .from("batch_f2_setups")
@@ -208,36 +215,35 @@ throw new Error(
 
   if (setupError || !setupRow) {
     throw new Error(
-  `Could not create F2 setup: ${setupError?.message || "unknown error"}`
-);
+      `Could not create F2 setup: ${setupError?.message || "unknown error"}`
+    );
   }
 
   const setupId = setupRow.id;
 
   const groupRows: TablesInsert<"batch_f2_bottle_groups">[] =
-  summary.bottleGroupPlans.map((groupPlan, index) => {
-    const draftGroup = bottleGroups.find((group) => group.id === groupPlan.groupId);
+    summary.bottleGroupPlans.map((groupPlan, index) => {
+      const draftGroup = bottleGroups.find((group) => group.id === groupPlan.groupId);
 
-    return {
-      f2_setup_id: setupId,
-      bottle_count: toInt(groupPlan.bottleCount),
-      bottle_size_ml: toInt(groupPlan.bottleSizeMl),
-      bottle_type: groupPlan.bottleType,
-      headspace_ml: toInt(groupPlan.headspaceMl),
-      target_fill_ml: toInt(groupPlan.targetFillMlPerBottle),
-      group_label: draftGroup?.groupLabel?.trim() || null,
-      sort_order: index,
-    };
-  });
+      return {
+        f2_setup_id: setupId,
+        bottle_count: toInt(groupPlan.bottleCount),
+        bottle_size_ml: toInt(groupPlan.bottleSizeMl),
+        bottle_type: groupPlan.bottleType,
+        headspace_ml: toInt(groupPlan.headspaceMl),
+        target_fill_ml: toInt(groupPlan.targetFillMlPerBottle),
+        group_label: draftGroup?.groupLabel?.trim() || null,
+        sort_order: index,
+      };
+    });
 
   const { error: groupsError } = await supabase
     .from("batch_f2_bottle_groups")
     .insert(groupRows);
 
   if (groupsError) {
-throw new Error(
-  `Could not save bottle groups: ${groupsError.message}`
-);  }
+    throw new Error(`Could not save bottle groups: ${groupsError.message}`);
+  }
 
   const bottleRows: TablesInsert<"batch_bottles">[] = [];
   const bottleMeta: Array<{
@@ -293,12 +299,12 @@ throw new Error(
 
   if (bottlesError || !insertedBottles) {
     throw new Error(
-  `Could not create bottles: ${bottlesError?.message || "unknown error"}`
-);
+      `Could not create bottles: ${bottlesError?.message || "unknown error"}`
+    );
   }
 
-  const ingredientRows: TablesInsert<"batch_bottle_ingredients">[] = insertedBottles.flatMap(
-    (bottle, bottleIndex) => {
+  const ingredientRows: TablesInsert<"batch_bottle_ingredients">[] =
+    insertedBottles.flatMap((bottle, bottleIndex) => {
       const meta = bottleMeta[bottleIndex];
 
       return meta.scaledItems.map((item) => ({
@@ -317,8 +323,7 @@ throw new Error(
             : null,
         estimated_sugar_g: null,
       }));
-    }
-  );
+    });
 
   const { error: ingredientsError } = await supabase
     .from("batch_bottle_ingredients")
@@ -326,8 +331,8 @@ throw new Error(
 
   if (ingredientsError) {
     throw new Error(
-  `Could not save bottle ingredients: ${ingredientsError.message}`
-);
+      `Could not save bottle ingredients: ${ingredientsError.message}`
+    );
   }
 
   const { error: batchUpdateError } = await supabase
@@ -342,8 +347,8 @@ throw new Error(
 
   if (batchUpdateError) {
     throw new Error(
-  `Could not update batch to F2 active: ${batchUpdateError.message}`
-);
+      `Could not update batch to F2 active: ${batchUpdateError.message}`
+    );
   }
 
   await Promise.allSettled([
