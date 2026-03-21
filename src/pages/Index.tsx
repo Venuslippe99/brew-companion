@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import { getNextAction, type KombuchaBatch } from "@/lib/mock-data";
+import { type KombuchaBatch } from "@/lib/batches";
 import { BatchCard } from "@/components/batches/BatchCard";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
