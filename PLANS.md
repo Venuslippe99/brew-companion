@@ -32,6 +32,7 @@ Examples:
 
 `PLANS.md` is the rulebook.
 Files inside `plans/` are the actual working plans.
+If `plans/` does not exist yet in the workspace, create that directory before creating the first plan file.
 
 ## Core rules for every plan
 

@@ -1,12 +1,17 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { type KombuchaBatch } from "@/lib/batches";
-import { BatchCard } from "@/components/batches/BatchCard";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
+import { TodayActionSection } from "@/components/dashboard/TodayActionSection";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
+import {
+  buildTodayActionSections,
+  type TodayActionReminder,
+} from "@/lib/today-actions";
 import {
   FlaskConical,
   Clock,
@@ -21,82 +26,60 @@ import {
   Settings
 } from "lucide-react";
 
-type DashboardReminder = {
-  id: string;
-  batchId: string;
-  batchName: string;
-  title: string;
-  description: string | null;
-  dueAt: string;
-  isCompleted: boolean;
-  urgencyLevel: "low" | "medium" | "high" | "overdue";
-  reminderType: string;
-};
+type DashboardBatchRow = Pick<
+  Tables<"kombucha_batches">,
+  | "id"
+  | "name"
+  | "status"
+  | "current_stage"
+  | "brew_started_at"
+  | "f2_started_at"
+  | "total_volume_ml"
+  | "tea_type"
+  | "sugar_g"
+  | "starter_liquid_ml"
+  | "scoby_present"
+  | "avg_room_temp_c"
+  | "vessel_type"
+  | "target_preference"
+  | "initial_ph"
+  | "initial_notes"
+  | "caution_level"
+  | "readiness_window_start"
+  | "readiness_window_end"
+  | "next_action"
+  | "completed_at"
+  | "updated_at"
+>;
 
-function UrgentReminders({ reminders }: { reminders: DashboardReminder[] }) {
-  const urgentReminders = reminders
-    .filter((r) => !r.isCompleted)
-    .sort((a, b) => {
-      const order = { overdue: 0, high: 1, medium: 2, low: 3 };
-      return order[a.urgencyLevel] - order[b.urgencyLevel];
-    });
+type DashboardReminderRow = Pick<
+  Tables<"batch_reminders">,
+  | "id"
+  | "batch_id"
+  | "title"
+  | "description"
+  | "due_at"
+  | "is_completed"
+  | "urgency_level"
+  | "reminder_type"
+>;
 
-  if (urgentReminders.length === 0) return null;
-
-  return (
-    <ScrollReveal>
-      <section className="space-y-3">
-        <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
-          Needs Attention
-        </h2>
-        <div className="space-y-2">
-          {urgentReminders.map((r) => {
-            const isOverdue = r.urgencyLevel === "overdue";
-            return (
-              <div
-                key={r.id}
-                className={`rounded-xl p-4 border transition-all ${
-                  isOverdue
-                    ? "bg-destructive/5 border-destructive/20"
-                    : "bg-caution-bg border-caution/20"
-                }`}
-              >
-                <div className="flex items-start gap-3">
-                  <div className={`mt-0.5 ${isOverdue ? "text-destructive" : "text-caution"}`}>
-                    <AlertTriangle className="h-4 w-4" />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className={`text-sm font-medium ${isOverdue ? "text-destructive" : "text-caution-foreground"}`}>
-                      {r.title}
-                    </p>
-                    <p className="text-xs text-muted-foreground mt-0.5">{r.batchName}</p>
-                  </div>
-                  {isOverdue && (
-                    <span className="text-[10px] font-semibold text-destructive uppercase tracking-wider">
-                      Overdue
-                    </span>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </section>
-    </ScrollReveal>
-  );
-}
-
-function SummaryStats({ batches, reminders }: { batches: KombuchaBatch[]; reminders: DashboardReminder[] }) {
+function SummaryStats({
+  batches,
+  sections,
+}: {
+  batches: KombuchaBatch[];
+  sections: ReturnType<typeof buildTodayActionSections>;
+}) {
   const activeBatches = batches.filter((b) => b.status === "active");
-  const readySoon = activeBatches.filter((b) => b.currentStage === "f1_check_window" || b.currentStage === "chilled_ready");
-  const overdue = reminders.filter((r) => r.urgencyLevel === "overdue" && !r.isCompleted);
-  const completed = batches.filter((b) => b.status === "completed");
+  const getCount = (key: string) =>
+    sections.find((section) => section.key === key)?.items.length || 0;
 
   const stats = [
     { label: "Active", value: activeBatches.length, icon: FlaskConical },
-    { label: "Ready Soon", value: readySoon.length, icon: Clock },
-    { label: "Overdue", value: overdue.length, icon: AlertTriangle },
-    { label: "Completed", value: completed.length, icon: CheckCircle2 },
+    { label: "Do Now", value: getCount("do_now"), icon: AlertTriangle },
+    { label: "Ready", value: getCount("ready_now"), icon: CheckCircle2 },
+    { label: "Soon", value: getCount("check_soon"), icon: Clock },
   ];
 
   return (
@@ -148,8 +131,13 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const [batches, setBatches] = useState<KombuchaBatch[]>([]);
-  const [reminders, setReminders] = useState<DashboardReminder[]>([]);
+  const [reminders, setReminders] = useState<TodayActionReminder[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const sections = useMemo(
+    () => buildTodayActionSections({ batches, reminders }),
+    [batches, reminders]
+  );
 
   useEffect(() => {
     const loadDashboard = async () => {
@@ -163,6 +151,7 @@ export default function Dashboard() {
           status,
           current_stage,
           brew_started_at,
+          f2_started_at,
           total_volume_ml,
           tea_type,
           sugar_g,
@@ -176,6 +165,7 @@ export default function Dashboard() {
           caution_level,
           readiness_window_start,
           readiness_window_end,
+          next_action,
           completed_at,
           updated_at
         `)
@@ -188,12 +178,13 @@ export default function Dashboard() {
         return;
       }
 
-      const mappedBatches: KombuchaBatch[] = (batchRows || []).map((row: any) => ({
+      const mappedBatches: KombuchaBatch[] = ((batchRows || []) as DashboardBatchRow[]).map((row) => ({
         id: row.id,
         name: row.name,
         status: row.status,
         currentStage: row.current_stage,
         brewStartedAt: row.brew_started_at,
+        f2StartedAt: row.f2_started_at || undefined,
         totalVolumeMl: row.total_volume_ml,
         teaType: row.tea_type,
         sugarG: Number(row.sugar_g),
@@ -207,6 +198,7 @@ export default function Dashboard() {
         cautionLevel: row.caution_level === "elevated" ? "high" : row.caution_level,
         readinessWindowStart: row.readiness_window_start || undefined,
         readinessWindowEnd: row.readiness_window_end || undefined,
+        nextAction: row.next_action || undefined,
         completedAt: row.completed_at || undefined,
         updatedAt: row.updated_at,
       }));
@@ -223,8 +215,7 @@ export default function Dashboard() {
           due_at,
           is_completed,
           urgency_level,
-          reminder_type,
-          kombucha_batches(name)
+          reminder_type
         `)
         .eq("is_completed", false)
         .order("due_at", { ascending: true });
@@ -234,14 +225,12 @@ export default function Dashboard() {
       } else {
         const now = new Date();
 
-        const mappedReminders: DashboardReminder[] = (reminderRows || []).map((row: any) => ({
+        const mappedReminders: TodayActionReminder[] = ((reminderRows || []) as DashboardReminderRow[]).map((row) => ({
           id: row.id,
           batchId: row.batch_id,
-          batchName: row.kombucha_batches?.name || "Unknown batch",
           title: row.title,
           description: row.description,
           dueAt: row.due_at,
-          isCompleted: row.is_completed,
           urgencyLevel:
             !row.is_completed && new Date(row.due_at) < now
               ? "overdue"
@@ -291,13 +280,19 @@ export default function Dashboard() {
           </div>
         </ScrollReveal>
 
-        <UrgentReminders reminders={reminders} />
-        <SummaryStats batches={batches} reminders={reminders} />
+        <SummaryStats batches={batches} sections={sections} />
 
         <ScrollReveal delay={0.08}>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Active Batches</h2>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">
+                  Today / Next Actions
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Start with what needs attention now across all active batches.
+                </p>
+              </div>
               <Button variant="ghost" size="sm" onClick={() => navigate("/batches")}>
                 View all
               </Button>
@@ -318,10 +313,24 @@ export default function Dashboard() {
                   <Plus className="h-4 w-4" /> Start First Batch
                 </Button>
               </div>
+            ) : sections.length === 0 ? (
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
+                <CheckCircle2 className="h-8 w-8 mx-auto text-primary/50 mb-3" />
+                <h3 className="font-display text-lg font-medium text-foreground mb-1">
+                  Nothing needs attention right now
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Your active batches look calm at the moment.
+                </p>
+              </div>
             ) : (
-              <div className="space-y-3">
-                {activeBatches.map((batch) => (
-                  <BatchCard key={batch.id} batch={batch} />
+              <div className="space-y-5">
+                {sections.map((section, index) => (
+                  <TodayActionSection
+                    key={section.key}
+                    section={section}
+                    delay={index * 0.04}
+                  />
                 ))}
               </div>
             )}

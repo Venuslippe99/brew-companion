@@ -110,7 +110,7 @@ Use an execution plan as described in `PLANS.md` for any non-trivial task, espec
 5. Multi-step features or refactors
 
 When a plan is needed:
-1. Create or update a file in `plans/`
+1. Create or update a dedicated markdown plan file. Use `plans/<date>-<name>.md` if the `plans/` directory exists; otherwise create that directory first.
 2. Follow `PLANS.md` exactly
 3. Keep the plan current as work progresses
 4. Implement milestone by milestone
