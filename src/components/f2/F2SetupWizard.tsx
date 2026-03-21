@@ -341,9 +341,13 @@ export default function F2SetupWizard({
 
     toast.success("F2 started successfully.");
   } catch (error) {
-    console.error("Start F2 error:", error);
-    toast.error("Could not start F2.");
-  } finally {
+  console.error("Start F2 error:", error);
+
+  const message =
+    error instanceof Error ? error.message : "Unknown error";
+
+  toast.error(message);
+} finally {
     setIsSubmitting(false);
   }
 };
