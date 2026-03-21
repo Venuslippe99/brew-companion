@@ -1,6 +1,6 @@
 import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import { guideArticles } from "@/lib/mock-data";
+import { guides } from "@/content/guides";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { useNavigate } from "react-router-dom";
 import { Search, BookOpen, ChevronRight, Clock } from "lucide-react";
