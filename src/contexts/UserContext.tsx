@@ -94,7 +94,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Persist to localStorage always
   useEffect(() => {
-    localStorage.setItem("brewflow-preferences", JSON.stringify(preferences));
+    localStorage.setItem("kombloom-preferences", JSON.stringify(preferences));
     if (preferences.darkMode) {
       document.documentElement.classList.add("dark");
     } else {

@@ -54,7 +54,7 @@ function DesktopSidebar() {
     <aside className="hidden lg:flex lg:flex-col lg:w-64 lg:fixed lg:inset-y-0 lg:left-0 bg-sidebar border-r border-sidebar-border z-40">
       <div className="p-6 border-b border-sidebar-border">
         <h1 className="font-display text-xl font-semibold text-sidebar-foreground tracking-tight">
-          BrewFlow
+          Kombloom
         </h1>
         <p className="text-xs text-muted-foreground mt-0.5">Kombucha Companion</p>
       </div>

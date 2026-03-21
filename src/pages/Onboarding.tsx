@@ -57,7 +57,7 @@ export default function Onboarding() {
                 <FlaskConical className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h1 className="font-display text-3xl font-semibold text-foreground">Welcome to BrewFlow</h1>
+                <h1 className="font-display text-3xl font-semibold text-foreground">Welcome to Kombloom</h1>
                 <p className="text-muted-foreground mt-2 leading-relaxed">
                   Your precision kombucha companion. Track batches, get stage guidance, and brew with confidence.
                 </p>

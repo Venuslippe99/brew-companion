@@ -65,7 +65,7 @@ export default function Login() {
             {isSignUp ? "Create Account" : "Welcome Back"}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isSignUp ? "Start tracking your kombucha brews" : "Sign in to your BrewFlow account"}
+            {isSignUp ? "Start tracking your kombucha brews" : "Sign in to your Kombloom account"}
           </p>
         </div>
 
