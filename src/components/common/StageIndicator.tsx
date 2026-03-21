@@ -1,4 +1,4 @@
-import { type BatchStage, getStageLabel } from "@/lib/mock-data";
+import { type BatchStage, getStageLabel } from "@/lib/batches";
 
 const stageStyleMap: Record<string, string> = {
   f1_active: "bg-stage-f1 stage-f1",
