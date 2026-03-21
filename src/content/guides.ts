@@ -1,13 +1,13 @@
 export type GuideSection = {
-  heading: string;
-  body: string[];
+  title: string;
+  body: string;
 };
 
 export type Guide = {
   id: string;
   slug: string;
   title: string;
-  description: string;
+  summary: string;
   category: string;
   readTime: string;
   image?: string;
