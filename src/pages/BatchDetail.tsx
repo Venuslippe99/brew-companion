@@ -66,13 +66,14 @@ function OverviewTab({
   actionLoading: WorkflowAction | null;
 }) {
   const timing = getBatchStageTiming({
-    brew_started_at: batch.brewStartedAt,
-    current_stage: batch.currentStage,
-    avg_room_temp_c: batch.avgRoomTempC,
-    target_preference: batch.targetPreference,
-    starter_liquid_ml: batch.starterLiquidMl,
-    total_volume_ml: batch.totalVolumeMl,
-  });
+  brew_started_at: batch.brewStartedAt,
+  f2_started_at: batch.f2StartedAt,
+  current_stage: batch.currentStage,
+  avg_room_temp_c: batch.avgRoomTempC,
+  target_preference: batch.targetPreference,
+  starter_liquid_ml: batch.starterLiquidMl,
+  total_volume_ml: batch.totalVolumeMl,
+});
 
   const stageIndex = getStageProgressIndex(batch.currentStage);
 
@@ -320,27 +321,28 @@ export default function BatchDetail() {
       const { data: batchRow, error: batchError } = await supabase
         .from("kombucha_batches")
         .select(`
-          id,
-          name,
-          status,
-          current_stage,
-          brew_started_at,
-          total_volume_ml,
-          tea_type,
-          sugar_g,
-          starter_liquid_ml,
-          scoby_present,
-          avg_room_temp_c,
-          vessel_type,
-          target_preference,
-          initial_ph,
-          initial_notes,
-          caution_level,
-          readiness_window_start,
-          readiness_window_end,
-          completed_at,
-          updated_at
-        `)
+  id,
+  name,
+  status,
+  current_stage,
+  brew_started_at,
+  f2_started_at,
+  total_volume_ml,
+  tea_type,
+  sugar_g,
+  starter_liquid_ml,
+  scoby_present,
+  avg_room_temp_c,
+  vessel_type,
+  target_preference,
+  initial_ph,
+  initial_notes,
+  caution_level,
+  readiness_window_start,
+  readiness_window_end,
+  completed_at,
+  updated_at
+`)
         .eq("id", id)
         .single();
 
@@ -351,27 +353,28 @@ export default function BatchDetail() {
       }
 
       const mappedBatch: KombuchaBatch = {
-        id: batchRow.id,
-        name: batchRow.name,
-        status: batchRow.status,
-        currentStage: batchRow.current_stage,
-        brewStartedAt: batchRow.brew_started_at,
-        totalVolumeMl: batchRow.total_volume_ml,
-        teaType: batchRow.tea_type,
-        sugarG: Number(batchRow.sugar_g),
-        starterLiquidMl: Number(batchRow.starter_liquid_ml),
-        scobyPresent: batchRow.scoby_present,
-        avgRoomTempC: Number(batchRow.avg_room_temp_c),
-        vesselType: batchRow.vessel_type || "Glass jar",
-        targetPreference: batchRow.target_preference || "balanced",
-        initialPh: batchRow.initial_ph ? Number(batchRow.initial_ph) : undefined,
-        initialNotes: batchRow.initial_notes || undefined,
-        cautionLevel: batchRow.caution_level === "elevated" ? "high" : batchRow.caution_level,
-        readinessWindowStart: batchRow.readiness_window_start || undefined,
-        readinessWindowEnd: batchRow.readiness_window_end || undefined,
-        completedAt: batchRow.completed_at || undefined,
-        updatedAt: batchRow.updated_at,
-      };
+  id: batchRow.id,
+  name: batchRow.name,
+  status: batchRow.status,
+  currentStage: batchRow.current_stage,
+  brewStartedAt: batchRow.brew_started_at,
+  f2StartedAt: batchRow.f2_started_at || undefined,
+  totalVolumeMl: batchRow.total_volume_ml,
+  teaType: batchRow.tea_type,
+  sugarG: Number(batchRow.sugar_g),
+  starterLiquidMl: Number(batchRow.starter_liquid_ml),
+  scobyPresent: batchRow.scoby_present,
+  avgRoomTempC: Number(batchRow.avg_room_temp_c),
+  vesselType: batchRow.vessel_type || "Glass jar",
+  targetPreference: batchRow.target_preference || "balanced",
+  initialPh: batchRow.initial_ph ? Number(batchRow.initial_ph) : undefined,
+  initialNotes: batchRow.initial_notes || undefined,
+  cautionLevel: batchRow.caution_level === "elevated" ? "high" : batchRow.caution_level,
+  readinessWindowStart: batchRow.readiness_window_start || undefined,
+  readinessWindowEnd: batchRow.readiness_window_end || undefined,
+  completedAt: batchRow.completed_at || undefined,
+  updatedAt: batchRow.updated_at,
+};
 
       setBatch(mappedBatch);
 
