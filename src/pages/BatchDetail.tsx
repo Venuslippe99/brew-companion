@@ -1,29 +1,44 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { mockBatches, mockReminders, getDayNumber, getStageLabel, getNextAction } from "@/lib/mock-data";
+import { getDayNumber, getNextAction, type KombuchaBatch } from "@/lib/mock-data";
+import { supabase } from "@/integrations/supabase/client";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Thermometer, Droplets, Clock, TestTube2, Camera, StickyNote, MessageCircle, BookOpen, FlaskConical, ChevronRight } from "lucide-react";
+import {
+  ArrowLeft,
+  Thermometer,
+  Droplets,
+  Clock,
+  FlaskConical,
+} from "lucide-react";
 
 const detailTabs = ["Overview", "Timeline", "Logs", "F2 & Bottles", "Photos", "Notes", "Guide", "Assistant"];
 
-function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
+type BatchReminder = {
+  id: string;
+  title: string;
+  description: string | null;
+  dueAt: string;
+  isCompleted: boolean;
+  urgencyLevel: "low" | "medium" | "high" | "overdue";
+};
+
+function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: BatchReminder[] }) {
   const dayNum = getDayNumber(batch.brewStartedAt);
-  const reminders = mockReminders.filter((r) => r.batchId === batch.id && !r.isCompleted);
 
   return (
     <div className="space-y-5">
-      {/* Stage Progress */}
       <ScrollReveal>
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Stage Progress</h3>
           <div className="flex items-center gap-1">
             {["F1", "Check", "F2", "Chill", "Done"].map((label, i) => {
               const stageIndex = ["f1_active", "f1_check_window", "f2_active", "refrigerate_now", "completed"].indexOf(batch.currentStage);
-              const isCompleted = i <= stageIndex;
-              const isCurrent = i === stageIndex;
+              const safeIndex = stageIndex === -1 ? 0 : stageIndex;
+              const isCompleted = i <= safeIndex;
+              const isCurrent = i === safeIndex;
               return (
                 <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
                   <div
@@ -41,7 +56,6 @@ function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
         </div>
       </ScrollReveal>
 
-      {/* Next Action */}
       <ScrollReveal delay={0.05}>
         <div className="bg-honey-light border border-primary/10 rounded-xl p-4">
           <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Next Action</p>
@@ -49,7 +63,6 @@ function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
         </div>
       </ScrollReveal>
 
-      {/* Reminders */}
       {reminders.length > 0 && (
         <ScrollReveal delay={0.08}>
           <div className="space-y-2">
@@ -58,7 +71,7 @@ function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
               <div key={r.id} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-foreground">{r.title}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{r.description}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{r.description || "No description"}</p>
                 </div>
                 <Button size="sm" variant="outline">Done</Button>
               </div>
@@ -67,7 +80,6 @@ function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
         </ScrollReveal>
       )}
 
-      {/* Recipe Summary */}
       <ScrollReveal delay={0.1}>
         <div className="bg-card border border-border rounded-xl p-5">
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Recipe</h3>
@@ -94,16 +106,18 @@ function OverviewTab({ batch }: { batch: typeof mockBatches[0] }) {
   );
 }
 
-function TimelineTab() {
+function TimelineTab({ batch }: { batch: KombuchaBatch }) {
   const events = [
-    { date: "Today", items: [{ time: "10:30 AM", label: "Temperature logged: 23°C", icon: Thermometer }] },
-    { date: "Yesterday", items: [
-      { time: "3:00 PM", label: "Taste test — still quite sweet", icon: Droplets },
-      { time: "9:00 AM", label: "Visual check — SCOBY forming nicely", icon: FlaskConical },
-    ]},
-    { date: "3 days ago", items: [
-      { time: "2:00 PM", label: "Batch created — F1 started", icon: Clock },
-    ]},
+    {
+      date: "Batch Created",
+      items: [
+        {
+          time: new Date(batch.brewStartedAt).toLocaleString(),
+          label: "Batch created and F1 started",
+          icon: Clock,
+        },
+      ],
+    },
   ];
 
   return (
@@ -147,8 +161,119 @@ export default function BatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Overview");
+  const [batch, setBatch] = useState<KombuchaBatch | null>(null);
+  const [reminders, setReminders] = useState<BatchReminder[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const batch = mockBatches.find((b) => b.id === id);
+  useEffect(() => {
+    const loadBatch = async () => {
+      if (!id) return;
+
+      setLoading(true);
+
+      const { data: batchRow, error: batchError } = await supabase
+        .from("kombucha_batches")
+        .select(`
+          id,
+          name,
+          status,
+          current_stage,
+          brew_started_at,
+          total_volume_ml,
+          tea_type,
+          sugar_g,
+          starter_liquid_ml,
+          scoby_present,
+          avg_room_temp_c,
+          vessel_type,
+          target_preference,
+          initial_ph,
+          initial_notes,
+          caution_level,
+          readiness_window_start,
+          readiness_window_end,
+          completed_at,
+          updated_at
+        `)
+        .eq("id", id)
+        .single();
+
+      if (batchError) {
+        console.error("Load batch error:", batchError);
+        setLoading(false);
+        return;
+      }
+
+      const mappedBatch: KombuchaBatch = {
+        id: batchRow.id,
+        name: batchRow.name,
+        status: batchRow.status,
+        currentStage: batchRow.current_stage,
+        brewStartedAt: batchRow.brew_started_at,
+        totalVolumeMl: batchRow.total_volume_ml,
+        teaType: batchRow.tea_type,
+        sugarG: Number(batchRow.sugar_g),
+        starterLiquidMl: Number(batchRow.starter_liquid_ml),
+        scobyPresent: batchRow.scoby_present,
+        avgRoomTempC: Number(batchRow.avg_room_temp_c),
+        vesselType: batchRow.vessel_type || "Glass jar",
+        targetPreference: batchRow.target_preference || "balanced",
+        initialPh: batchRow.initial_ph ? Number(batchRow.initial_ph) : undefined,
+        initialNotes: batchRow.initial_notes || undefined,
+        cautionLevel: batchRow.caution_level === "elevated" ? "high" : batchRow.caution_level,
+        readinessWindowStart: batchRow.readiness_window_start || undefined,
+        readinessWindowEnd: batchRow.readiness_window_end || undefined,
+        completedAt: batchRow.completed_at || undefined,
+        updatedAt: batchRow.updated_at,
+      };
+
+      setBatch(mappedBatch);
+
+      const { data: reminderRows, error: reminderError } = await supabase
+        .from("batch_reminders")
+        .select("id, title, description, due_at, is_completed, urgency_level")
+        .eq("batch_id", id)
+        .eq("is_completed", false)
+        .order("due_at", { ascending: true });
+
+      if (reminderError) {
+        console.error("Load reminders error:", reminderError);
+      } else {
+        const now = new Date();
+
+        const mappedReminders: BatchReminder[] = (reminderRows || []).map((row: any) => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          dueAt: row.due_at,
+          isCompleted: row.is_completed,
+          urgencyLevel:
+            !row.is_completed && new Date(row.due_at) < now
+              ? "overdue"
+              : row.urgency_level === "critical"
+              ? "high"
+              : row.urgency_level,
+        }));
+
+        setReminders(mappedReminders);
+      }
+
+      setLoading(false);
+    };
+
+    loadBatch();
+  }, [id]);
+
+  if (loading) {
+    return (
+      <AppLayout>
+        <div className="max-w-2xl mx-auto px-4 pt-20 text-center">
+          <p className="text-muted-foreground">Loading batch...</p>
+        </div>
+      </AppLayout>
+    );
+  }
+
   if (!batch) {
     return (
       <AppLayout>
@@ -165,12 +290,10 @@ export default function BatchDetail() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 pt-4 lg:pt-8 lg:px-8 space-y-5 pb-8">
-        {/* Back button */}
         <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
           <ArrowLeft className="h-4 w-4" /> Back
         </button>
 
-        {/* Header Card */}
         <ScrollReveal>
           <div className="bg-card border border-border rounded-2xl p-5 space-y-4">
             <div className="flex items-start justify-between">
@@ -205,7 +328,6 @@ export default function BatchDetail() {
           </div>
         </ScrollReveal>
 
-        {/* Tabs */}
         <ScrollReveal delay={0.05}>
           <div className="flex gap-1 overflow-x-auto pb-1 -mx-1 px-1 scrollbar-none">
             {detailTabs.map((tab) => (
@@ -224,10 +346,9 @@ export default function BatchDetail() {
           </div>
         </ScrollReveal>
 
-        {/* Tab Content */}
         <div className="min-h-[300px]">
-          {activeTab === "Overview" && <OverviewTab batch={batch} />}
-          {activeTab === "Timeline" && <TimelineTab />}
+          {activeTab === "Overview" && <OverviewTab batch={batch} reminders={reminders} />}
+          {activeTab === "Timeline" && <TimelineTab batch={batch} />}
           {activeTab === "Logs" && <PlaceholderTab title="Logs" description="Structured action history will appear here. Add taste tests, temperature readings, and more." />}
           {activeTab === "F2 & Bottles" && <PlaceholderTab title="F2 & Bottles" description="Set up your second fermentation here once F1 is ready. Configure bottles, flavourings, and carbonation targets." />}
           {activeTab === "Photos" && <PlaceholderTab title="Photos" description="Document your batch visually. Upload photos to track SCOBY growth, colour changes, and more." />}
