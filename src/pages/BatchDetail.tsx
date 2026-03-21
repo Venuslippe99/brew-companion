@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { getDayNumber, getNextAction, type KombuchaBatch } from "@/lib/batches";
+import { getDayNumber, type KombuchaBatch } from "@/lib/batches";
+import { getBatchStageTiming } from "@/lib/batch-timing";
 import { supabase } from "@/integrations/supabase/client";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
@@ -9,9 +10,7 @@ import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
   Thermometer,
-  Droplets,
   Clock,
-  FlaskConical,
 } from "lucide-react";
 
 const detailTabs = ["Overview", "Timeline", "Logs", "F2 & Bottles", "Photos", "Notes", "Guide", "Assistant"];
@@ -26,7 +25,21 @@ type BatchReminder = {
 };
 
 function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: BatchReminder[] }) {
-  const dayNum = getDayNumber(batch.brewStartedAt);
+  const timing = getBatchStageTiming({
+    brew_started_at: batch.brewStartedAt,
+    current_stage: batch.currentStage,
+    avg_room_temp_c: batch.avgRoomTempC,
+    target_preference: batch.targetPreference,
+    starter_liquid_ml: batch.starterLiquidMl,
+    total_volume_ml: batch.totalVolumeMl,
+  });
+
+  const timingStatusClasses =
+    timing?.status === "ready"
+      ? "bg-primary/10 text-primary border border-primary/15"
+      : timing?.status === "overdue"
+        ? "bg-caution-bg text-caution-foreground border border-caution/15"
+        : "bg-muted text-foreground border border-border";
 
   return (
     <div className="space-y-5">
@@ -57,10 +70,62 @@ function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: Ba
       </ScrollReveal>
 
       <ScrollReveal delay={0.05}>
-        <div className="bg-honey-light border border-primary/10 rounded-xl p-4">
-          <p className="text-xs font-semibold text-primary uppercase tracking-wider mb-1">Next Action</p>
-          <p className="text-sm font-medium text-foreground">{getNextAction(batch)}</p>
-        </div>
+        {timing ? (
+          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                  Current Stage
+                </p>
+                <h3 className="text-lg font-semibold text-foreground mt-1">
+                  {timing.stageLabel} Day {timing.elapsedDays}
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  {timing.guidance}
+                </p>
+              </div>
+
+              <span
+                className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-medium ${timingStatusClasses}`}
+              >
+                {timing.statusLabel}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="rounded-xl bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Estimated tasting window</p>
+                <p className="text-sm font-semibold text-foreground mt-1">
+                  Day {timing.windowStartDay}–{timing.windowEndDay}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {timing.windowDateRangeText}
+                </p>
+              </div>
+
+              <div className="rounded-xl bg-muted/50 p-3">
+                <p className="text-xs text-muted-foreground">Next step</p>
+                <p className="text-sm font-semibold text-foreground mt-1">
+                  {timing.nextActionLabel}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {timing.nextCheckText}
+                </p>
+              </div>
+            </div>
+
+            <div className="rounded-xl bg-honey-light border border-primary/10 p-3">
+              <p className="text-xs text-muted-foreground">Why this estimate</p>
+              <p className="text-sm text-foreground mt-1">{timing.explanation}</p>
+            </div>
+          </div>
+        ) : (
+          <div className="bg-card border border-border rounded-xl p-4">
+            <p className="text-sm text-muted-foreground">
+              Timing estimate is not available for this batch yet.
+            </p>
+          </div>
+        )}
       </ScrollReveal>
 
       {reminders.length > 0 && (
@@ -251,8 +316,8 @@ export default function BatchDetail() {
             !row.is_completed && new Date(row.due_at) < now
               ? "overdue"
               : row.urgency_level === "critical"
-              ? "high"
-              : row.urgency_level,
+                ? "high"
+                : row.urgency_level,
         }));
 
         setReminders(mappedReminders);
