@@ -35,6 +35,9 @@ type StartF2Result = {
 function round2(value: number) {
   return Number(value.toFixed(2));
 }
+function toInt(value: number) {
+  return Math.round(value);
+}
 
 function isIngredientForm(value?: string): "juice" | "puree" | "whole_fruit" | "syrup" | "herbs_spices" | "other" | null {
   if (
@@ -171,31 +174,31 @@ throw new Error(
     .eq("is_current", true);
 
   const setupInsert: TablesInsert<"batch_f2_setups"> = {
-    batch_id: batch.id,
-    ambient_temp_c: ambientTempC,
-    desired_carbonation_level: desiredCarbonationLevel,
-    estimated_pressure_risk: summary.riskLevel,
-    reserved_for_sediment_ml: reserveForSedimentMl,
-    available_f1_volume_ml: summary.availableF1VolumeMl,
-    bottle_count: summary.totalBottleCount,
-    bottle_size_ml: bottleGroups[0]?.bottleSizeMl ?? 500,
-    bottle_type: bottleGroups[0]?.bottleType ?? "swing_top",
-    default_headspace_ml: avgHeadspaceMl,
-    avg_headspace_description:
-      bottleGroups.length <= 1
-        ? `${bottleGroups[0]?.headspaceMl ?? 0} ml`
-        : `Mixed headspace across ${bottleGroups.length} groups`,
-    planned_bottle_volume_ml: summary.totalPlannedBottleVolumeMl,
-    planned_kombucha_fill_ml: summary.totalKombuchaNeededMl,
-    additional_sugar_total_g: 0,
-    flavouring_mode: guidedMode ? "guided" : "advanced",
-    selected_recipe_id: persistedRecipeId,
-    recipe_name_snapshot: recipeName.trim() || null,
-    recipe_snapshot_json: recipeSnapshot,
-    burp_reminders_enabled: false,
-    is_current: true,
-    setup_status: "active",
-  };
+  batch_id: batch.id,
+  ambient_temp_c: ambientTempC,
+  desired_carbonation_level: desiredCarbonationLevel,
+  estimated_pressure_risk: summary.riskLevel,
+  reserved_for_sediment_ml: toInt(reserveForSedimentMl),
+  available_f1_volume_ml: toInt(summary.availableF1VolumeMl),
+  bottle_count: toInt(summary.totalBottleCount),
+  bottle_size_ml: toInt(bottleGroups[0]?.bottleSizeMl ?? 500),
+  bottle_type: bottleGroups[0]?.bottleType ?? "swing_top",
+  default_headspace_ml: avgHeadspaceMl,
+  avg_headspace_description:
+    bottleGroups.length <= 1
+      ? `${bottleGroups[0]?.headspaceMl ?? 0} ml`
+      : `Mixed headspace across ${bottleGroups.length} groups`,
+  planned_bottle_volume_ml: toInt(summary.totalPlannedBottleVolumeMl),
+  planned_kombucha_fill_ml: toInt(summary.totalKombuchaNeededMl),
+  additional_sugar_total_g: 0,
+  flavouring_mode: guidedMode ? "guided" : "advanced",
+  selected_recipe_id: persistedRecipeId,
+  recipe_name_snapshot: recipeName.trim() || null,
+  recipe_snapshot_json: recipeSnapshot,
+  burp_reminders_enabled: false,
+  is_current: true,
+  setup_status: "active",
+};
 
   const { data: setupRow, error: setupError } = await supabase
     .from("batch_f2_setups")
@@ -212,20 +215,20 @@ throw new Error(
   const setupId = setupRow.id;
 
   const groupRows: TablesInsert<"batch_f2_bottle_groups">[] =
-    summary.bottleGroupPlans.map((groupPlan, index) => {
-      const draftGroup = bottleGroups.find((group) => group.id === groupPlan.groupId);
+  summary.bottleGroupPlans.map((groupPlan, index) => {
+    const draftGroup = bottleGroups.find((group) => group.id === groupPlan.groupId);
 
-      return {
-        f2_setup_id: setupId,
-        bottle_count: groupPlan.bottleCount,
-        bottle_size_ml: groupPlan.bottleSizeMl,
-        bottle_type: groupPlan.bottleType,
-        headspace_ml: groupPlan.headspaceMl,
-        target_fill_ml: groupPlan.targetFillMlPerBottle,
-        group_label: draftGroup?.groupLabel?.trim() || null,
-        sort_order: index,
-      };
-    });
+    return {
+      f2_setup_id: setupId,
+      bottle_count: toInt(groupPlan.bottleCount),
+      bottle_size_ml: toInt(groupPlan.bottleSizeMl),
+      bottle_type: groupPlan.bottleType,
+      headspace_ml: toInt(groupPlan.headspaceMl),
+      target_fill_ml: toInt(groupPlan.targetFillMlPerBottle),
+      group_label: draftGroup?.groupLabel?.trim() || null,
+      sort_order: index,
+    };
+  });
 
   const { error: groupsError } = await supabase
     .from("batch_f2_bottle_groups")
@@ -257,7 +260,7 @@ throw new Error(
     for (let i = 0; i < groupPlan.bottleCount; i += 1) {
       bottleRows.push({
         f2_setup_id: setupId,
-        bottle_size_ml: groupPlan.bottleSizeMl,
+        bottle_size_ml: toInt(groupPlan.bottleSizeMl),
         bottle_label: `${baseLabel} ${i + 1}`,
         bottle_notes: null,
         custom_flavour_name: null,
