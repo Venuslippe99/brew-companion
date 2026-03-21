@@ -1,15 +1,40 @@
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
-import { mockBatches, mockReminders, getDayNumber, getNextAction } from "@/lib/mock-data";
+import { getNextAction, type KombuchaBatch } from "@/lib/mock-data";
 import { BatchCard } from "@/components/batches/BatchCard";
-import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useUser } from "@/contexts/UserContext";
 import { useNavigate } from "react-router-dom";
-import { FlaskConical, Clock, AlertTriangle, CheckCircle2, Plus, Droplets, Thermometer, TestTube2, Camera, StickyNote, Settings } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import {
+  FlaskConical,
+  Clock,
+  AlertTriangle,
+  CheckCircle2,
+  Plus,
+  Droplets,
+  Thermometer,
+  TestTube2,
+  Camera,
+  StickyNote,
+  Settings
+} from "lucide-react";
 
-function UrgentReminders() {
-  const urgentReminders = mockReminders
+type DashboardReminder = {
+  id: string;
+  batchId: string;
+  batchName: string;
+  title: string;
+  description: string | null;
+  dueAt: string;
+  isCompleted: boolean;
+  urgencyLevel: "low" | "medium" | "high" | "overdue";
+  reminderType: string;
+};
+
+function UrgentReminders({ reminders }: { reminders: DashboardReminder[] }) {
+  const urgentReminders = reminders
     .filter((r) => !r.isCompleted)
     .sort((a, b) => {
       const order = { overdue: 0, high: 1, medium: 2, low: 3 };
@@ -61,11 +86,11 @@ function UrgentReminders() {
   );
 }
 
-function SummaryStats() {
-  const activeBatches = mockBatches.filter((b) => b.status === "active");
+function SummaryStats({ batches, reminders }: { batches: KombuchaBatch[]; reminders: DashboardReminder[] }) {
+  const activeBatches = batches.filter((b) => b.status === "active");
   const readySoon = activeBatches.filter((b) => b.currentStage === "f1_check_window" || b.currentStage === "chilled_ready");
-  const overdue = mockReminders.filter((r) => r.urgencyLevel === "overdue" && !r.isCompleted);
-  const completed = mockBatches.filter((b) => b.status === "completed");
+  const overdue = reminders.filter((r) => r.urgencyLevel === "overdue" && !r.isCompleted);
+  const completed = batches.filter((b) => b.status === "completed");
 
   const stats = [
     { label: "Active", value: activeBatches.length, icon: FlaskConical },
@@ -121,7 +146,121 @@ function QuickActions() {
 export default function Dashboard() {
   const { preferences } = useUser();
   const navigate = useNavigate();
-  const activeBatches = mockBatches.filter((b) => b.status === "active");
+
+  const [batches, setBatches] = useState<KombuchaBatch[]>([]);
+  const [reminders, setReminders] = useState<DashboardReminder[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const loadDashboard = async () => {
+      setLoading(true);
+
+      const { data: batchRows, error: batchError } = await supabase
+        .from("kombucha_batches")
+        .select(`
+          id,
+          name,
+          status,
+          current_stage,
+          brew_started_at,
+          total_volume_ml,
+          tea_type,
+          sugar_g,
+          starter_liquid_ml,
+          scoby_present,
+          avg_room_temp_c,
+          vessel_type,
+          target_preference,
+          initial_ph,
+          initial_notes,
+          caution_level,
+          readiness_window_start,
+          readiness_window_end,
+          completed_at,
+          updated_at
+        `)
+        .order("updated_at", { ascending: false });
+
+      if (batchError) {
+        console.error("Load dashboard batches error:", batchError);
+        alert(batchError.message);
+        setLoading(false);
+        return;
+      }
+
+      const mappedBatches: KombuchaBatch[] = (batchRows || []).map((row: any) => ({
+        id: row.id,
+        name: row.name,
+        status: row.status,
+        currentStage: row.current_stage,
+        brewStartedAt: row.brew_started_at,
+        totalVolumeMl: row.total_volume_ml,
+        teaType: row.tea_type,
+        sugarG: Number(row.sugar_g),
+        starterLiquidMl: Number(row.starter_liquid_ml),
+        scobyPresent: row.scoby_present,
+        avgRoomTempC: Number(row.avg_room_temp_c),
+        vesselType: row.vessel_type || "Glass jar",
+        targetPreference: row.target_preference || "balanced",
+        initialPh: row.initial_ph ? Number(row.initial_ph) : undefined,
+        initialNotes: row.initial_notes || undefined,
+        cautionLevel: row.caution_level === "elevated" ? "high" : row.caution_level,
+        readinessWindowStart: row.readiness_window_start || undefined,
+        readinessWindowEnd: row.readiness_window_end || undefined,
+        completedAt: row.completed_at || undefined,
+        updatedAt: row.updated_at,
+      }));
+
+      setBatches(mappedBatches);
+
+      const { data: reminderRows, error: reminderError } = await supabase
+        .from("batch_reminders")
+        .select(`
+          id,
+          batch_id,
+          title,
+          description,
+          due_at,
+          is_completed,
+          urgency_level,
+          reminder_type,
+          kombucha_batches(name)
+        `)
+        .eq("is_completed", false)
+        .order("due_at", { ascending: true });
+
+      if (reminderError) {
+        console.error("Load dashboard reminders error:", reminderError);
+      } else {
+        const now = new Date();
+
+        const mappedReminders: DashboardReminder[] = (reminderRows || []).map((row: any) => ({
+          id: row.id,
+          batchId: row.batch_id,
+          batchName: row.kombucha_batches?.name || "Unknown batch",
+          title: row.title,
+          description: row.description,
+          dueAt: row.due_at,
+          isCompleted: row.is_completed,
+          urgencyLevel:
+            !row.is_completed && new Date(row.due_at) < now
+              ? "overdue"
+              : row.urgency_level === "critical"
+              ? "high"
+              : row.urgency_level,
+          reminderType: row.reminder_type,
+        }));
+
+        setReminders(mappedReminders);
+      }
+
+      setLoading(false);
+    };
+
+    loadDashboard();
+  }, []);
+
+  const activeBatches = batches.filter((b) => b.status === "active");
 
   const greeting = () => {
     const h = new Date().getHours();
@@ -133,7 +272,6 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-6">
-        {/* Header */}
         <ScrollReveal>
           <div className="flex items-center justify-between">
             <div>
@@ -153,13 +291,9 @@ export default function Dashboard() {
           </div>
         </ScrollReveal>
 
-        {/* Urgent Reminders */}
-        <UrgentReminders />
+        <UrgentReminders reminders={reminders} />
+        <SummaryStats batches={batches} reminders={reminders} />
 
-        {/* Summary Stats */}
-        <SummaryStats />
-
-        {/* Active Batches */}
         <ScrollReveal delay={0.08}>
           <section className="space-y-3">
             <div className="flex items-center justify-between">
@@ -168,7 +302,12 @@ export default function Dashboard() {
                 View all
               </Button>
             </div>
-            {activeBatches.length === 0 ? (
+
+            {loading ? (
+              <div className="bg-card border border-border rounded-xl p-8 text-center">
+                <p className="text-sm text-muted-foreground">Loading dashboard...</p>
+              </div>
+            ) : activeBatches.length === 0 ? (
               <div className="bg-card border border-border rounded-xl p-8 text-center">
                 <FlaskConical className="h-8 w-8 mx-auto text-muted-foreground/40 mb-3" />
                 <h3 className="font-display text-lg font-medium text-foreground mb-1">No active batches</h3>
@@ -189,10 +328,8 @@ export default function Dashboard() {
           </section>
         </ScrollReveal>
 
-        {/* Quick Actions */}
         <QuickActions />
 
-        {/* Learn Section for Beginners */}
         {preferences.experienceLevel === "beginner" && (
           <ScrollReveal delay={0.2}>
             <section className="bg-honey-light border border-primary/10 rounded-xl p-5">
