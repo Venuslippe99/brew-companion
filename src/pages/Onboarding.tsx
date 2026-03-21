@@ -4,6 +4,7 @@ import { useUser, type ExperienceLevel, type BrewingGoal } from "@/contexts/User
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlaskConical, ChevronRight, ChevronLeft } from "lucide-react";
+import kombuchaHero from "@/assets/kombucha-hero.jpg";
 
 const steps = ["welcome", "experience", "goals", "start"];
 
