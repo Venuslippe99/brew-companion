@@ -1,4 +1,4 @@
-import { KombuchaBatch, getDayNumber, getNextAction } from "@/lib/mock-data";
+import { KombuchaBatch, getDayNumber, getNextAction } from "@/lib/batches";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { useNavigate } from "react-router-dom";
 
