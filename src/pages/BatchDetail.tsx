@@ -4,6 +4,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { getDayNumber, type BatchStage, type KombuchaBatch } from "@/lib/batches";
 import { getBatchStageTiming } from "@/lib/batch-timing";
 import { supabase } from "@/integrations/supabase/client";
+import F2SetupWizard from "@/components/f2/F2SetupWizard";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
@@ -636,8 +637,7 @@ export default function BatchDetail() {
           )}
           {activeTab === "Timeline" && <TimelineTab batch={batch} />}
           {activeTab === "Logs" && <PlaceholderTab title="Logs" description="Structured action history will appear here. Add taste tests, temperature readings, and more." />}
-          {activeTab === "F2 & Bottles" && <PlaceholderTab title="F2 & Bottles" description="Set up your second fermentation here once F1 is ready. Configure bottles, flavourings, and carbonation targets." />}
-          {activeTab === "Photos" && <PlaceholderTab title="Photos" description="Document your batch visually. Upload photos to track SCOBY growth, colour changes, and more." />}
+          {activeTab === "F2 & Bottles" && <F2SetupWizard batch={batch} />}          {activeTab === "Photos" && <PlaceholderTab title="Photos" description="Document your batch visually. Upload photos to track SCOBY growth, colour changes, and more." />}
           {activeTab === "Notes" && <PlaceholderTab title="Notes" description="Freeform notes for observations, reflections, and custom tracking." />}
           {activeTab === "Guide" && <PlaceholderTab title="Stage Guide" description="Context-aware tips for your current fermentation stage." />}
           {activeTab === "Assistant" && <PlaceholderTab title="Batch Assistant" description="AI-powered guidance based on this batch's data. Ask questions about your brew." />}
