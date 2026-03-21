@@ -1,9 +1,10 @@
 import { useUser, type ExperienceLevel, type BrewingGoal } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/AuthContext";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, User, Sliders, Moon, Sun } from "lucide-react";
+import { User, Sliders, Moon, Sun, LogOut } from "lucide-react";
 
 const experienceLevels: { value: ExperienceLevel; label: string; desc: string }[] = [
   { value: "beginner", label: "Beginner", desc: "More guidance, explanations, and step help" },
@@ -21,7 +22,13 @@ const goals: { value: BrewingGoal; label: string }[] = [
 
 export default function Settings() {
   const { preferences, updatePreferences } = useUser();
+  const { user, signOut } = useAuth();
   const navigate = useNavigate();
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   return (
     <AppLayout>
@@ -103,19 +110,35 @@ export default function Settings() {
           </div>
         </ScrollReveal>
 
-        {/* Account placeholder */}
+        {/* Account */}
         <ScrollReveal delay={0.12}>
           <div className="bg-card border border-border rounded-xl p-5 space-y-3">
             <div className="flex items-center gap-2">
               <User className="h-4 w-4 text-primary" />
               <h2 className="text-sm font-semibold text-foreground uppercase tracking-wider">Account</h2>
             </div>
-            <p className="text-sm text-muted-foreground">
-              Sign in to sync your batches across devices and access AI-powered guidance.
-            </p>
-            <Button variant="outline" onClick={() => navigate("/login")}>
-              Sign In
-            </Button>
+            {user ? (
+              <div className="space-y-3">
+                <div>
+                  <p className="text-sm font-medium text-foreground">
+                    {preferences.displayName || "BrewFlow User"}
+                  </p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </div>
+                <Button variant="outline" onClick={handleSignOut} className="gap-2">
+                  <LogOut className="h-4 w-4" /> Sign Out
+                </Button>
+              </div>
+            ) : (
+              <>
+                <p className="text-sm text-muted-foreground">
+                  Sign in to sync your batches across devices and access AI-powered guidance.
+                </p>
+                <Button variant="outline" onClick={() => navigate("/login")}>
+                  Sign In
+                </Button>
+              </>
+            )}
           </div>
         </ScrollReveal>
       </div>
