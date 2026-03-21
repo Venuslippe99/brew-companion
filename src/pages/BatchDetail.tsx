@@ -180,7 +180,7 @@ function OverviewTab({
                     onClick={onStartF2}
                     disabled={actionsDisabled}
                   >
-                    {actionLoading === "start-f2" ? "Starting F2..." : "Start F2"}
+                    {actionLoading === "start-f2" ? "Opening F2 setup..." : "Set up F2"}
                   </Button>
 
                   <Button
@@ -526,7 +526,7 @@ export default function BatchDetail() {
       reason: "Started F2 from timing card",
       logType: "moved_to_f2",
       note: "User marked the batch as ready and moved into F2 setup from the timing card.",
-      successMessage: "Moved to F2 setup.",
+      successMessage: "Moved to F2 setup. Complete the wizard to start F2.",
       nextTab: "F2 & Bottles",
     });
   };
@@ -637,8 +637,25 @@ export default function BatchDetail() {
           )}
           {activeTab === "Timeline" && <TimelineTab batch={batch} />}
           {activeTab === "Logs" && <PlaceholderTab title="Logs" description="Structured action history will appear here. Add taste tests, temperature readings, and more." />}
-          {activeTab === "F2 & Bottles" && <F2SetupWizard batch={batch} />}          {activeTab === "Photos" && <PlaceholderTab title="Photos" description="Document your batch visually. Upload photos to track SCOBY growth, colour changes, and more." />}
-          {activeTab === "Notes" && <PlaceholderTab title="Notes" description="Freeform notes for observations, reflections, and custom tracking." />}
+{activeTab === "F2 & Bottles" && (
+  <F2SetupWizard
+    batch={batch}
+    userId={user?.id}
+    onF2Started={({ f2StartedAt }) => {
+      setBatch((current) =>
+        current
+          ? {
+              ...current,
+              currentStage: "f2_active",
+              f2StartedAt,
+              updatedAt: f2StartedAt,
+            }
+          : current
+      );
+      setActiveTab("Overview");
+    }}
+  />
+)}          {activeTab === "Notes" && <PlaceholderTab title="Notes" description="Freeform notes for observations, reflections, and custom tracking." />}
           {activeTab === "Guide" && <PlaceholderTab title="Stage Guide" description="Context-aware tips for your current fermentation stage." />}
           {activeTab === "Assistant" && <PlaceholderTab title="Batch Assistant" description="AI-powered guidance based on this batch's data. Ask questions about your brew." />}
         </div>
