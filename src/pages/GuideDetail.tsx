@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { guideArticles } from "@/lib/mock-data";
+import { getGuideBySlug } from "@/content/guides";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Clock, FlaskConical } from "lucide-react";
