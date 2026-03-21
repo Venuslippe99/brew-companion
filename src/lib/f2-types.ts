@@ -14,8 +14,8 @@ export type F2IngredientForm =
   | "other";
 
 export type F2CarbonationLevel = "light" | "balanced" | "strong";
-
 export type F2RiskLevel = "low" | "moderate" | "high";
+export type F2RecipeSourceTab = "my" | "presets" | "create";
 
 export type F2BottleGroupDraft = {
   id: string;
@@ -95,4 +95,22 @@ export type F2SetupSummary = {
   validationErrors: string[];
   riskLevel: F2RiskLevel;
   riskNotes: string[];
+};
+
+export type FlavourPresetSummary = {
+  id: string;
+  name: string;
+  displayName?: string | null;
+  defaultUnit: string;
+  recommendedDefaultPer500?: number | null;
+  recommendedMaxPer500?: number | null;
+  carbonationTendency: number;
+  isLiquid?: boolean | null;
+};
+
+export type F2RecipeSummary = {
+  id: string;
+  name: string;
+  description?: string | null;
+  isPreset: boolean;
 };
