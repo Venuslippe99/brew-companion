@@ -7,7 +7,16 @@ import {
   loadCurrentF2Setup,
   type LoadedF2Setup,
 } from "@/lib/f2-current-setup";
-import type { KombuchaBatch } from "@/lib/batches";
+import {
+  applyF2ActiveAction,
+  type F2ActiveAction,
+} from "@/lib/f2-active-actions";
+import {
+  getNextAction,
+  type BatchStage,
+  type BatchStatus,
+  type KombuchaBatch,
+} from "@/lib/batches";
 import type {
   F2BottleGroupDraft,
   F2RecipeItemDraft,
@@ -27,6 +36,13 @@ type F2SetupWizardProps = {
   onF2Started?: (args: {
     f2StartedAt: string;
     nextAction: string;
+  }) => void;
+  onBatchStateChanged?: (args: {
+    currentStage: BatchStage;
+    updatedAt: string;
+    nextAction: string;
+    status: BatchStatus;
+    completedAt?: string;
   }) => void;
 };
 
@@ -53,7 +69,27 @@ function makeRecipeItem(): F2RecipeItemDraft {
   };
 }
 
-function SavedF2SetupView({ setup }: { setup: LoadedF2Setup }) {
+function SavedF2SetupView({
+  setup,
+  currentStage,
+  currentNextAction,
+  actionLoading,
+  onCheckedOneBottle,
+  onNeedsMoreCarbonation,
+  onRefrigerateNow,
+  onMovedToFridge,
+  onMarkCompleted,
+}: {
+  setup: LoadedF2Setup;
+  currentStage: BatchStage;
+  currentNextAction?: string;
+  actionLoading: F2ActiveAction | null;
+  onCheckedOneBottle: () => void;
+  onNeedsMoreCarbonation: () => void;
+  onRefrigerateNow: () => void;
+  onMovedToFridge: () => void;
+  onMarkCompleted: () => void;
+}) {
   const snapshot = (setup.recipeSnapshotJson || {}) as {
     guidedMode?: boolean;
     recipeName?: string | null;
@@ -125,6 +161,109 @@ function SavedF2SetupView({ setup }: { setup: LoadedF2Setup }) {
             </p>
           </div>
         </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+        <div>
+          <h4 className="text-base font-semibold text-foreground">Current next action</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            This is the current instruction saved on the batch.
+          </p>
+        </div>
+
+        <div className="rounded-xl bg-muted/50 p-4">
+          <p className="text-sm font-semibold text-foreground">
+            {currentNextAction || "No next action recorded."}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1 capitalize">
+            Current stage: {currentStage.replaceAll("_", " ")}
+          </p>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div>
+          <h4 className="text-base font-semibold text-foreground">F2 actions</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            Record what happened after checking carbonation or moving the bottles.
+          </p>
+        </div>
+
+        {currentStage === "f2_active" ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCheckedOneBottle}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "checked-one-bottle"
+                ? "Saving..."
+                : "Checked one bottle"}
+            </Button>
+
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onNeedsMoreCarbonation}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "needs-more-carbonation"
+                ? "Saving..."
+                : "Needs more carbonation"}
+            </Button>
+
+            <Button
+              type="button"
+              onClick={onRefrigerateNow}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "refrigerate-now"
+                ? "Saving..."
+                : "Refrigerate now"}
+            </Button>
+          </div>
+        ) : currentStage === "refrigerate_now" ? (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground">
+              This batch is marked as ready to refrigerate.
+            </p>
+
+            <Button
+              type="button"
+              onClick={onMovedToFridge}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "moved-to-fridge"
+                ? "Saving..."
+                : "Moved to fridge"}
+            </Button>
+          </div>
+        ) : currentStage === "chilled_ready" ? (
+          <div className="space-y-3">
+            <p className="text-sm text-foreground">
+              This batch is chilled and ready. Mark it complete once you want to close out the lifecycle.
+            </p>
+
+            <Button
+              type="button"
+              onClick={onMarkCompleted}
+              disabled={actionLoading !== null}
+            >
+              {actionLoading === "mark-completed"
+                ? "Saving..."
+                : "Mark completed"}
+            </Button>
+          </div>
+        ) : currentStage === "completed" ? (
+          <p className="text-sm text-foreground">
+            This batch has been completed.
+          </p>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No F2 actions are available for this stage.
+          </p>
+        )}
       </div>
 
       <div className="bg-card border border-border rounded-xl p-5 space-y-4">
@@ -254,8 +393,11 @@ export default function F2SetupWizard({
   batch,
   userId,
   onF2Started,
+  onBatchStateChanged,
 }: F2SetupWizardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedActionLoading, setSavedActionLoading] =
+    useState<F2ActiveAction | null>(null);
   const [savedSetup, setSavedSetup] = useState<LoadedF2Setup | null>(null);
   const [loadingSavedSetup, setLoadingSavedSetup] = useState(true);
   const [step, setStep] = useState(1);
@@ -543,7 +685,11 @@ export default function F2SetupWizard({
         ? presetRecipes
         : [];
 
-  const showSavedSetup = batch.currentStage === "f2_active" && savedSetup !== null;
+  const showSavedSetup =
+    savedSetup !== null &&
+    ["f2_active", "refrigerate_now", "chilled_ready", "completed"].includes(
+      batch.currentStage
+    );
 
   const handleConfirmAndStartF2 = async () => {
     if (!userId) {
@@ -600,6 +746,42 @@ export default function F2SetupWizard({
     }
   };
 
+  const handleSavedF2Action = async (action: F2ActiveAction) => {
+    if (!userId) {
+      toast.error("You need to be signed in to update this batch.");
+      return;
+    }
+
+    try {
+      setSavedActionLoading(action);
+
+      const result = await applyF2ActiveAction({
+        batch,
+        userId,
+        action,
+      });
+
+      onBatchStateChanged?.({
+        currentStage: result.currentStage,
+        updatedAt: result.updatedAt,
+        nextAction: result.nextAction,
+        status: result.status,
+        completedAt: result.completedAt,
+      });
+
+      toast.success(result.successMessage);
+    } catch (error) {
+      console.error("Saved F2 action error:", error);
+
+      const message =
+        error instanceof Error ? error.message : "Could not update this batch.";
+
+      toast.error(message);
+    } finally {
+      setSavedActionLoading(null);
+    }
+  };
+
   if (loadingSavedSetup) {
     return (
       <div className="bg-card border border-border rounded-xl p-5">
@@ -611,7 +793,19 @@ export default function F2SetupWizard({
   return (
     <div className="space-y-5">
       {showSavedSetup ? (
-        <SavedF2SetupView setup={savedSetup} />
+        <SavedF2SetupView
+          setup={savedSetup!}
+          currentStage={batch.currentStage}
+          currentNextAction={batch.nextAction || getNextAction(batch)}
+          actionLoading={savedActionLoading}
+          onCheckedOneBottle={() => handleSavedF2Action("checked-one-bottle")}
+          onNeedsMoreCarbonation={() =>
+            handleSavedF2Action("needs-more-carbonation")
+          }
+          onRefrigerateNow={() => handleSavedF2Action("refrigerate-now")}
+          onMovedToFridge={() => handleSavedF2Action("moved-to-fridge")}
+          onMarkCompleted={() => handleSavedF2Action("mark-completed")}
+        />
       ) : (
         <>
           <div className="bg-card border border-border rounded-xl p-5">
