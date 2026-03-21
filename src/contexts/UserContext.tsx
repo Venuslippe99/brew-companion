@@ -54,7 +54,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [profileLoading, setProfileLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
-    const saved = localStorage.getItem("brewflow-preferences");
+    const saved = localStorage.getItem("kombloom-preferences");
     return saved ? { ...defaultPreferences, ...JSON.parse(saved) } : defaultPreferences;
   });
 
