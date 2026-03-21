@@ -22,7 +22,7 @@ export type Database = {
           title: string | null
           updated_at: string
           user_id: string
-          f2_started_at: string | null
+          
         }
         Insert: {
           created_at?: string
@@ -31,7 +31,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id: string
-          f2_started_at?: string | null
+          
         }
         Update: {
           created_at?: string
@@ -40,7 +40,7 @@ export type Database = {
           title?: string | null
           updated_at?: string
           user_id?: string
-          f2_started_at?: string | null
+          
         }
         Relationships: [
           {
@@ -800,6 +800,7 @@ export type Database = {
           id: string
           prefers_guided_mode: boolean
           updated_at: string
+          f2_started_at: string | null
         }
         Insert: {
           brewing_goal?: Database["public"]["Enums"]["brewing_goal_enum"] | null
@@ -810,6 +811,7 @@ export type Database = {
           id: string
           prefers_guided_mode?: boolean
           updated_at?: string
+          f2_started_at?: string | null
         }
         Update: {
           brewing_goal?: Database["public"]["Enums"]["brewing_goal_enum"] | null
@@ -820,6 +822,7 @@ export type Database = {
           id?: string
           prefers_guided_mode?: boolean
           updated_at?: string
+          f2_started_at?: string | null
         }
         Relationships: []
       }
