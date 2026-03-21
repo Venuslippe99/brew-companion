@@ -121,7 +121,7 @@ export default function Settings() {
               <div className="space-y-3">
                 <div>
                   <p className="text-sm font-medium text-foreground">
-                    {preferences.displayName || "BrewFlow User"}
+                    {preferences.displayName || "Kombloom User"}
                   </p>
                   <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>

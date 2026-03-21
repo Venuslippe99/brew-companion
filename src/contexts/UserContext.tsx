@@ -54,7 +54,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
   const [profileLoading, setProfileLoading] = useState(false);
   const [preferences, setPreferences] = useState<UserPreferences>(() => {
-    const saved = localStorage.getItem("brewflow-preferences");
+    const saved = localStorage.getItem("kombloom-preferences");
     return saved ? { ...defaultPreferences, ...JSON.parse(saved) } : defaultPreferences;
   });
 
@@ -94,7 +94,7 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
 
   // Persist to localStorage always
   useEffect(() => {
-    localStorage.setItem("brewflow-preferences", JSON.stringify(preferences));
+    localStorage.setItem("kombloom-preferences", JSON.stringify(preferences));
     if (preferences.darkMode) {
       document.documentElement.classList.add("dark");
     } else {
