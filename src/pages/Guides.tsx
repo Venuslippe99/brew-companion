@@ -5,14 +5,14 @@ import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { useNavigate } from "react-router-dom";
 import { Search, BookOpen, ChevronRight, Clock } from "lucide-react";
 
-const categories = [...new Set(guideArticles.map((g) => g.category))];
+const categories = [...new Set(guide.map((g) => g.category))];
 
 export default function Guides() {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [selectedCat, setSelectedCat] = useState<string | null>(null);
 
-  let filtered = guideArticles;
+  let filtered = guide;
   if (search) {
     filtered = filtered.filter((g) =>
       g.title.toLowerCase().includes(search.toLowerCase()) ||
