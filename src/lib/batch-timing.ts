@@ -32,6 +32,12 @@ const shortDateFormatter = new Intl.DateTimeFormat("en-GB", {
   month: "short",
 });
 
+const F1_TIMING_STAGES = new Set([
+  "f1_active",
+  "f1_check_window",
+  "f1_extended",
+]);
+
 function stripTime(date: Date) {
   return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
@@ -112,12 +118,12 @@ export function getBatchStageTiming(
 ): BatchTimingResult | null {
   if (!batch.brew_started_at) return null;
 
-  // Phase 1 only: calculate timing for F1 batches
-  if (batch.current_stage && batch.current_stage !== "f1_active") {
+  if (batch.current_stage && !F1_TIMING_STAGES.has(batch.current_stage)) {
     return null;
   }
 
   const elapsedDays = getElapsedDays(batch.brew_started_at, now);
+  const isExtendedF1 = batch.current_stage === "f1_extended";
 
   const baseReadyDay = 7;
   const temperatureAdjustment = getTemperatureAdjustment(batch.avg_room_temp_c);
@@ -156,14 +162,18 @@ export function getBatchStageTiming(
     nextCheckText = "Taste tomorrow";
   } else if (elapsedDays <= windowEndDay) {
     status = "ready";
-    statusLabel = "Ready to taste";
-    guidance = "This is a good time to taste and decide whether to continue F1 or start F2.";
+    statusLabel = isExtendedF1 ? "Still fermenting, taste again" : "Ready to taste";
+    guidance = isExtendedF1
+      ? "You chose to keep fermenting. Taste again today and move to F2 when it is ready."
+      : "This is a good time to taste and decide whether to continue F1 or start F2.";
     nextActionLabel = "Taste today";
     nextCheckText = "Taste today";
   } else {
     status = "overdue";
-    statusLabel = "Past expected F1 window";
-    guidance = "Your batch is past its expected F1 window. Taste now and move to F2 if ready.";
+    statusLabel = isExtendedF1 ? "Extended F1, check again now" : "Past expected F1 window";
+    guidance = isExtendedF1
+      ? "This batch is still in F1 beyond the first window. Taste again now and move to F2 once it is ready."
+      : "Your batch is past its expected F1 window. Taste now and move to F2 if ready.";
     nextActionLabel = "Taste now";
     nextCheckText = "Check flavour now";
   }
