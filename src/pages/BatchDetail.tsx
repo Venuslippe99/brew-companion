@@ -1,12 +1,14 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { getDayNumber, type KombuchaBatch } from "@/lib/batches";
+import { getDayNumber, type BatchStage, type KombuchaBatch } from "@/lib/batches";
 import { getBatchStageTiming } from "@/lib/batch-timing";
 import { supabase } from "@/integrations/supabase/client";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/contexts/AuthContext";
+import { toast } from "sonner";
 import {
   ArrowLeft,
   Thermometer,
@@ -24,7 +26,45 @@ type BatchReminder = {
   urgencyLevel: "low" | "medium" | "high" | "overdue";
 };
 
-function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: BatchReminder[] }) {
+type WorkflowAction = "start-f2" | "still-fermenting";
+
+const f1TimingStages: BatchStage[] = ["f1_active", "f1_check_window", "f1_extended"];
+
+function getStageProgressIndex(stage: BatchStage) {
+  switch (stage) {
+    case "f1_active":
+      return 0;
+    case "f1_check_window":
+    case "f1_extended":
+      return 1;
+    case "f2_setup":
+    case "f2_active":
+      return 2;
+    case "refrigerate_now":
+      return 3;
+    case "chilled_ready":
+    case "completed":
+    case "archived":
+    case "discarded":
+      return 4;
+    default:
+      return 0;
+  }
+}
+
+function OverviewTab({
+  batch,
+  reminders,
+  onStartF2,
+  onStillFermenting,
+  actionLoading,
+}: {
+  batch: KombuchaBatch;
+  reminders: BatchReminder[];
+  onStartF2: () => Promise<void>;
+  onStillFermenting: () => Promise<void>;
+  actionLoading: WorkflowAction | null;
+}) {
   const timing = getBatchStageTiming({
     brew_started_at: batch.brewStartedAt,
     current_stage: batch.currentStage,
@@ -34,12 +74,21 @@ function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: Ba
     total_volume_ml: batch.totalVolumeMl,
   });
 
+  const stageIndex = getStageProgressIndex(batch.currentStage);
+
   const timingStatusClasses =
     timing?.status === "ready"
       ? "bg-primary/10 text-primary border border-primary/15"
       : timing?.status === "overdue"
         ? "bg-caution-bg text-caution-foreground border border-caution/15"
         : "bg-muted text-foreground border border-border";
+
+  const showWorkflowActions =
+    !!timing &&
+    (timing.status === "ready" || timing.status === "overdue") &&
+    f1TimingStages.includes(batch.currentStage);
+
+  const actionsDisabled = actionLoading !== null;
 
   return (
     <div className="space-y-5">
@@ -48,10 +97,8 @@ function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: Ba
           <h3 className="text-sm font-semibold text-foreground uppercase tracking-wider mb-3">Stage Progress</h3>
           <div className="flex items-center gap-1">
             {["F1", "Check", "F2", "Chill", "Done"].map((label, i) => {
-              const stageIndex = ["f1_active", "f1_check_window", "f2_active", "refrigerate_now", "completed"].indexOf(batch.currentStage);
-              const safeIndex = stageIndex === -1 ? 0 : stageIndex;
-              const isCompleted = i <= safeIndex;
-              const isCurrent = i === safeIndex;
+              const isCompleted = i <= stageIndex;
+              const isCurrent = i === stageIndex;
               return (
                 <div key={label} className="flex-1 flex flex-col items-center gap-1.5">
                   <div
@@ -113,6 +160,38 @@ function OverviewTab({ batch, reminders }: { batch: KombuchaBatch; reminders: Ba
                 </p>
               </div>
             </div>
+
+            {showWorkflowActions && (
+              <div className="rounded-xl bg-primary/5 border border-primary/15 p-4 space-y-3">
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    After tasting
+                  </p>
+                  <p className="text-sm text-foreground mt-1">
+                    Record what happened so the batch moves into the right next step.
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <Button
+                    className="sm:flex-1"
+                    onClick={onStartF2}
+                    disabled={actionsDisabled}
+                  >
+                    {actionLoading === "start-f2" ? "Starting F2..." : "Start F2"}
+                  </Button>
+
+                  <Button
+                    variant="outline"
+                    className="sm:flex-1"
+                    onClick={onStillFermenting}
+                    disabled={actionsDisabled}
+                  >
+                    {actionLoading === "still-fermenting" ? "Saving..." : "Still fermenting"}
+                  </Button>
+                </div>
+              </div>
+            )}
 
             <div className="rounded-xl bg-honey-light border border-primary/10 p-3">
               <p className="text-xs text-muted-foreground">Why this estimate</p>
@@ -225,10 +304,12 @@ function PlaceholderTab({ title, description }: { title: string; description: st
 export default function BatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("Overview");
   const [batch, setBatch] = useState<KombuchaBatch | null>(null);
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [actionLoading, setActionLoading] = useState<WorkflowAction | null>(null);
 
   useEffect(() => {
     const loadBatch = async () => {
@@ -329,6 +410,135 @@ export default function BatchDetail() {
     loadBatch();
   }, [id]);
 
+  const applyWorkflowAction = async ({
+    action,
+    nextStage,
+    nextAction,
+    reason,
+    logType,
+    note,
+    successMessage,
+    nextTab,
+  }: {
+    action: WorkflowAction;
+    nextStage: BatchStage;
+    nextAction: string;
+    reason: string;
+    logType: "taste_test" | "moved_to_f2";
+    note: string;
+    successMessage: string;
+    nextTab?: string;
+  }) => {
+    if (!batch) return;
+
+    if (!user?.id) {
+      toast.error("You need to be signed in to update this batch.");
+      return;
+    }
+
+    const nowIso = new Date().toISOString();
+    const previousStage = batch.currentStage;
+
+    setActionLoading(action);
+
+    try {
+      const { error: batchUpdateError } = await supabase
+        .from("kombucha_batches")
+        .update({
+          current_stage: nextStage,
+          next_action: nextAction,
+          updated_at: nowIso,
+        })
+        .eq("id", batch.id);
+
+      if (batchUpdateError) {
+        throw batchUpdateError;
+      }
+
+      const auxiliaryWrites = await Promise.allSettled([
+        supabase.from("batch_stage_events").insert({
+          batch_id: batch.id,
+          from_stage: previousStage,
+          to_stage: nextStage,
+          reason,
+          triggered_by: user.id,
+        }),
+        supabase.from("batch_logs").insert({
+          batch_id: batch.id,
+          created_by_user_id: user.id,
+          log_type: logType,
+          logged_at: nowIso,
+          note,
+          structured_payload: {
+            source: "timing_card",
+            action,
+            from_stage: previousStage,
+            to_stage: nextStage,
+          },
+        }),
+      ]);
+
+      const auxiliaryWriteFailed = auxiliaryWrites.some((result) => {
+        if (result.status === "rejected") return true;
+        return !!result.value.error;
+      });
+
+      if (auxiliaryWriteFailed) {
+        console.error("Batch workflow update partially failed:", auxiliaryWrites);
+      }
+
+      setBatch((current) =>
+        current
+          ? {
+              ...current,
+              currentStage: nextStage,
+              updatedAt: nowIso,
+            }
+          : current
+      );
+
+      if (nextTab) {
+        setActiveTab(nextTab);
+      }
+
+      toast.success(successMessage);
+
+      if (auxiliaryWriteFailed) {
+        toast.message("The stage changed, but one of the timeline entries could not be saved.");
+      }
+    } catch (error) {
+      console.error("Batch workflow action error:", error);
+      toast.error("Couldn't update this batch.");
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleStartF2 = async () => {
+    await applyWorkflowAction({
+      action: "start-f2",
+      nextStage: "f2_setup",
+      nextAction: "Configure bottles and flavourings for F2",
+      reason: "Started F2 from timing card",
+      logType: "moved_to_f2",
+      note: "User marked the batch as ready and moved into F2 setup from the timing card.",
+      successMessage: "Moved to F2 setup.",
+      nextTab: "F2 & Bottles",
+    });
+  };
+
+  const handleStillFermenting = async () => {
+    await applyWorkflowAction({
+      action: "still-fermenting",
+      nextStage: "f1_extended",
+      nextAction: "Continue F1 and taste again tomorrow",
+      reason: "Continued F1 after tasting",
+      logType: "taste_test",
+      note: "User tasted the batch and chose to continue F1.",
+      successMessage: "Batch kept in F1.",
+    });
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -412,7 +622,15 @@ export default function BatchDetail() {
         </ScrollReveal>
 
         <div className="min-h-[300px]">
-          {activeTab === "Overview" && <OverviewTab batch={batch} reminders={reminders} />}
+          {activeTab === "Overview" && (
+            <OverviewTab
+              batch={batch}
+              reminders={reminders}
+              onStartF2={handleStartF2}
+              onStillFermenting={handleStillFermenting}
+              actionLoading={actionLoading}
+            />
+          )}
           {activeTab === "Timeline" && <TimelineTab batch={batch} />}
           {activeTab === "Logs" && <PlaceholderTab title="Logs" description="Structured action history will appear here. Add taste tests, temperature readings, and more." />}
           {activeTab === "F2 & Bottles" && <PlaceholderTab title="F2 & Bottles" description="Set up your second fermentation here once F1 is ready. Configure bottles, flavourings, and carbonation targets." />}
