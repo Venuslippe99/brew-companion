@@ -97,8 +97,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
       .single();
 
     if (recipeError || !savedRecipe) {
-      throw recipeError || new Error("Could not save recipe.");
-    }
+throw new Error(
+  `Could not save recipe: ${recipeError?.message || "unknown error"}`
+);    }
 
     persistedRecipeId = savedRecipe.id;
 
@@ -120,7 +121,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
       .select("id, sort_order");
 
     if (recipeItemsError) {
-      throw recipeItemsError;
+      throw new Error(
+  `Could not save recipe items: ${recipeItemsError.message}`
+);
     }
 
     persistedRecipeItemIdsByDraftId = {};
@@ -201,7 +204,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     .single();
 
   if (setupError || !setupRow) {
-    throw setupError || new Error("Could not create F2 setup.");
+    throw new Error(
+  `Could not create F2 setup: ${setupError?.message || "unknown error"}`
+);
   }
 
   const setupId = setupRow.id;
@@ -227,8 +232,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     .insert(groupRows);
 
   if (groupsError) {
-    throw groupsError;
-  }
+throw new Error(
+  `Could not save bottle groups: ${groupsError.message}`
+);  }
 
   const bottleRows: TablesInsert<"batch_bottles">[] = [];
   const bottleMeta: Array<{
@@ -283,7 +289,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     .select("id");
 
   if (bottlesError || !insertedBottles) {
-    throw bottlesError || new Error("Could not create bottles.");
+    throw new Error(
+  `Could not create bottles: ${bottlesError?.message || "unknown error"}`
+);
   }
 
   const ingredientRows: TablesInsert<"batch_bottle_ingredients">[] = insertedBottles.flatMap(
@@ -314,7 +322,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     .insert(ingredientRows);
 
   if (ingredientsError) {
-    throw ingredientsError;
+    throw new Error(
+  `Could not save bottle ingredients: ${ingredientsError.message}`
+);
   }
 
   const { error: batchUpdateError } = await supabase
@@ -328,7 +338,9 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     .eq("id", batch.id);
 
   if (batchUpdateError) {
-    throw batchUpdateError;
+    throw new Error(
+  `Could not update batch to F2 active: ${batchUpdateError.message}`
+);
   }
 
   await Promise.allSettled([
