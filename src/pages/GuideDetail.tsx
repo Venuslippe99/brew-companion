@@ -8,7 +8,7 @@ import { ArrowLeft, Clock, FlaskConical } from "lucide-react";
 export default function GuideDetail() {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const guide = guideArticles.find((g) => g.slug === slug);
+  const guide = guide.find((g) => g.slug === slug);
 
   if (!guide) {
     return (
