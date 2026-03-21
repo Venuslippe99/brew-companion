@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
-import { getDayNumber, getNextAction, type KombuchaBatch } from "@/lib/mock-data";
+import { getDayNumber, getNextAction, type KombuchaBatch } from "@/lib/batches";
 import { supabase } from "@/integrations/supabase/client";
 import { StageIndicator, CautionBadge } from "@/components/common/StageIndicator";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
