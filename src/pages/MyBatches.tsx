@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { BatchCard } from "@/components/batches/BatchCard";
-import { type BatchStatus, type KombuchaBatch } from "@/lib/mock-data";
+import { type BatchStatus, type KombuchaBatch } from "@/lib/batches";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
