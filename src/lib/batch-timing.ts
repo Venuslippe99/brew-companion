@@ -1,5 +1,6 @@
 export type BatchTimingInput = {
   brew_started_at?: string | null;
+  f2_started_at?: string | null;
   current_stage?: string | null;
   avg_room_temp_c?: number | null;
   target_preference?: string | null;
@@ -10,8 +11,8 @@ export type BatchTimingInput = {
 export type BatchTimingStatus = "too_early" | "approaching" | "ready" | "overdue";
 
 export type BatchTimingResult = {
-  stageKey: "f1_active";
-  stageLabel: "F1";
+  stageKey: "f1_active" | "f2_active";
+  stageLabel: "F1" | "F2";
   elapsedDays: number;
   estimatedReadyDay: number;
   windowStartDay: number;
@@ -89,6 +90,22 @@ function getStarterAdjustment(starterLiquidMl?: number | null, totalVolumeMl?: n
   return 0;
 }
 
+function getF2Window(tempC?: number | null) {
+  if (tempC == null) {
+    return { firstCheckDay: 2, refrigerateByDay: 4 };
+  }
+
+  if (tempC >= 26) {
+    return { firstCheckDay: 1, refrigerateByDay: 3 };
+  }
+
+  if (tempC >= 23) {
+    return { firstCheckDay: 2, refrigerateByDay: 4 };
+  }
+
+  return { firstCheckDay: 3, refrigerateByDay: 5 };
+}
+
 function buildExplanation(batch: BatchTimingInput) {
   const parts: string[] = [];
 
@@ -117,6 +134,66 @@ export function getBatchStageTiming(
   now = new Date()
 ): BatchTimingResult | null {
   if (!batch.brew_started_at) return null;
+
+  if (batch.current_stage === "f2_active") {
+    if (!batch.f2_started_at) return null;
+
+    const elapsedDays = getElapsedDays(batch.f2_started_at, now);
+    const { firstCheckDay, refrigerateByDay } = getF2Window(batch.avg_room_temp_c);
+
+    let status: BatchTimingStatus;
+    let statusLabel: string;
+    let guidance: string;
+    let nextActionLabel: string;
+    let nextCheckText: string;
+
+    if (elapsedDays < firstCheckDay) {
+      const daysUntilCheck = firstCheckDay - elapsedDays;
+      status = "too_early";
+      statusLabel = "Carbonation still building";
+      guidance = "Your bottles are still carbonating. Do not open them yet unless pressure risk is high.";
+      nextActionLabel = "Let bottles carbonate";
+      nextCheckText = `Check in ${daysUntilCheck} day${daysUntilCheck === 1 ? "" : "s"}`;
+    } else if (elapsedDays === firstCheckDay) {
+      status = "ready";
+      statusLabel = "Check one bottle today";
+      guidance = "Open one tester bottle and assess carbonation.";
+      nextActionLabel = "Test carbonation";
+      nextCheckText = "Check today";
+    } else if (elapsedDays <= refrigerateByDay) {
+      status = "ready";
+      statusLabel = "In carbonation window";
+      guidance = "Your batch is in the likely carbonation window. Check daily and refrigerate once ready.";
+      nextActionLabel = "Check daily";
+      nextCheckText = "Refrigerate when carbonation is right";
+    } else {
+      status = "overdue";
+      statusLabel = "Past expected F2 window";
+      guidance = "Your bottles may now be highly carbonated. Chill them as soon as possible.";
+      nextActionLabel = "Refrigerate now";
+      nextCheckText = "Move to fridge now";
+    }
+
+    const f2StartDate = stripTime(new Date(batch.f2_started_at));
+    const windowStartDate = addDays(f2StartDate, firstCheckDay - 1);
+    const windowEndDate = addDays(f2StartDate, refrigerateByDay - 1);
+
+    return {
+      stageKey: "f2_active",
+      stageLabel: "F2",
+      elapsedDays,
+      estimatedReadyDay: firstCheckDay,
+      windowStartDay: firstCheckDay,
+      windowEndDay: refrigerateByDay,
+      windowDateRangeText: `${formatShortDate(windowStartDate)}–${formatShortDate(windowEndDate)}`,
+      status,
+      statusLabel,
+      guidance,
+      nextActionLabel,
+      nextCheckText,
+      explanation: "Based on when F2 started and your room temperature.",
+    };
+  }
 
   if (batch.current_stage && !F1_TIMING_STAGES.has(batch.current_stage)) {
     return null;
