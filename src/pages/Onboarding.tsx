@@ -52,8 +52,9 @@ export default function Onboarding() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="text-center space-y-6"
             >
-              <div className="h-16 w-16 rounded-2xl bg-honey-light flex items-center justify-center mx-auto">
-                <FlaskConical className="h-8 w-8 text-primary" />
+              <img src={kombuchaHero} alt="Kombucha brewing" className="w-full max-w-[200px] mx-auto rounded-2xl shadow-lg shadow-primary/10 mb-2" />
+              <div className="h-14 w-14 rounded-2xl bg-honey-light flex items-center justify-center mx-auto">
+                <FlaskConical className="h-7 w-7 text-primary" />
               </div>
               <div>
                 <h1 className="font-display text-3xl font-semibold text-foreground">Welcome to BrewFlow</h1>
