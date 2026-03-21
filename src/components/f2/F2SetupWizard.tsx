@@ -3,6 +3,10 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { startF2FromWizard } from "@/lib/f2-persistence";
+import {
+  loadCurrentF2Setup,
+  type LoadedF2Setup,
+} from "@/lib/f2-current-setup";
 import type { KombuchaBatch } from "@/lib/batches";
 import type {
   F2BottleGroupDraft,
@@ -49,12 +53,211 @@ function makeRecipeItem(): F2RecipeItemDraft {
   };
 }
 
+function SavedF2SetupView({ setup }: { setup: LoadedF2Setup }) {
+  const snapshot = (setup.recipeSnapshotJson || {}) as {
+    guidedMode?: boolean;
+    recipeName?: string | null;
+    recipeDescription?: string | null;
+    items?: Array<{
+      customIngredientName?: string | null;
+      amountPer500?: number;
+      unit?: string;
+      prepNotes?: string | null;
+    }>;
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div>
+          <h3 className="text-lg font-semibold text-foreground">Saved F2 setup</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            This batch already has an active F2 setup saved in the database.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground">Carbonation</p>
+            <p className="font-semibold text-foreground capitalize">
+              {setup.desiredCarbonationLevel}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Risk</p>
+            <p className="font-semibold text-foreground capitalize">
+              {setup.estimatedPressureRisk || "Unknown"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Bottle count</p>
+            <p className="font-semibold text-foreground">{setup.bottleCount}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Ambient temp</p>
+            <p className="font-semibold text-foreground">{setup.ambientTempC}°C</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3 text-sm">
+          <div>
+            <p className="text-muted-foreground">Available F1</p>
+            <p className="font-semibold text-foreground">
+              {setup.availableF1VolumeMl != null
+                ? `${(setup.availableF1VolumeMl / 1000).toFixed(2)}L`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Planned bottle volume</p>
+            <p className="font-semibold text-foreground">
+              {setup.plannedBottleVolumeMl != null
+                ? `${(setup.plannedBottleVolumeMl / 1000).toFixed(2)}L`
+                : "—"}
+            </p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Planned kombucha fill</p>
+            <p className="font-semibold text-foreground">
+              {setup.plannedKombuchaFillMl != null
+                ? `${(setup.plannedKombuchaFillMl / 1000).toFixed(2)}L`
+                : "—"}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div>
+          <h4 className="text-base font-semibold text-foreground">Bottle groups</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            These are the saved bottle groups for this F2 run.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {setup.groups.map((group, index) => (
+            <div key={group.id} className="rounded-xl border border-border p-4">
+              <p className="text-sm font-semibold text-foreground">
+                {group.groupLabel || `Group ${index + 1}`}
+              </p>
+
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-3 text-sm mt-3">
+                <div>
+                  <p className="text-muted-foreground">Count</p>
+                  <p className="font-medium text-foreground">{group.bottleCount}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Bottle size</p>
+                  <p className="font-medium text-foreground">{group.bottleSizeMl}ml</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Type</p>
+                  <p className="font-medium text-foreground capitalize">
+                    {group.bottleType.replaceAll("_", " ")}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Headspace</p>
+                  <p className="font-medium text-foreground">{group.headspaceMl}ml</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Target fill</p>
+                  <p className="font-medium text-foreground">{group.targetFillMl}ml</p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div>
+          <h4 className="text-base font-semibold text-foreground">Recipe snapshot</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            This is the saved recipe snapshot used when F2 started.
+          </p>
+        </div>
+
+        <div className="text-sm">
+          <p className="text-muted-foreground">Recipe</p>
+          <p className="font-semibold text-foreground">
+            {setup.recipeNameSnapshot || snapshot.recipeName || "Unnamed recipe"}
+          </p>
+        </div>
+
+        {snapshot.items && snapshot.items.length > 0 ? (
+          <div className="space-y-2">
+            {snapshot.items.map((item, index) => (
+              <div
+                key={`${item.customIngredientName || "ingredient"}-${index}`}
+                className="rounded-lg border border-border p-3 text-sm"
+              >
+                <p className="font-medium text-foreground">
+                  {item.customIngredientName || "Ingredient"}
+                </p>
+                <p className="text-muted-foreground">
+                  {item.amountPer500 ?? 0}
+                  {item.unit || ""} per 500ml
+                </p>
+                {item.prepNotes && (
+                  <p className="text-muted-foreground mt-1">{item.prepNotes}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            No recipe snapshot items were found.
+          </p>
+        )}
+      </div>
+
+      <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+        <div>
+          <h4 className="text-base font-semibold text-foreground">Created bottles</h4>
+          <p className="text-sm text-muted-foreground mt-1">
+            These bottles were created when F2 started.
+          </p>
+        </div>
+
+        <div className="space-y-3">
+          {setup.bottles.map((bottle, index) => (
+            <div key={bottle.id} className="rounded-xl border border-border p-4">
+              <p className="text-sm font-semibold text-foreground">
+                {bottle.bottleLabel || `Bottle ${index + 1}`} · {bottle.bottleSizeMl}ml
+              </p>
+
+              {bottle.ingredients.length > 0 ? (
+                <ul className="mt-2 space-y-1 text-sm text-foreground list-disc pl-5">
+                  {bottle.ingredients.map((ingredient) => (
+                    <li key={ingredient.id}>
+                      {ingredient.ingredientNameSnapshot}: {ingredient.amountValue}
+                      {ingredient.amountUnit}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  No saved ingredient rows found for this bottle.
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function F2SetupWizard({
   batch,
   userId,
   onF2Started,
 }: F2SetupWizardProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [savedSetup, setSavedSetup] = useState<LoadedF2Setup | null>(null);
+  const [loadingSavedSetup, setLoadingSavedSetup] = useState(true);
   const [step, setStep] = useState(1);
 
   const [reserveForSedimentMl, setReserveForSedimentMl] = useState(200);
@@ -191,6 +394,38 @@ export default function F2SetupWizard({
     loadSelectedRecipeItems();
   }, [selectedRecipeId, myRecipes, presetRecipes]);
 
+  useEffect(() => {
+    let isMounted = true;
+
+    const run = async () => {
+      try {
+        setLoadingSavedSetup(true);
+
+        const data = await loadCurrentF2Setup(batch.id);
+
+        if (!isMounted) return;
+        setSavedSetup(data);
+      } catch (error) {
+        console.error("Load saved F2 setup error:", error);
+
+        if (!isMounted) return;
+        toast.error(
+          error instanceof Error ? error.message : "Could not load saved F2 setup."
+        );
+      } finally {
+        if (isMounted) {
+          setLoadingSavedSetup(false);
+        }
+      }
+    };
+
+    run();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [batch.id]);
+
   const flavourPresetMap = useMemo(() => {
     return Object.fromEntries(flavourPresets.map((preset) => [preset.id, preset]));
   }, [flavourPresets]);
@@ -302,670 +537,724 @@ export default function F2SetupWizard({
         : true;
 
   const activeRecipeList =
-    recipeSourceTab === "my" ? myRecipes : recipeSourceTab === "presets" ? presetRecipes : [];
+    recipeSourceTab === "my"
+      ? myRecipes
+      : recipeSourceTab === "presets"
+        ? presetRecipes
+        : [];
+
+  const showSavedSetup = batch.currentStage === "f2_active" && savedSetup !== null;
+
   const handleConfirmAndStartF2 = async () => {
-  if (!userId) {
-    toast.error("You need to be signed in to start F2.");
-    return;
+    if (!userId) {
+      toast.error("You need to be signed in to start F2.");
+      return;
+    }
+
+    if (summary.validationErrors.length > 0) {
+      toast.error("Fix the review errors first.");
+      return;
+    }
+
+    try {
+      setIsSubmitting(true);
+
+      const result = await startF2FromWizard({
+        batch,
+        userId,
+        reserveForSedimentMl,
+        ambientTempC,
+        desiredCarbonationLevel,
+        bottleGroups,
+        recipeSourceTab,
+        guidedMode,
+        selectedRecipeId,
+        recipeName,
+        recipeDescription,
+        saveRecipe,
+        adjustedRecipeItems,
+        summary,
+      });
+
+      try {
+        const refreshedSetup = await loadCurrentF2Setup(batch.id);
+        setSavedSetup(refreshedSetup);
+      } catch (refreshError) {
+        console.error("Refresh saved F2 setup error:", refreshError);
+      }
+
+      onF2Started?.({
+        f2StartedAt: result.f2StartedAt,
+        nextAction: result.nextAction,
+      });
+
+      toast.success("F2 started successfully.");
+    } catch (error) {
+      console.error("Start F2 error:", error);
+
+      const message = error instanceof Error ? error.message : "Unknown error";
+
+      toast.error(message);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (loadingSavedSetup) {
+    return (
+      <div className="bg-card border border-border rounded-xl p-5">
+        <p className="text-sm text-muted-foreground">Loading F2 setup...</p>
+      </div>
+    );
   }
-
-  if (summary.validationErrors.length > 0) {
-    toast.error("Fix the review errors first.");
-    return;
-  }
-
-  try {
-    setIsSubmitting(true);
-
-    const result = await startF2FromWizard({
-      batch,
-      userId,
-      reserveForSedimentMl,
-      ambientTempC,
-      desiredCarbonationLevel,
-      bottleGroups,
-      recipeSourceTab,
-      guidedMode,
-      selectedRecipeId,
-      recipeName,
-      recipeDescription,
-      saveRecipe,
-      adjustedRecipeItems,
-      summary,
-    });
-
-    onF2Started?.({
-      f2StartedAt: result.f2StartedAt,
-      nextAction: result.nextAction,
-    });
-
-    toast.success("F2 started successfully.");
-  } catch (error) {
-  console.error("Start F2 error:", error);
-
-  const message =
-    error instanceof Error ? error.message : "Unknown error";
-
-  toast.error(message);
-} finally {
-    setIsSubmitting(false);
-  }
-};
 
   return (
     <div className="space-y-5">
-      <div className="bg-card border border-border rounded-xl p-5">
-        <h3 className="text-lg font-semibold text-foreground">F2 Setup Wizard</h3>
-        <p className="text-sm text-muted-foreground mt-1">
-          Plan bottles, choose a recipe, and generate a carbonation-ready bottling plan.
-        </p>
+      {showSavedSetup ? (
+        <SavedF2SetupView setup={savedSetup} />
+      ) : (
+        <>
+          <div className="bg-card border border-border rounded-xl p-5">
+            <h3 className="text-lg font-semibold text-foreground">F2 Setup Wizard</h3>
+            <p className="text-sm text-muted-foreground mt-1">
+              Plan bottles, choose a recipe, and generate a carbonation ready bottling
+              plan.
+            </p>
 
-        <div className="grid grid-cols-3 gap-2 mt-4">
-          {[1, 2, 3].map((n) => {
-            const labels = {
-              1: "Bottle Plan",
-              2: "Recipe",
-              3: "Review",
-            } as const;
+            <div className="grid grid-cols-3 gap-2 mt-4">
+              {[1, 2, 3].map((n) => {
+                const labels = {
+                  1: "Bottle Plan",
+                  2: "Recipe",
+                  3: "Review",
+                } as const;
 
-            const active = step === n;
+                const active = step === n;
 
-            return (
-              <button
-                key={n}
-                type="button"
-                onClick={() => setStep(n)}
-                className={`rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
-                  active
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border"
-                }`}
-              >
-                {labels[n as 1 | 2 | 3]}
-              </button>
-            );
-          })}
-        </div>
-      </div>
-
-      {step === 1 && (
-        <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">Global setup</h4>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">Reserve for sediment ml</span>
-                <input
-                  type="number"
-                  value={reserveForSedimentMl}
-                  onChange={(e) => setReserveForSedimentMl(Number(e.target.value))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">Ambient temperature °C</span>
-                <input
-                  type="number"
-                  value={ambientTempC}
-                  onChange={(e) => setAmbientTempC(Number(e.target.value))}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                />
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">Carbonation target</span>
-                <select
-                  value={desiredCarbonationLevel}
-                  onChange={(e) =>
-                    setDesiredCarbonationLevel(e.target.value as F2CarbonationLevel)
-                  }
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <option value="light">Light</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="strong">Strong</option>
-                </select>
-              </label>
+                return (
+                  <button
+                    key={n}
+                    type="button"
+                    onClick={() => setStep(n)}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium border transition-colors ${
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border"
+                    }`}
+                  >
+                    {labels[n as 1 | 2 | 3]}
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <div className="flex items-center justify-between">
-              <h4 className="text-base font-semibold text-foreground">Bottle groups</h4>
-              <Button type="button" variant="outline" onClick={addBottleGroup}>
-                Add bottle group
-              </Button>
-            </div>
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">Global setup</h4>
 
-            {bottleGroups.map((group, index) => (
-              <div
-                key={group.id}
-                className="rounded-xl border border-border p-4 space-y-3"
-              >
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-medium text-foreground">
-                    Group {index + 1}
-                  </p>
-                  {bottleGroups.length > 1 && (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => removeBottleGroup(group.id)}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Reserve for sediment ml
+                    </span>
+                    <input
+                      type="number"
+                      value={reserveForSedimentMl}
+                      onChange={(e) => setReserveForSedimentMl(Number(e.target.value))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Ambient temperature °C
+                    </span>
+                    <input
+                      type="number"
+                      value={ambientTempC}
+                      onChange={(e) => setAmbientTempC(Number(e.target.value))}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    />
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Carbonation target
+                    </span>
+                    <select
+                      value={desiredCarbonationLevel}
+                      onChange={(e) =>
+                        setDesiredCarbonationLevel(e.target.value as F2CarbonationLevel)
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
                     >
-                      Remove
+                      <option value="light">Light</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="strong">Strong</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-base font-semibold text-foreground">Bottle groups</h4>
+                  <Button type="button" variant="outline" onClick={addBottleGroup}>
+                    Add bottle group
+                  </Button>
+                </div>
+
+                {bottleGroups.map((group, index) => (
+                  <div
+                    key={group.id}
+                    className="rounded-xl border border-border p-4 space-y-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-medium text-foreground">
+                        Group {index + 1}
+                      </p>
+                      {bottleGroups.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => removeBottleGroup(group.id)}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Count</span>
+                        <input
+                          type="number"
+                          value={group.bottleCount}
+                          onChange={(e) =>
+                            updateBottleGroup(group.id, "bottleCount", Number(e.target.value))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">
+                          Bottle size ml
+                        </span>
+                        <input
+                          type="number"
+                          value={group.bottleSizeMl}
+                          onChange={(e) =>
+                            updateBottleGroup(group.id, "bottleSizeMl", Number(e.target.value))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Bottle type</span>
+                        <select
+                          value={group.bottleType}
+                          onChange={(e) =>
+                            updateBottleGroup(group.id, "bottleType", e.target.value)
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="swing_top">Swing top</option>
+                          <option value="crown_cap">Crown cap</option>
+                          <option value="screw_cap">Screw cap</option>
+                          <option value="plastic_test_bottle">Plastic test bottle</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Headspace ml</span>
+                        <input
+                          type="number"
+                          value={group.headspaceMl}
+                          onChange={(e) =>
+                            updateBottleGroup(group.id, "headspaceMl", Number(e.target.value))
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Label</span>
+                        <input
+                          type="text"
+                          value={group.groupLabel || ""}
+                          onChange={(e) =>
+                            updateBottleGroup(group.id, "groupLabel", e.target.value)
+                          }
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          placeholder="Optional"
+                        />
+                      </label>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-5">
+                <h4 className="text-base font-semibold text-foreground mb-3">
+                  Live volume summary
+                </h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Available F1</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.availableF1VolumeMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Bottle count</p>
+                    <p className="font-semibold text-foreground">
+                      {summary.totalBottleCount}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Planned fill</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.totalTargetFillMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Remaining</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.remainingVolumeMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {step === 2 && (
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">Recipe source</h4>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRecipeSourceTab("my")}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium border ${
+                      recipeSourceTab === "my"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border"
+                    }`}
+                  >
+                    My recipes
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRecipeSourceTab("presets")}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium border ${
+                      recipeSourceTab === "presets"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border"
+                    }`}
+                  >
+                    Presets
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRecipeSourceTab("create");
+                      setSelectedRecipeId("");
+                    }}
+                    className={`rounded-lg px-3 py-2 text-sm font-medium border ${
+                      recipeSourceTab === "create"
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-background text-foreground border-border"
+                    }`}
+                  >
+                    Create new
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <label className="space-y-1">
+                    <span className="text-sm text-muted-foreground">
+                      Carbonation target
+                    </span>
+                    <select
+                      value={desiredCarbonationLevel}
+                      onChange={(e) =>
+                        setDesiredCarbonationLevel(e.target.value as F2CarbonationLevel)
+                      }
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="light">Light</option>
+                      <option value="balanced">Balanced</option>
+                      <option value="strong">Strong</option>
+                    </select>
+                  </label>
+
+                  <label className="space-y-1">
+                    <span className="text-sm text-muted-foreground">Planner mode</span>
+                    <select
+                      value={guidedMode ? "guided" : "advanced"}
+                      onChange={(e) => setGuidedMode(e.target.value === "guided")}
+                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                    >
+                      <option value="guided">Guided</option>
+                      <option value="advanced">Advanced</option>
+                    </select>
+                  </label>
+                </div>
+
+                {recipeSourceTab !== "create" && (
+                  <div className="space-y-2">
+                    <label className="space-y-1 block">
+                      <span className="text-sm text-muted-foreground">
+                        {recipeSourceTab === "my"
+                          ? "Choose one of your recipes"
+                          : "Choose a preset"}
+                      </span>
+                      <select
+                        value={selectedRecipeId}
+                        onChange={(e) => setSelectedRecipeId(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                      >
+                        <option value="">
+                          {loadingRecipeData
+                            ? "Loading..."
+                            : activeRecipeList.length === 0
+                              ? "No recipes available"
+                              : "Select a recipe"}
+                        </option>
+                        {activeRecipeList.map((recipe) => (
+                          <option key={recipe.id} value={recipe.id}>
+                            {recipe.name}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    {selectedRecipeId && (
+                      <p className="text-sm text-muted-foreground">
+                        Recipe items are loaded automatically and adjusted for your
+                        carbonation target.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">
+                  {recipeSourceTab === "create" ? "Recipe builder" : "Recipe items"}
+                </h4>
+
+                {recipeSourceTab === "create" && (
+                  <>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">Recipe name</span>
+                        <input
+                          type="text"
+                          value={recipeName}
+                          onChange={(e) => setRecipeName(e.target.value)}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        />
+                      </label>
+
+                      <label className="space-y-1">
+                        <span className="text-sm text-muted-foreground">
+                          Save recipe for later
+                        </span>
+                        <select
+                          value={saveRecipe ? "yes" : "no"}
+                          onChange={(e) => setSaveRecipe(e.target.value === "yes")}
+                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="no">No</option>
+                          <option value="yes">Yes</option>
+                        </select>
+                      </label>
+                    </div>
+
+                    <label className="space-y-1 block">
+                      <span className="text-sm text-muted-foreground">Description</span>
+                      <textarea
+                        value={recipeDescription}
+                        onChange={(e) => setRecipeDescription(e.target.value)}
+                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[80px]"
+                      />
+                    </label>
+                  </>
+                )}
+
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">
+                    Guided mode uses preset defaults and adjusts them to the carbonation
+                    target.
+                  </p>
+                  {recipeSourceTab === "create" && (
+                    <Button type="button" variant="outline" onClick={addRecipeItem}>
+                      Add ingredient
                     </Button>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Count</span>
-                    <input
-                      type="number"
-                      value={group.bottleCount}
-                      onChange={(e) =>
-                        updateBottleGroup(group.id, "bottleCount", Number(e.target.value))
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    />
-                  </label>
+                {adjustedRecipeItems.map((item, index) => {
+                  const suggestedAmount = guidedMode
+                    ? item.amountPer500
+                    : recipeItems[index]?.amountPer500 ?? item.amountPer500;
 
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Bottle size ml</span>
-                    <input
-                      type="number"
-                      value={group.bottleSizeMl}
-                      onChange={(e) =>
-                        updateBottleGroup(group.id, "bottleSizeMl", Number(e.target.value))
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Bottle type</span>
-                    <select
-                      value={group.bottleType}
-                      onChange={(e) =>
-                        updateBottleGroup(group.id, "bottleType", e.target.value)
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-xl border border-border p-4 space-y-3"
                     >
-                      <option value="swing_top">Swing top</option>
-                      <option value="crown_cap">Crown cap</option>
-                      <option value="screw_cap">Screw cap</option>
-                      <option value="plastic_test_bottle">Plastic test bottle</option>
-                      <option value="other">Other</option>
-                    </select>
-                  </label>
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm font-medium text-foreground">
+                          Ingredient {index + 1}
+                        </p>
+                        {recipeSourceTab === "create" && recipeItems.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => removeRecipeItem(item.id)}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </div>
 
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Headspace ml</span>
-                    <input
-                      type="number"
-                      value={group.headspaceMl}
-                      onChange={(e) =>
-                        updateBottleGroup(group.id, "headspaceMl", Number(e.target.value))
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    />
-                  </label>
+                      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                        {recipeSourceTab === "create" && (
+                          <label className="space-y-1 md:col-span-2">
+                            <span className="text-sm text-muted-foreground">
+                              Preset ingredient
+                            </span>
+                            <select
+                              value={recipeItems[index]?.flavourPresetId || ""}
+                              onChange={(e) =>
+                                applyFlavourPresetToItem(item.id, e.target.value)
+                              }
+                              className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                            >
+                              <option value="">Choose preset ingredient</option>
+                              {flavourPresets.map((preset) => (
+                                <option key={preset.id} value={preset.id}>
+                                  {preset.displayName || preset.name}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        )}
 
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Label</span>
-                    <input
-                      type="text"
-                      value={group.groupLabel || ""}
-                      onChange={(e) =>
-                        updateBottleGroup(group.id, "groupLabel", e.target.value)
-                      }
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                      placeholder="Optional"
-                    />
-                  </label>
-                </div>
-              </div>
-            ))}
-          </div>
+                        <label className="space-y-1 md:col-span-2">
+                          <span className="text-sm text-muted-foreground">
+                            Ingredient name
+                          </span>
+                          <input
+                            type="text"
+                            value={item.customIngredientName || ""}
+                            onChange={(e) =>
+                              updateRecipeItem(item.id, "customIngredientName", e.target.value)
+                            }
+                            disabled={recipeSourceTab !== "create"}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </label>
 
-          <div className="bg-card border border-border rounded-xl p-5">
-            <h4 className="text-base font-semibold text-foreground mb-3">Live volume summary</h4>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Available F1</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.availableF1VolumeMl / 1000).toFixed(2)}L
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Bottle count</p>
-                <p className="font-semibold text-foreground">{summary.totalBottleCount}</p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Planned fill</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.totalTargetFillMl / 1000).toFixed(2)}L
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Remaining</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.remainingVolumeMl / 1000).toFixed(2)}L
-                </p>
+                        <label className="space-y-1">
+                          <span className="text-sm text-muted-foreground">Form</span>
+                          <select
+                            value={item.ingredientForm || "juice"}
+                            onChange={(e) =>
+                              updateRecipeItem(item.id, "ingredientForm", e.target.value)
+                            }
+                            disabled={recipeSourceTab !== "create"}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          >
+                            <option value="juice">Juice</option>
+                            <option value="puree">Puree</option>
+                            <option value="whole_fruit">Whole fruit</option>
+                            <option value="syrup">Syrup</option>
+                            <option value="herbs_spices">Herbs / spices</option>
+                            <option value="other">Other</option>
+                          </select>
+                        </label>
+
+                        <label className="space-y-1">
+                          <span className="text-sm text-muted-foreground">
+                            {guidedMode ? "Suggested per 500ml" : "Amount per 500ml"}
+                          </span>
+                          <input
+                            type="number"
+                            value={suggestedAmount}
+                            onChange={(e) =>
+                              updateRecipeItem(item.id, "amountPer500", Number(e.target.value))
+                            }
+                            disabled={guidedMode || recipeSourceTab !== "create"}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </label>
+
+                        <label className="space-y-1">
+                          <span className="text-sm text-muted-foreground">Unit</span>
+                          <input
+                            type="text"
+                            value={item.unit}
+                            onChange={(e) => updateRecipeItem(item.id, "unit", e.target.value)}
+                            disabled={guidedMode || recipeSourceTab !== "create"}
+                            className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
+                          />
+                        </label>
+                      </div>
+
+                      {guidedMode && (
+                        <p className="text-sm text-muted-foreground">
+                          This amount is automatically adjusted for your carbonation target.
+                        </p>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {step === 2 && (
-        <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">Recipe source</h4>
+          {step === 3 && (
+            <div className="space-y-4">
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">Review</h4>
 
-            <div className="grid grid-cols-3 gap-2">
-              <button
-                type="button"
-                onClick={() => setRecipeSourceTab("my")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-                  recipeSourceTab === "my"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border"
-                }`}
-              >
-                My recipes
-              </button>
-              <button
-                type="button"
-                onClick={() => setRecipeSourceTab("presets")}
-                className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-                  recipeSourceTab === "presets"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border"
-                }`}
-              >
-                Presets
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  setRecipeSourceTab("create");
-                  setSelectedRecipeId("");
-                }}
-                className={`rounded-lg px-3 py-2 text-sm font-medium border ${
-                  recipeSourceTab === "create"
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : "bg-background text-foreground border-border"
-                }`}
-              >
-                Create new
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">Carbonation target</span>
-                <select
-                  value={desiredCarbonationLevel}
-                  onChange={(e) =>
-                    setDesiredCarbonationLevel(e.target.value as F2CarbonationLevel)
-                  }
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <option value="light">Light</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="strong">Strong</option>
-                </select>
-              </label>
-
-              <label className="space-y-1">
-                <span className="text-sm text-muted-foreground">Planner mode</span>
-                <select
-                  value={guidedMode ? "guided" : "advanced"}
-                  onChange={(e) => setGuidedMode(e.target.value === "guided")}
-                  className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                >
-                  <option value="guided">Guided</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </label>
-            </div>
-
-            {recipeSourceTab !== "create" && (
-              <div className="space-y-2">
-                <label className="space-y-1 block">
-                  <span className="text-sm text-muted-foreground">
-                    {recipeSourceTab === "my" ? "Choose one of your recipes" : "Choose a preset"}
-                  </span>
-                  <select
-                    value={selectedRecipeId}
-                    onChange={(e) => setSelectedRecipeId(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                  >
-                    <option value="">
-                      {loadingRecipeData
-                        ? "Loading..."
-                        : activeRecipeList.length === 0
-                          ? "No recipes available"
-                          : "Select a recipe"}
-                    </option>
-                    {activeRecipeList.map((recipe) => (
-                      <option key={recipe.id} value={recipe.id}>
-                        {recipe.name}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                {selectedRecipeId && (
-                  <p className="text-sm text-muted-foreground">
-                    Recipe items are loaded automatically and adjusted for your carbonation target.
-                  </p>
+                {summary.validationErrors.length > 0 && (
+                  <div className="rounded-xl border border-red-300 bg-red-50 p-4">
+                    <p className="text-sm font-semibold text-red-700">Fix these first</p>
+                    <ul className="mt-2 space-y-1 text-sm text-red-700 list-disc pl-5">
+                      {summary.validationErrors.map((error) => (
+                        <li key={error}>{error}</li>
+                      ))}
+                    </ul>
+                  </div>
                 )}
+
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
+                  <div>
+                    <p className="text-muted-foreground">Available F1</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.availableF1VolumeMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Kombucha needed</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.totalKombuchaNeededMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Remaining</p>
+                    <p className="font-semibold text-foreground">
+                      {(summary.remainingVolumeMl / 1000).toFixed(2)}L
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-muted-foreground">Risk</p>
+                    <p className="font-semibold text-foreground capitalize">
+                      {summary.riskLevel}
+                    </p>
+                  </div>
+                </div>
               </div>
-            )}
-          </div>
 
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">
-              {recipeSourceTab === "create" ? "Recipe builder" : "Recipe items"}
-            </h4>
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">
+                  Per bottle instructions
+                </h4>
 
-            {recipeSourceTab === "create" && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Recipe name</span>
-                    <input
-                      type="text"
-                      value={recipeName}
-                      onChange={(e) => setRecipeName(e.target.value)}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    />
-                  </label>
-
-                  <label className="space-y-1">
-                    <span className="text-sm text-muted-foreground">Save recipe for later</span>
-                    <select
-                      value={saveRecipe ? "yes" : "no"}
-                      onChange={(e) => setSaveRecipe(e.target.value === "yes")}
-                      className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                    >
-                      <option value="no">No</option>
-                      <option value="yes">Yes</option>
-                    </select>
-                  </label>
+                <div className="space-y-3">
+                  {summary.bottleGroupPlans.map((group) => (
+                    <div key={group.groupId} className="rounded-xl border border-border p-4">
+                      <p className="text-sm font-semibold text-foreground">
+                        {group.bottleCount} × {group.bottleSizeMl}ml {group.bottleType}
+                      </p>
+                      <ul className="mt-2 space-y-1 text-sm text-foreground list-disc pl-5">
+                        {group.scaledItemsPerBottle.map((item) => (
+                          <li key={item.id}>
+                            Add {item.scaledAmount.toFixed(1)}
+                            {item.unit} {item.customIngredientName || "ingredient"}
+                          </li>
+                        ))}
+                        <li>Top with {group.kombuchaMlPerBottle.toFixed(1)}ml kombucha</li>
+                        <li>Leave {group.headspaceMl}ml headspace</li>
+                      </ul>
+                    </div>
+                  ))}
                 </div>
+              </div>
 
-                <label className="space-y-1 block">
-                  <span className="text-sm text-muted-foreground">Description</span>
-                  <textarea
-                    value={recipeDescription}
-                    onChange={(e) => setRecipeDescription(e.target.value)}
-                    className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm min-h-[80px]"
-                  />
-                </label>
-              </>
-            )}
+              <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+                <h4 className="text-base font-semibold text-foreground">
+                  Total ingredients needed
+                </h4>
 
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-muted-foreground">
-                Guided mode uses preset defaults and adjusts them to the carbonation target.
-              </p>
-              {recipeSourceTab === "create" && (
-                <Button type="button" variant="outline" onClick={addRecipeItem}>
-                  Add ingredient
-                </Button>
-              )}
-            </div>
-
-            {adjustedRecipeItems.map((item, index) => {
-              const suggestedAmount =
-                guidedMode ? item.amountPer500 : recipeItems[index]?.amountPer500 ?? item.amountPer500;
-
-              return (
-                <div
-                  key={item.id}
-                  className="rounded-xl border border-border p-4 space-y-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-foreground">
-                      Ingredient {index + 1}
-                    </p>
-                    {recipeSourceTab === "create" && recipeItems.length > 1 && (
-                      <Button
-                        type="button"
-                        variant="outline"
-                        onClick={() => removeRecipeItem(item.id)}
-                      >
-                        Remove
-                      </Button>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    {recipeSourceTab === "create" && (
-                      <label className="space-y-1 md:col-span-2">
-                        <span className="text-sm text-muted-foreground">Preset ingredient</span>
-                        <select
-                          value={recipeItems[index]?.flavourPresetId || ""}
-                          onChange={(e) => applyFlavourPresetToItem(item.id, e.target.value)}
-                          className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                        >
-                          <option value="">Choose preset ingredient</option>
-                          {flavourPresets.map((preset) => (
-                            <option key={preset.id} value={preset.id}>
-                              {preset.displayName || preset.name}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    )}
-
-                    <label className="space-y-1 md:col-span-2">
-                      <span className="text-sm text-muted-foreground">Ingredient name</span>
-                      <input
-                        type="text"
-                        value={item.customIngredientName || ""}
-                        onChange={(e) =>
-                          updateRecipeItem(item.id, "customIngredientName", e.target.value)
-                        }
-                        disabled={recipeSourceTab !== "create"}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                      />
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-sm text-muted-foreground">Form</span>
-                      <select
-                        value={item.ingredientForm || "juice"}
-                        onChange={(e) =>
-                          updateRecipeItem(item.id, "ingredientForm", e.target.value)
-                        }
-                        disabled={recipeSourceTab !== "create"}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                      >
-                        <option value="juice">Juice</option>
-                        <option value="puree">Puree</option>
-                        <option value="whole_fruit">Whole fruit</option>
-                        <option value="syrup">Syrup</option>
-                        <option value="herbs_spices">Herbs / spices</option>
-                        <option value="other">Other</option>
-                      </select>
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-sm text-muted-foreground">
-                        {guidedMode ? "Suggested per 500ml" : "Amount per 500ml"}
-                      </span>
-                      <input
-                        type="number"
-                        value={suggestedAmount}
-                        onChange={(e) =>
-                          updateRecipeItem(item.id, "amountPer500", Number(e.target.value))
-                        }
-                        disabled={guidedMode || recipeSourceTab !== "create"}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                      />
-                    </label>
-
-                    <label className="space-y-1">
-                      <span className="text-sm text-muted-foreground">Unit</span>
-                      <input
-                        type="text"
-                        value={item.unit}
-                        onChange={(e) =>
-                          updateRecipeItem(item.id, "unit", e.target.value)
-                        }
-                        disabled={guidedMode || recipeSourceTab !== "create"}
-                        className="w-full rounded-lg border border-border bg-background px-3 py-2 text-sm"
-                      />
-                    </label>
-                  </div>
-
-                  {guidedMode && (
-                    <p className="text-sm text-muted-foreground">
-                      This amount is automatically adjusted for your carbonation target.
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {step === 3 && (
-        <div className="space-y-4">
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">Review</h4>
-
-            {summary.validationErrors.length > 0 && (
-              <div className="rounded-xl border border-red-300 bg-red-50 p-4">
-                <p className="text-sm font-semibold text-red-700">Fix these first</p>
-                <ul className="mt-2 space-y-1 text-sm text-red-700 list-disc pl-5">
-                  {summary.validationErrors.map((error) => (
-                    <li key={error}>{error}</li>
+                <ul className="space-y-1 text-sm text-foreground list-disc pl-5">
+                  {summary.ingredientTotals.map((item) => (
+                    <li key={`${item.name}-${item.unit}`}>
+                      {item.name}: {item.totalAmount}
+                      {item.unit}
+                    </li>
                   ))}
                 </ul>
-              </div>
-            )}
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Available F1</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.availableF1VolumeMl / 1000).toFixed(2)}L
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Kombucha needed</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.totalKombuchaNeededMl / 1000).toFixed(2)}L
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Remaining</p>
-                <p className="font-semibold text-foreground">
-                  {(summary.remainingVolumeMl / 1000).toFixed(2)}L
-                </p>
-              </div>
-              <div>
-                <p className="text-muted-foreground">Risk</p>
-                <p className="font-semibold text-foreground capitalize">
-                  {summary.riskLevel}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">
-              Per bottle instructions
-            </h4>
-
-            <div className="space-y-3">
-              {summary.bottleGroupPlans.map((group) => (
-                <div key={group.groupId} className="rounded-xl border border-border p-4">
-                  <p className="text-sm font-semibold text-foreground">
-                    {group.bottleCount} × {group.bottleSizeMl}ml {group.bottleType}
-                  </p>
-                  <ul className="mt-2 space-y-1 text-sm text-foreground list-disc pl-5">
-                    {group.scaledItemsPerBottle.map((item) => (
-                      <li key={item.id}>
-                        Add {item.scaledAmount.toFixed(1)}
-                        {item.unit} {item.customIngredientName || "ingredient"}
-                      </li>
+                <div className="pt-2 border-t border-border">
+                  <p className="text-sm font-semibold text-foreground">Risk notes</p>
+                  <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc pl-5">
+                    {summary.riskNotes.map((note) => (
+                      <li key={note}>{note}</li>
                     ))}
-                    <li>Top with {group.kombuchaMlPerBottle.toFixed(1)}ml kombucha</li>
-                    <li>Leave {group.headspaceMl}ml headspace</li>
                   </ul>
                 </div>
-              ))}
+
+                <div className="pt-2 border-t border-border space-y-3">
+                  <p className="text-sm text-muted-foreground">
+                    This will save your setup, create your bottles, save ingredient rows,
+                    and start F2 for this batch.
+                  </p>
+
+                  <Button
+                    type="button"
+                    onClick={handleConfirmAndStartF2}
+                    disabled={isSubmitting || summary.validationErrors.length > 0}
+                    className="w-full"
+                  >
+                    {isSubmitting ? "Starting F2..." : "I bottled this and start F2"}
+                  </Button>
+                </div>
+              </div>
             </div>
+          )}
+
+          <div className="flex items-center justify-between">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setStep((current) => Math.max(1, current - 1))}
+              disabled={step === 1}
+            >
+              Back
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => setStep((current) => Math.min(3, current + 1))}
+              disabled={step === 3 || !canGoNext}
+            >
+              Next
+            </Button>
           </div>
-
-          <div className="bg-card border border-border rounded-xl p-5 space-y-4">
-            <h4 className="text-base font-semibold text-foreground">
-              Total ingredients needed
-            </h4>
-
-            <ul className="space-y-1 text-sm text-foreground list-disc pl-5">
-              {summary.ingredientTotals.map((item) => (
-                <li key={`${item.name}-${item.unit}`}>
-                  {item.name}: {item.totalAmount}
-                  {item.unit}
-                </li>
-              ))}
-            </ul>
-
-            <div className="pt-2 border-t border-border">
-              <p className="text-sm font-semibold text-foreground">Risk notes</p>
-              <ul className="mt-2 space-y-1 text-sm text-muted-foreground list-disc pl-5">
-                {summary.riskNotes.map((note) => (
-                  <li key={note}>{note}</li>
-                ))}
-              </ul>
-            </div>
-
-            <div className="pt-2 border-t border-border space-y-3">
-  <p className="text-sm text-muted-foreground">
-    This will save your setup, create your bottles, save ingredient rows, and start F2 for this batch.
-  </p>
-
-  <Button
-    type="button"
-    onClick={handleConfirmAndStartF2}
-    disabled={isSubmitting || summary.validationErrors.length > 0}
-    className="w-full"
-  >
-    {isSubmitting ? "Starting F2..." : "I bottled this and start F2"}
-  </Button>
-</div>
-          </div>
-        </div>
+        </>
       )}
-
-      <div className="flex items-center justify-between">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => setStep((current) => Math.max(1, current - 1))}
-          disabled={step === 1}
-        >
-          Back
-        </Button>
-
-        <Button
-          type="button"
-          onClick={() => setStep((current) => Math.min(3, current + 1))}
-          disabled={step === 3 || !canGoNext}
-        >
-          Next
-        </Button>
-      </div>
     </div>
   );
 }
