@@ -175,6 +175,7 @@ export type Database = {
           estimated_pressure_risk: Database["public"]["Enums"]["caution_level_enum"]
           flavouring_mode: string | null
           id: string
+          is_current: boolean
           setup_created_at: string
           setup_notes: string | null
           suggested_first_check_at: string | null
@@ -196,6 +197,7 @@ export type Database = {
           estimated_pressure_risk?: Database["public"]["Enums"]["caution_level_enum"]
           flavouring_mode?: string | null
           id?: string
+          is_current?: boolean
           setup_created_at?: string
           setup_notes?: string | null
           suggested_first_check_at?: string | null
@@ -217,6 +219,7 @@ export type Database = {
           estimated_pressure_risk?: Database["public"]["Enums"]["caution_level_enum"]
           flavouring_mode?: string | null
           id?: string
+          is_current?: boolean
           setup_created_at?: string
           setup_notes?: string | null
           suggested_first_check_at?: string | null
@@ -258,7 +261,7 @@ export type Database = {
         Insert: {
           batch_id: string
           created_at?: string
-          created_by_user_id: string
+          created_by_user_id?: string
           id?: string
           log_type: Database["public"]["Enums"]["log_type_enum"]
           logged_at?: string
