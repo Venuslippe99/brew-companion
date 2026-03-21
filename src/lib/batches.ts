@@ -28,12 +28,18 @@ export interface KombuchaBatch {
   scobyPresent: boolean;
   avgRoomTempC: number;
   vesselType: string;
-  targetPreference: "sweeter" | "balanced" | "tart";
+  targetPreference:
+    | "sweeter"
+    | "balanced"
+    | "tart"
+    | "stronger_carbonation"
+    | "safer_guided";
   initialPh?: number;
   initialNotes?: string;
   cautionLevel: BatchCautionLevel;
   readinessWindowStart?: string;
   readinessWindowEnd?: string;
+  nextAction?: string;
   completedAt?: string;
   updatedAt: string;
 }
@@ -62,6 +68,10 @@ export function getStageLabel(stage: BatchStage): string {
 }
 
 export function getNextAction(batch: KombuchaBatch): string {
+  if (batch.nextAction) {
+    return batch.nextAction;
+  }
+
   const actions: Record<BatchStage, string> = {
     f1_active: "Wait & monitor fermentation",
     f1_check_window: "Taste test recommended",
