@@ -3,7 +3,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { guides } from "@/content/guides";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { useNavigate } from "react-router-dom";
-import { Search, BookOpen, ChevronRight, Clock } from "lucide-react";
+import { Search, BookOpen, ChevronRight, Clock, ShieldAlert } from "lucide-react";
 
 const categories = [...new Set(guides.map((g) => g.category))];
 
@@ -31,6 +31,30 @@ export default function Guides() {
           <p className="text-sm text-muted-foreground mt-1">
             Learn everything about kombucha brewing
           </p>
+        </ScrollReveal>
+
+        <ScrollReveal delay={0.03}>
+          <section className="rounded-xl border border-primary/15 bg-honey-light p-5">
+            <div className="flex items-start gap-3">
+              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="flex-1">
+                <h2 className="text-base font-semibold text-foreground">
+                  Need help with what you are seeing right now?
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Open the troubleshooting assistant for calmer next-step guidance when a batch
+                  looks strange, seems too sweet, or feels too pressurized.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/assistant")}
+                className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
+              >
+                Open assistant
+              </button>
+            </div>
+          </section>
         </ScrollReveal>
 
         {/* Search */}

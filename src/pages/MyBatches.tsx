@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Search, SlidersHorizontal, Plus, FlaskConical } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import type { Tables } from "@/integrations/supabase/types";
 
 const tabs: { label: string; value: BatchStatus }[] = [
   { label: "Active", value: "active" },
@@ -20,6 +21,30 @@ const sortOptions = [
   { label: "Oldest", value: "oldest" },
   { label: "Recently updated", value: "updated" },
 ];
+
+type MyBatchesRow = Pick<
+  Tables<"kombucha_batches">,
+  | "id"
+  | "name"
+  | "status"
+  | "current_stage"
+  | "brew_started_at"
+  | "total_volume_ml"
+  | "tea_type"
+  | "sugar_g"
+  | "starter_liquid_ml"
+  | "scoby_present"
+  | "avg_room_temp_c"
+  | "vessel_type"
+  | "target_preference"
+  | "initial_ph"
+  | "initial_notes"
+  | "caution_level"
+  | "readiness_window_start"
+  | "readiness_window_end"
+  | "completed_at"
+  | "updated_at"
+>;
 
 export default function MyBatches() {
   const navigate = useNavigate();
@@ -67,7 +92,7 @@ export default function MyBatches() {
         return;
       }
 
-      const mapped: KombuchaBatch[] = (data || []).map((row: any) => ({
+      const mapped: KombuchaBatch[] = ((data || []) as MyBatchesRow[]).map((row) => ({
         id: row.id,
         name: row.name,
         status: row.status,

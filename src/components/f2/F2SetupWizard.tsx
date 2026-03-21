@@ -176,7 +176,7 @@ function SavedF2SetupView({
             {currentNextAction || "No next action recorded."}
           </p>
           <p className="text-xs text-muted-foreground mt-1 capitalize">
-            Current stage: {currentStage.replaceAll("_", " ")}
+            Current stage: {currentStage.replace(/_/g, " ")}
           </p>
         </div>
       </div>
@@ -293,7 +293,7 @@ function SavedF2SetupView({
                 <div>
                   <p className="text-muted-foreground">Type</p>
                   <p className="font-medium text-foreground capitalize">
-                    {group.bottleType.replaceAll("_", " ")}
+                    {group.bottleType.replace(/_/g, " ")}
                   </p>
                 </div>
                 <div>

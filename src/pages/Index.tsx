@@ -293,9 +293,14 @@ export default function Dashboard() {
                   Start with what needs attention now across all active batches.
                 </p>
               </div>
-              <Button variant="ghost" size="sm" onClick={() => navigate("/batches")}>
-                View all
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={() => navigate("/assistant")}>
+                  Troubleshoot
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => navigate("/batches")}>
+                  View all
+                </Button>
+              </div>
             </div>
 
             {loading ? (

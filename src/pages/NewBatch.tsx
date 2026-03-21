@@ -12,6 +12,21 @@ const teaTypes = ["Black tea", "Green tea", "Oolong tea", "White tea", "Black & 
 const vesselTypes = ["Glass jar", "Ceramic crock", "Food-grade plastic"];
 const preferences = ["sweeter", "balanced", "tart"] as const;
 
+type NewBatchForm = {
+  name: string;
+  brewDate: string;
+  totalVolumeMl: number;
+  teaType: string;
+  sugarG: number;
+  starterLiquidMl: number;
+  scobyPresent: boolean;
+  avgRoomTempC: number;
+  vesselType: string;
+  targetPreference: (typeof preferences)[number];
+  initialPh: string;
+  initialNotes: string;
+};
+
 export default function NewBatch() {
   const navigate = useNavigate();
   const { isBeginner } = useUser();
@@ -20,7 +35,7 @@ export default function NewBatch() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
-  const [form, setForm] = useState({
+  const [form, setForm] = useState<NewBatchForm>({
     name: "",
     brewDate: new Date().toISOString().split("T")[0],
     totalVolumeMl: 3800,
@@ -35,7 +50,8 @@ export default function NewBatch() {
     initialNotes: "",
   });
 
-  const update = (key: string, value: any) => setForm((f) => ({ ...f, [key]: value }));
+  const update = <K extends keyof NewBatchForm>(key: K, value: NewBatchForm[K]) =>
+    setForm((f) => ({ ...f, [key]: value }));
 
   const handleCreate = async () => {
     if (!user) {
