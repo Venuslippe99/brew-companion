@@ -10,6 +10,7 @@ import Index from "./pages/Index";
 import MyBatches from "./pages/MyBatches";
 import NewBatch from "./pages/NewBatch";
 import BatchDetail from "./pages/BatchDetail";
+import BatchLineage from "./pages/BatchLineage";
 import Guides from "./pages/Guides";
 import GuideDetail from "./pages/GuideDetail";
 import Assistant from "./pages/Assistant";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/batches" element={<ProtectedRoute><MyBatches /></ProtectedRoute>} />
               <Route path="/new-batch" element={<ProtectedRoute><NewBatch /></ProtectedRoute>} />
               <Route path="/batch/:id" element={<ProtectedRoute><BatchDetail /></ProtectedRoute>} />
+              <Route path="/batch/:id/lineage" element={<ProtectedRoute><BatchLineage /></ProtectedRoute>} />
               <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
               <Route path="*" element={<NotFound />} />

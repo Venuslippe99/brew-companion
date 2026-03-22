@@ -357,7 +357,11 @@ function OverviewTab({
       />
 
       <ScrollReveal delay={0.07}>
-        <BatchLineageSection lineage={lineage} loading={lineageLoading} />
+        <BatchLineageSection
+          lineage={lineage}
+          loading={lineageLoading}
+          rootBatchId={batch.id}
+        />
       </ScrollReveal>
 
       {reminders.length > 0 && (

@@ -1,11 +1,13 @@
 import { Link } from "react-router-dom";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
+import { Button } from "@/components/ui/button";
 import { getStageLabel } from "@/lib/batches";
 import type { BatchLineage, LineageBatchSummary } from "@/lib/lineage";
 
 type BatchLineageSectionProps = {
   lineage: BatchLineage | null;
   loading: boolean;
+  rootBatchId?: string;
 };
 
 function formatUpdatedLabel(updatedAt: string) {
@@ -81,6 +83,7 @@ function LineageGroup({
 export function BatchLineageSection({
   lineage,
   loading,
+  rootBatchId,
 }: BatchLineageSectionProps) {
   if (loading) {
     return (
@@ -118,12 +121,21 @@ export function BatchLineageSection({
   return (
     <div className="space-y-4">
       <div className="rounded-xl border border-border bg-card p-5">
-        <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
-          Lineage
-        </h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          Track where this batch came from and what later batches came from it.
-        </p>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-sm font-semibold uppercase tracking-wider text-foreground">
+              Lineage
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Track where this batch came from and what later batches came from it.
+            </p>
+          </div>
+          {rootBatchId && (
+            <Button asChild size="sm" variant="outline">
+              <Link to={`/batch/${rootBatchId}/lineage`}>Open family tree</Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       <LineageGroup
