@@ -1,0 +1,319 @@
+import F2SetupWizard from "@/components/f2/F2SetupWizard";
+import { BatchLineageSection } from "@/components/lineage/BatchLineageSection";
+import { PhaseOutcomeCard } from "@/components/outcomes/PhaseOutcomeCard";
+import { ScrollReveal } from "@/components/common/ScrollReveal";
+import { BatchJourneyStrip } from "@/components/batch-detail/BatchJourneyStrip";
+import { BatchReminderPanel } from "@/components/batch-detail/BatchReminderPanel";
+import { BatchCurrentPhaseCard } from "@/components/batch-detail/BatchCurrentPhaseCard";
+import { BatchPhaseCollapse } from "@/components/batch-detail/BatchPhaseCollapse";
+import { BatchCompletedSummary } from "@/components/batch-detail/BatchCompletedSummary";
+import type { BrewAgainPlan, BrewAgainMode } from "@/lib/brew-again-types";
+import {
+  getCurrentPhaseLabel,
+  shouldCollapseChapterByDefault,
+  type BatchReminder,
+} from "@/lib/batch-detail-view";
+import type { BatchTimingResult } from "@/lib/batch-timing";
+import type { BatchStage, BatchStatus, KombuchaBatch } from "@/lib/batches";
+import type { LoadedF2Setup } from "@/lib/f2-current-setup";
+import type { BatchLineage } from "@/lib/lineage";
+import {
+  canLogF1Outcome,
+  canLogF2Outcome,
+  getOutcomeForPhase,
+  type PhaseOutcomeRow,
+} from "@/lib/phase-outcomes";
+
+type WorkflowAction = "start-f2" | "still-fermenting";
+
+function RecipeSnapshot({ batch }: { batch: KombuchaBatch }) {
+  const items = [
+    ["Tea", batch.teaType],
+    ["Sugar", `${batch.sugarG}g`],
+    ["Starter", `${batch.starterLiquidMl}ml`],
+    ["Volume", `${(batch.totalVolumeMl / 1000).toFixed(1)}L`],
+    ["Vessel", batch.vesselType],
+    ["Target", batch.targetPreference.replace(/_/g, " ")],
+  ];
+
+  return (
+    <div className="grid grid-cols-2 gap-3 text-sm">
+      {items.map(([label, value]) => (
+        <div key={label}>
+          <p className="text-xs text-muted-foreground">{label}</p>
+          <p className="mt-1 font-medium capitalize text-foreground">{value}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+function F2Snapshot({ setup }: { setup: LoadedF2Setup }) {
+  return (
+    <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+      <div>
+        <p className="text-xs text-muted-foreground">Bottles</p>
+        <p className="mt-1 font-medium text-foreground">{setup.bottleCount}</p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Carbonation</p>
+        <p className="mt-1 font-medium capitalize text-foreground">
+          {setup.desiredCarbonationLevel}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Pressure risk</p>
+        <p className="mt-1 font-medium capitalize text-foreground">
+          {setup.estimatedPressureRisk || "Unknown"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Ambient room</p>
+        <p className="mt-1 font-medium text-foreground">{setup.ambientTempC}°C</p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Recipe snapshot</p>
+        <p className="mt-1 font-medium text-foreground">
+          {setup.recipeNameSnapshot || "Saved recipe"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Setup saved</p>
+        <p className="mt-1 font-medium text-foreground">
+          {new Date(setup.setupCreatedAt).toLocaleDateString()}
+        </p>
+      </div>
+    </div>
+  );
+}
+
+function OverviewSupportingPanel({
+  batch,
+  outcomes,
+  outcomesLoading,
+  currentF2Setup,
+  onOpenOutcome,
+  lineage,
+  lineageLoading,
+}: {
+  batch: KombuchaBatch;
+  outcomes: PhaseOutcomeRow[];
+  outcomesLoading: boolean;
+  currentF2Setup: LoadedF2Setup | null;
+  onOpenOutcome: (phase: "f1" | "f2") => void;
+  lineage: BatchLineage | null;
+  lineageLoading: boolean;
+}) {
+  const f1Outcome = getOutcomeForPhase(outcomes, "f1");
+  const f2Outcome = getOutcomeForPhase(outcomes, "f2");
+  const showF1Card = ["f1_active", "f1_check_window", "f1_extended"].includes(
+    batch.currentStage
+  );
+  const f2ContextSummary = currentF2Setup
+    ? `${currentF2Setup.bottleCount} bottles planned with ${currentF2Setup.desiredCarbonationLevel} carbonation at ${currentF2Setup.ambientTempC}°C.`
+    : undefined;
+
+  return (
+    <div className="space-y-5">
+      {showF1Card && (
+        <PhaseOutcomeCard
+          phase="f1"
+          outcome={f1Outcome}
+          loading={outcomesLoading}
+          canLogNow={canLogF1Outcome(batch)}
+          onAdd={() => onOpenOutcome("f1")}
+          onEdit={() => onOpenOutcome("f1")}
+        />
+      )}
+      <PhaseOutcomeCard
+        phase="f2"
+        outcome={f2Outcome}
+        loading={outcomesLoading}
+        canLogNow={canLogF2Outcome(batch)}
+        contextSummary={f2ContextSummary}
+        onAdd={() => onOpenOutcome("f2")}
+        onEdit={() => onOpenOutcome("f2")}
+      />
+      <ScrollReveal delay={0.08}>
+        <BatchLineageSection
+          lineage={lineage}
+          loading={lineageLoading}
+          rootBatchId={batch.id}
+        />
+      </ScrollReveal>
+    </div>
+  );
+}
+
+export function BatchOverviewSurface({
+  batch,
+  userId,
+  reminders,
+  onCompleteReminder,
+  timing,
+  outcomes,
+  outcomesLoading,
+  lineage,
+  lineageLoading,
+  currentF2Setup,
+  onOpenOutcome,
+  onStartF2,
+  onStillFermenting,
+  actionLoading,
+  onF2Started,
+  onBatchStateChanged,
+  onStartBrewAgain,
+}: {
+  batch: KombuchaBatch;
+  userId?: string;
+  reminders: BatchReminder[];
+  onCompleteReminder: (reminderId: string) => void;
+  timing: BatchTimingResult | null;
+  outcomes: PhaseOutcomeRow[];
+  outcomesLoading: boolean;
+  lineage: BatchLineage | null;
+  lineageLoading: boolean;
+  currentF2Setup: LoadedF2Setup | null;
+  onOpenOutcome: (phase: "f1" | "f2") => void;
+  onStartF2: () => Promise<void>;
+  onStillFermenting: () => Promise<void>;
+  actionLoading: WorkflowAction | null;
+  onF2Started: (args: { f2StartedAt: string; nextAction: string }) => void;
+  onBatchStateChanged: (args: {
+    currentStage: BatchStage;
+    updatedAt: string;
+    nextAction: string;
+    status: BatchStatus;
+    completedAt?: string;
+  }) => void;
+  onStartBrewAgain: (args: {
+    mode: BrewAgainMode;
+    plan: BrewAgainPlan;
+    enabledSuggestionIds: string[];
+  }) => void;
+}) {
+  const isCompletedLike = batch.status === "completed" || batch.status === "archived";
+  const f1Outcome = getOutcomeForPhase(outcomes, "f1");
+  const f2Outcome = getOutcomeForPhase(outcomes, "f2");
+  const chapterLabel = getCurrentPhaseLabel(batch.currentStage);
+  const showF2Inline = [
+    "f2_setup",
+    "f2_active",
+    "refrigerate_now",
+    "chilled_ready",
+    "completed",
+    "archived",
+  ].includes(batch.currentStage);
+
+  return (
+    <div className="space-y-5">
+      <BatchJourneyStrip batch={batch} />
+
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1.45fr)_minmax(320px,0.9fr)]">
+        <div className="space-y-5">
+          <BatchReminderPanel
+            reminders={reminders}
+            onCompleteReminder={onCompleteReminder}
+          />
+
+          {isCompletedLike ? (
+            <BatchCompletedSummary
+              batch={batch}
+              f1Outcome={f1Outcome}
+              f2Outcome={f2Outcome}
+              currentF2Setup={currentF2Setup}
+              onStartBrewAgain={onStartBrewAgain}
+            />
+          ) : (
+            <BatchCurrentPhaseCard
+              batch={batch}
+              timing={timing}
+              currentF2Setup={currentF2Setup}
+              actionLoading={actionLoading}
+              onStartF2={onStartF2}
+              onStillFermenting={onStillFermenting}
+            />
+          )}
+
+          {showF2Inline && (
+            <BatchPhaseCollapse
+              title={`Current ${chapterLabel} details`}
+              description="Keep the setup, bottle plan, and live actions close to the main flow instead of hiding them behind a separate tab."
+              defaultOpen={!shouldCollapseChapterByDefault(batch, "second_fermentation")}
+            >
+              <div className="space-y-4">
+                {currentF2Setup && (
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Saved Second Fermentation summary
+                    </p>
+                    <div className="mt-3">
+                      <F2Snapshot setup={currentF2Setup} />
+                    </div>
+                  </div>
+                )}
+
+                <F2SetupWizard
+                  batch={batch}
+                  userId={userId}
+                  onF2Started={onF2Started}
+                  onBatchStateChanged={onBatchStateChanged}
+                />
+              </div>
+            </BatchPhaseCollapse>
+          )}
+
+          {(batch.currentStage !== "f1_active") && (
+            <BatchPhaseCollapse
+              title="First Fermentation memory"
+              description="Keep the base recipe, timing window, and F1 reflection close by without letting old details crowd the current chapter."
+              defaultOpen={!shouldCollapseChapterByDefault(batch, "first_fermentation")}
+            >
+              <div className="space-y-4">
+                <div className="rounded-2xl border border-border bg-background p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                    Base recipe
+                  </p>
+                  <div className="mt-3">
+                    <RecipeSnapshot batch={batch} />
+                  </div>
+                </div>
+
+                {timing && (
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      First Fermentation timing memory
+                    </p>
+                    <p className="mt-2 text-sm font-medium text-foreground">
+                      Tasting window: Day {timing.windowStartDay}-{timing.windowEndDay}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">{timing.explanation}</p>
+                  </div>
+                )}
+
+                <PhaseOutcomeCard
+                  phase="f1"
+                  outcome={f1Outcome}
+                  loading={outcomesLoading}
+                  canLogNow={canLogF1Outcome(batch)}
+                  onAdd={() => onOpenOutcome("f1")}
+                  onEdit={() => onOpenOutcome("f1")}
+                />
+              </div>
+            </BatchPhaseCollapse>
+          )}
+        </div>
+
+        <OverviewSupportingPanel
+          batch={batch}
+          outcomes={outcomes}
+          outcomesLoading={outcomesLoading}
+          currentF2Setup={currentF2Setup}
+          onOpenOutcome={onOpenOutcome}
+          lineage={lineage}
+          lineageLoading={lineageLoading}
+        />
+      </div>
+    </div>
+  );
+}
