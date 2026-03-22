@@ -2,10 +2,13 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
+import { getPhaseOutcomeLabel } from "@/lib/phase-outcome-options";
+import { isBrewAgainNavigationState } from "@/lib/brew-again";
+import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
 import { FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 
 const teaTypes = ["Black tea", "Green tea", "Oolong tea", "White tea", "Black & green blend", "Green & white blend"];
@@ -28,26 +31,31 @@ type NewBatchForm = {
 };
 
 export default function NewBatch() {
+  const location = useLocation();
   const navigate = useNavigate();
   const { isBeginner } = useUser();
   const { user } = useAuth();
+  const brewAgainState = isBrewAgainNavigationState(location.state)
+    ? (location.state as BrewAgainNavigationState)
+    : null;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   const [form, setForm] = useState<NewBatchForm>({
-    name: "",
-    brewDate: new Date().toISOString().split("T")[0],
-    totalVolumeMl: 3800,
-    teaType: "Black tea",
-    sugarG: 200,
-    starterLiquidMl: 380,
-    scobyPresent: true,
-    avgRoomTempC: 23,
-    vesselType: "Glass jar",
-    targetPreference: "balanced" as typeof preferences[number],
-    initialPh: "",
-    initialNotes: "",
+    name: brewAgainState?.prefill.name || "",
+    brewDate: brewAgainState?.prefill.brewDate || new Date().toISOString().split("T")[0],
+    totalVolumeMl: brewAgainState?.prefill.totalVolumeMl || 3800,
+    teaType: brewAgainState?.prefill.teaType || "Black tea",
+    sugarG: brewAgainState?.prefill.sugarG || 200,
+    starterLiquidMl: brewAgainState?.prefill.starterLiquidMl || 380,
+    scobyPresent: brewAgainState?.prefill.scobyPresent ?? true,
+    avgRoomTempC: brewAgainState?.prefill.avgRoomTempC || 23,
+    vesselType: brewAgainState?.prefill.vesselType || "Glass jar",
+    targetPreference:
+      brewAgainState?.prefill.targetPreference || ("balanced" as typeof preferences[number]),
+    initialPh: brewAgainState?.prefill.initialPh || "",
+    initialNotes: brewAgainState?.prefill.initialNotes || "",
   });
 
   const update = <K extends keyof NewBatchForm>(key: K, value: NewBatchForm[K]) =>
@@ -79,6 +87,7 @@ export default function NewBatch() {
         status: "active",
         current_stage: "f1_active",
         brew_started_at: new Date(`${form.brewDate}T12:00:00`).toISOString(),
+        brew_again_source_batch_id: brewAgainState?.sourceSummary.sourceBatchId || null,
         total_volume_ml: form.totalVolumeMl,
         tea_type: form.teaType,
         sugar_g: form.sugarG,
@@ -124,6 +133,54 @@ export default function NewBatch() {
                 Fill in what you know — the more detail you add, the better your readiness estimates will be.
                 Required fields are marked with *.
               </p>
+            </div>
+          </ScrollReveal>
+        )}
+
+        {brewAgainState && (
+          <ScrollReveal delay={0.06}>
+            <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 space-y-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Brew Again
+                </p>
+                <h2 className="mt-1 text-base font-semibold text-foreground">
+                  Based on {brewAgainState.sourceSummary.sourceBatchName}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Mode: {brewAgainState.mode.replace(/_/g, " ")}. You can review and edit everything before creating this new batch.
+                </p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="rounded-xl border border-primary/10 bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Previous F1</p>
+                  <p className="mt-1 text-sm text-foreground">
+                    {brewAgainState.sourceSummary.f1Outcome
+                      ? `${getPhaseOutcomeLabel(brewAgainState.sourceSummary.f1Outcome.f1_taste_state)} · ${getPhaseOutcomeLabel(brewAgainState.sourceSummary.f1Outcome.f1_readiness)}`
+                      : "No saved F1 outcome"}
+                  </p>
+                </div>
+                <div className="rounded-xl border border-primary/10 bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Previous F2</p>
+                  <p className="mt-1 text-sm text-foreground">
+                    {brewAgainState.sourceSummary.f2Outcome
+                      ? `${getPhaseOutcomeLabel(brewAgainState.sourceSummary.f2Outcome.f2_overall_result)} · ${getPhaseOutcomeLabel(brewAgainState.sourceSummary.f2Outcome.f2_brew_again)}`
+                      : "No saved F2 outcome"}
+                  </p>
+                </div>
+              </div>
+
+              {brewAgainState.acceptedSuggestions.length > 0 && (
+                <div className="rounded-xl border border-primary/10 bg-background p-3">
+                  <p className="text-xs text-muted-foreground">Accepted suggestions</p>
+                  <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
+                    {brewAgainState.acceptedSuggestions.map((suggestion) => (
+                      <li key={suggestion.id}>{suggestion.summary}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
           </ScrollReveal>
         )}

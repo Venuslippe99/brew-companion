@@ -1023,6 +1023,7 @@ export type Database = {
           archived_at: string | null
           avg_room_temp_c: number
           batch_type: string
+          brew_again_source_batch_id: string | null
           brew_started_at: string
           brewing_method_notes: string | null
           caution_level: Database["public"]["Enums"]["caution_level_enum"]
@@ -1063,6 +1064,7 @@ export type Database = {
           archived_at?: string | null
           avg_room_temp_c: number
           batch_type?: string
+          brew_again_source_batch_id?: string | null
           brew_started_at: string
           brewing_method_notes?: string | null
           caution_level?: Database["public"]["Enums"]["caution_level_enum"]
@@ -1103,6 +1105,7 @@ export type Database = {
           archived_at?: string | null
           avg_room_temp_c?: number
           batch_type?: string
+          brew_again_source_batch_id?: string | null
           brew_started_at?: string
           brewing_method_notes?: string | null
           caution_level?: Database["public"]["Enums"]["caution_level_enum"]
@@ -1140,6 +1143,20 @@ export type Database = {
           vessel_type?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "kombucha_batches_brew_again_source_batch_id_fkey"
+            columns: ["brew_again_source_batch_id"]
+            isOneToOne: false
+            referencedRelation: "batch_dashboard_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kombucha_batches_brew_again_source_batch_id_fkey"
+            columns: ["brew_again_source_batch_id"]
+            isOneToOne: false
+            referencedRelation: "kombucha_batches"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "kombucha_batches_starter_source_batch_id_fkey"
             columns: ["starter_source_batch_id"]

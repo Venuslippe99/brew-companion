@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
+import { BrewAgainLauncher } from "@/components/brew-again/BrewAgainLauncher";
 import {
   getDayNumber,
   getStageLabel,
@@ -33,6 +34,7 @@ import {
   loadCurrentF2Setup,
   type LoadedF2Setup,
 } from "@/lib/f2-current-setup";
+import { applyBrewAgainSelection } from "@/lib/brew-again";
 import {
   ArrowLeft,
   ArrowRight,
@@ -999,6 +1001,25 @@ export default function BatchDetail() {
                   <StageIndicator stage={batch.currentStage} size="md" />
                   <CautionBadge level={batch.cautionLevel} />
                 </div>
+                {(batch.status === "completed" || batch.status === "archived") && (
+                  <div className="mt-3">
+                    <BrewAgainLauncher
+                      batch={batch}
+                      f1Outcome={getOutcomeForPhase(phaseOutcomes, "f1")}
+                      f2Outcome={getOutcomeForPhase(phaseOutcomes, "f2")}
+                      currentF2Setup={currentF2Setup}
+                      onContinue={({ mode, plan, enabledSuggestionIds }) => {
+                        navigate("/new-batch", {
+                          state: applyBrewAgainSelection({
+                            plan,
+                            mode,
+                            enabledSuggestionIds,
+                          }),
+                        });
+                      }}
+                    />
+                  </div>
+                )}
               </div>
               <div className="text-right">
                 <span className="text-3xl font-display font-bold text-foreground tabular-nums">
