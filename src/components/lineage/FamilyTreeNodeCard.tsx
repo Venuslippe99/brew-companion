@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
 import type { LineageNodeBadge } from "@/lib/lineage-analytics";
 import type { VisibleFamilyGraphNode } from "@/lib/lineage-graph";
@@ -7,8 +6,8 @@ type FamilyTreeNodeCardProps = {
   node: VisibleFamilyGraphNode;
   badges: LineageNodeBadge[];
   isRoot?: boolean;
-  onCenter: (batchId: string) => void;
-  onOpenBatch: (batchId: string) => void;
+  isSelected?: boolean;
+  onSelect: (batchId: string) => void;
 };
 
 function getBadgeClasses(tone: LineageNodeBadge["tone"]) {
@@ -34,16 +33,18 @@ export function FamilyTreeNodeCard({
   node,
   badges,
   isRoot = false,
-  onCenter,
-  onOpenBatch,
+  isSelected = false,
+  onSelect,
 }: FamilyTreeNodeCardProps) {
   return (
-    <div
+    <button
+      type="button"
+      onClick={() => onSelect(node.id)}
       className={`rounded-2xl border p-4 shadow-sm ${
         isRoot
           ? "border-primary/30 bg-primary/5"
           : "border-border bg-card"
-      }`}
+      } ${isSelected ? "ring-2 ring-primary/40 border-primary/30" : ""} text-left transition-colors hover:bg-muted/60`}
     >
       <div className="flex items-start justify-between gap-3">
         <div>
@@ -77,24 +78,19 @@ export function FamilyTreeNodeCard({
       <div className="mt-3 space-y-2 text-sm">
         <div className="rounded-xl bg-muted/50 p-3">
           <p className="text-xs text-muted-foreground">F1</p>
-          <p className="mt-1 text-foreground">{node.f1Summary || "No saved F1 outcome"}</p>
+          <p className="mt-1 text-foreground line-clamp-2">{node.f1Summary || "No saved F1 outcome"}</p>
         </div>
         <div className="rounded-xl bg-muted/50 p-3">
           <p className="text-xs text-muted-foreground">F2</p>
-          <p className="mt-1 text-foreground">{node.f2Summary || "No saved F2 outcome"}</p>
+          <p className="mt-1 text-foreground line-clamp-2">{node.f2Summary || "No saved F2 outcome"}</p>
         </div>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
-        <Button size="sm" onClick={() => onOpenBatch(node.id)}>
-          Open batch
-        </Button>
-        {!isRoot && (
-          <Button size="sm" variant="outline" onClick={() => onCenter(node.id)}>
-            Center here
-          </Button>
-        )}
+      <div className="mt-4">
+        <p className="text-xs text-muted-foreground">
+          {isSelected ? "Selected" : "Tap to inspect"}
+        </p>
       </div>
-    </div>
+    </button>
   );
 }
