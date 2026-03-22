@@ -196,6 +196,18 @@ export function BrewAgainLauncher({
               <p className="mt-1 text-sm text-muted-foreground">{plan.explanation}</p>
             </div>
 
+            <div className="rounded-xl border border-border p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Lineage handoff
+              </p>
+              <p className="mt-2 text-sm text-foreground">
+                Continuing from here will always mark the next batch as brewed from {batch.name}.
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                On the next screen, you can separately keep, change, or clear whether this batch is also the starter source.
+              </p>
+            </div>
+
             <div className="grid gap-3 sm:grid-cols-2">
               <OutcomeSummary
                 title="F1 Outcome"

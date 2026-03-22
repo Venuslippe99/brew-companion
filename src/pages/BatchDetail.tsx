@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { BrewAgainLauncher } from "@/components/brew-again/BrewAgainLauncher";
+import { BatchLineageSection } from "@/components/lineage/BatchLineageSection";
 import {
   getDayNumber,
   getStageLabel,
@@ -35,6 +36,10 @@ import {
   type LoadedF2Setup,
 } from "@/lib/f2-current-setup";
 import { applyBrewAgainSelection } from "@/lib/brew-again";
+import {
+  loadBatchLineage,
+  type BatchLineage,
+} from "@/lib/lineage";
 import {
   ArrowLeft,
   ArrowRight,
@@ -156,6 +161,8 @@ function OverviewTab({
   reminders,
   outcomes,
   outcomesLoading,
+  lineage,
+  lineageLoading,
   currentF2Setup,
   onOpenOutcome,
   onStartF2,
@@ -166,6 +173,8 @@ function OverviewTab({
   reminders: BatchReminder[];
   outcomes: PhaseOutcomeRow[];
   outcomesLoading: boolean;
+  lineage: BatchLineage | null;
+  lineageLoading: boolean;
   currentF2Setup: LoadedF2Setup | null;
   onOpenOutcome: (phase: "f1" | "f2") => void;
   onStartF2: () => Promise<void>;
@@ -346,6 +355,10 @@ function OverviewTab({
         onAdd={() => onOpenOutcome("f2")}
         onEdit={() => onOpenOutcome("f2")}
       />
+
+      <ScrollReveal delay={0.07}>
+        <BatchLineageSection lineage={lineage} loading={lineageLoading} />
+      </ScrollReveal>
 
       {reminders.length > 0 && (
         <ScrollReveal delay={0.08}>
@@ -575,16 +588,19 @@ export default function BatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const userId = user?.id;
 
   const [activeTab, setActiveTab] = useState("Overview");
   const [batch, setBatch] = useState<KombuchaBatch | null>(null);
   const [reminders, setReminders] = useState<BatchReminder[]>([]);
   const [timelineEntries, setTimelineEntries] = useState<BatchTimelineEntry[]>([]);
   const [phaseOutcomes, setPhaseOutcomes] = useState<PhaseOutcomeRow[]>([]);
+  const [lineage, setLineage] = useState<BatchLineage | null>(null);
   const [currentF2Setup, setCurrentF2Setup] = useState<LoadedF2Setup | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(true);
   const [outcomesLoading, setOutcomesLoading] = useState(true);
+  const [lineageLoading, setLineageLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<WorkflowAction | null>(null);
   const [activeOutcomePhase, setActiveOutcomePhase] = useState<"f1" | "f2" | null>(null);
   const [outcomeSaving, setOutcomeSaving] = useState(false);
@@ -690,9 +706,12 @@ export default function BatchDetail() {
           initial_ph,
           initial_notes,
           caution_level,
+          brew_again_source_batch_id,
           readiness_window_start,
           readiness_window_end,
           next_action,
+          starter_source_batch_id,
+          starter_source_type,
           completed_at,
           updated_at
         `)
@@ -733,6 +752,34 @@ export default function BatchDetail() {
 
       setBatch(mappedBatch);
 
+      if (!userId) {
+        setLineage(null);
+        setLineageLoading(false);
+      } else {
+        setLineageLoading(true);
+
+        try {
+          const resolvedStarterSourceBatchId =
+            batchRow.starter_source_type === "previous_batch"
+              ? batchRow.starter_source_batch_id
+              : null;
+
+          const lineageData = await loadBatchLineage({
+            userId,
+            batchId: batchRow.id,
+            brewedFromBatchId: batchRow.brew_again_source_batch_id,
+            starterSourceBatchId: resolvedStarterSourceBatchId,
+          });
+
+          setLineage(lineageData);
+        } catch (error) {
+          console.error("Load lineage error:", error);
+          setLineage(null);
+        } finally {
+          setLineageLoading(false);
+        }
+      }
+
       const { data: reminderRows, error: reminderError } = await supabase
         .from("batch_reminders")
         .select("id, title, description, due_at, is_completed, urgency_level")
@@ -766,7 +813,7 @@ export default function BatchDetail() {
     };
 
     void loadBatch();
-  }, [id]);
+  }, [id, userId]);
 
   useEffect(() => {
     if (!id) return;
@@ -1080,6 +1127,8 @@ export default function BatchDetail() {
               reminders={reminders}
               outcomes={phaseOutcomes}
               outcomesLoading={outcomesLoading}
+              lineage={lineage}
+              lineageLoading={lineageLoading}
               currentF2Setup={currentF2Setup}
               onOpenOutcome={setActiveOutcomePhase}
               onStartF2={handleStartF2}
@@ -1102,7 +1151,7 @@ export default function BatchDetail() {
           {activeTab === "F2 & Bottles" && (
             <F2SetupWizard
               batch={batch}
-              userId={user?.id}
+              userId={userId}
               onF2Started={({ f2StartedAt, nextAction }) => {
                 setBatch((current) =>
                   current

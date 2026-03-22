@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
+import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
 import { Button } from "@/components/ui/button";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useUser } from "@/contexts/UserContext";
@@ -9,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { getPhaseOutcomeLabel } from "@/lib/phase-outcome-options";
 import { isBrewAgainNavigationState } from "@/lib/brew-again";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
+import { loadStarterSourceCandidates, type LineageBatchSummary } from "@/lib/lineage";
 import { FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 
 const teaTypes = ["Black tea", "Green tea", "Oolong tea", "White tea", "Black & green blend", "Green & white blend"];
@@ -38,9 +40,13 @@ export default function NewBatch() {
   const brewAgainState = isBrewAgainNavigationState(location.state)
     ? (location.state as BrewAgainNavigationState)
     : null;
+  const recommendedStarterSourceBatchId = brewAgainState?.sourceSummary.sourceBatchId || null;
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [starterSourceOptions, setStarterSourceOptions] = useState<LineageBatchSummary[]>([]);
+  const [starterSourceLoading, setStarterSourceLoading] = useState(false);
+  const [starterSourceBatchId, setStarterSourceBatchId] = useState<string | null>(null);
 
   const [form, setForm] = useState<NewBatchForm>({
     name: brewAgainState?.prefill.name || "",
@@ -60,6 +66,54 @@ export default function NewBatch() {
 
   const update = <K extends keyof NewBatchForm>(key: K, value: NewBatchForm[K]) =>
     setForm((f) => ({ ...f, [key]: value }));
+
+  useEffect(() => {
+    if (!user?.id) {
+      setStarterSourceOptions([]);
+      setStarterSourceBatchId(null);
+      return;
+    }
+
+    let isActive = true;
+    setStarterSourceLoading(true);
+
+    void loadStarterSourceCandidates(user.id)
+      .then((options) => {
+        if (!isActive) {
+          return;
+        }
+
+        setStarterSourceOptions(options);
+
+        if (
+          recommendedStarterSourceBatchId &&
+          options.some((option) => option.id === recommendedStarterSourceBatchId)
+        ) {
+          setStarterSourceBatchId(recommendedStarterSourceBatchId);
+          return;
+        }
+
+        setStarterSourceBatchId((current) =>
+          current && options.some((option) => option.id === current) ? current : null
+        );
+      })
+      .catch((error) => {
+        console.error("Load starter source candidates error:", error);
+        if (isActive) {
+          setStarterSourceOptions([]);
+          setStarterSourceBatchId(null);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setStarterSourceLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [recommendedStarterSourceBatchId, user?.id]);
 
   const handleCreate = async () => {
     if (!user) {
@@ -88,6 +142,8 @@ export default function NewBatch() {
         current_stage: "f1_active",
         brew_started_at: new Date(`${form.brewDate}T12:00:00`).toISOString(),
         brew_again_source_batch_id: brewAgainState?.sourceSummary.sourceBatchId || null,
+        starter_source_type: starterSourceBatchId ? "previous_batch" : "manual",
+        starter_source_batch_id: starterSourceBatchId,
         total_volume_ml: form.totalVolumeMl,
         tea_type: form.teaType,
         sugar_g: form.sugarG,
@@ -181,6 +237,15 @@ export default function NewBatch() {
                   </ul>
                 </div>
               )}
+
+              <div className="rounded-xl border border-primary/10 bg-background p-3">
+                <p className="text-xs text-muted-foreground">Starter source in this new batch</p>
+                <p className="mt-1 text-sm text-foreground">
+                  {recommendedStarterSourceBatchId
+                    ? "This batch is set to use the repeated batch as the starter source by default. You can change or clear that below."
+                    : "No starter-source link is preselected. You can add one below if you are using starter from a previous batch."}
+                </p>
+              </div>
             </div>
           </ScrollReveal>
         )}
@@ -252,6 +317,14 @@ export default function NewBatch() {
                 />
               </div>
             </div>
+
+            <StarterSourceSelector
+              options={starterSourceOptions}
+              value={starterSourceBatchId}
+              loading={starterSourceLoading}
+              recommendedBatchId={recommendedStarterSourceBatchId}
+              onChange={setStarterSourceBatchId}
+            />
 
             <div>
               <label className="block text-sm font-medium text-foreground mb-1.5">Average Room Temperature (°C) *</label>
