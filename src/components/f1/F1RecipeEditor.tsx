@@ -239,7 +239,7 @@ export function F1RecipeEditor({
             <Label htmlFor="f1-recipe-vessel">Preferred vessel</Label>
             {onManageVessels ? (
               <Button type="button" variant="ghost" size="sm" onClick={onManageVessels}>
-                Manage vessels
+                View vessels
               </Button>
             ) : null}
           </div>
@@ -259,7 +259,8 @@ export function F1RecipeEditor({
             ))}
           </select>
           <p className="text-xs text-muted-foreground">
-            This only sets a default. You can still change the actual vessel in New Batch before saving.
+            This only sets a starting vessel for the recipe. You can still choose a different
+            vessel for any batch.
           </p>
         </div>
       </div>
@@ -290,7 +291,7 @@ export function F1RecipeEditor({
               : "border-border bg-background text-muted-foreground"
           }`}
         >
-          {draft.isFavorite ? "Favorite recipe" : "Mark as favorite"}
+          {draft.isFavorite ? "Saved as a favorite" : "Mark as favorite"}
         </button>
       </div>
 
@@ -311,7 +312,7 @@ export function F1RecipeEditor({
         disabled={saving || !draft.name.trim()}
         className="w-full"
       >
-        {saving ? "Saving..." : submitLabel}
+        {saving ? "Saving recipe..." : submitLabel}
       </Button>
     </div>
   );

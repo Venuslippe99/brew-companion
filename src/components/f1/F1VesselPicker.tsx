@@ -30,27 +30,29 @@ export function F1VesselPicker({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>Choose an F1 vessel</SheetTitle>
+          <SheetTitle>Choose a vessel</SheetTitle>
           <SheetDescription>
-            Pick a saved vessel for this batch, or keep using a manual vessel if you are not ready to save one yet.
+            Pick one of your saved vessels for today, or keep using a custom vessel if that is
+            easier.
           </SheetDescription>
         </SheetHeader>
 
         <div className="mt-4 space-y-4">
           <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={onManageLibrary}>
-              Open vessel library
+            <Button type="button" variant="ghost" onClick={onManageLibrary}>
+              View vessel library
             </Button>
           </div>
 
           {loading ? (
             <div className="rounded-2xl border border-border bg-card p-6 text-center">
-              <p className="text-sm text-muted-foreground">Loading vessels...</p>
+              <p className="text-sm text-muted-foreground">Loading your saved vessels...</p>
             </div>
           ) : vessels.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-6 text-center">
               <p className="text-sm text-muted-foreground">
-                You do not have any saved vessels yet. You can keep using a manual vessel in New Batch and save it later if it becomes a regular setup.
+                You do not have any saved vessels yet. You can keep entering a custom vessel here
+                and save it later if it becomes part of your regular setup.
               </p>
             </div>
           ) : (

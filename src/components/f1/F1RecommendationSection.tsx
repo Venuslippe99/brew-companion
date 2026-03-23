@@ -25,17 +25,18 @@ export function F1RecommendationSection({
     <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          F1 guidance
+          Review notes
         </p>
         <h3 className="mt-1 text-lg font-semibold text-foreground">
-          Explainable setup recommendations
+          Suggestions for this batch
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Kombloom starts with baseline brewing guidance, then adds lineage, similar setups, and saved F1 outcomes when it has enough evidence.
+          These notes help you sanity-check the setup before you start. The most important items
+          come first, and lighter context stays below.
         </p>
         {loadingHistory ? (
           <p className="mt-2 text-xs text-muted-foreground">
-            Loading related setup history. Baseline guidance is already shown, and history-backed notes will settle in next.
+            Checking similar past batches now. The first notes are already based on this setup.
           </p>
         ) : null}
       </div>
@@ -54,7 +55,7 @@ export function F1RecommendationSection({
       {secondaryCards.length > 0 ? (
         <div className="space-y-3">
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            More context
+            Also worth knowing
           </p>
           {secondaryCards.map((card) => (
             <F1RecommendationCard

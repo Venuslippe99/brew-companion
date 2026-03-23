@@ -29,7 +29,7 @@ export function StarterSourceSelector({
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Starter source</h3>
+        <h3 className="text-sm font-semibold text-foreground">Starter from another batch</h3>
         <p className="mt-1 text-sm text-muted-foreground">
           Link a previous batch only if its starter liquid or culture is actually feeding this new batch.
         </p>
@@ -37,7 +37,7 @@ export function StarterSourceSelector({
 
       <div>
         <label className="block text-sm font-medium text-foreground mb-1.5">
-          Starter lineage
+          Which batch supplied the starter?
         </label>
         <select
           value={value || ""}
@@ -56,7 +56,7 @@ export function StarterSourceSelector({
       </div>
 
       {loading && (
-        <p className="text-xs text-muted-foreground">Loading starter-source options...</p>
+        <p className="text-xs text-muted-foreground">Loading past batches you can link here...</p>
       )}
 
       {!loading && options.length === 0 && (
@@ -81,7 +81,8 @@ export function StarterSourceSelector({
             )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            This only records lineage. You can still change recipe details, timing targets, and reminders separately.
+            This just keeps the batch history connected. You can still change the setup details on
+            their own.
           </p>
         </div>
       )}

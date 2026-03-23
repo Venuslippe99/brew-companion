@@ -109,7 +109,7 @@ export function buildF1OutcomeSignalCards(args: {
       category: "tea_amount_recommendation",
       priority: 72,
       title: "Past similar batches often felt light on tea",
-      summary: "Repeated `weak_tea_base` tags justify a modestly stronger tea base.",
+      summary: "Repeated notes about a light tea base support a modest increase next time.",
       explanation:
         `${weakTeaCount} similar saved outcomes called out a weak tea base. That supports a small tea-strength increase more than a dramatic recipe rewrite.`,
       sourceType: "outcomes",
@@ -124,7 +124,7 @@ export function buildF1OutcomeSignalCards(args: {
       category: "tea_amount_recommendation",
       priority: 70,
       title: "Past similar batches often felt strong on tea",
-      summary: "Repeated `strong_tea_base` tags support modestly softening the tea base.",
+      summary: "Repeated notes about a strong tea base support softening it a little next time.",
       explanation:
         `${strongTeaCount} similar saved outcomes tagged the tea base as strong, so a slightly softer tea profile is a reasonable next-time lesson.`,
       sourceType: "outcomes",

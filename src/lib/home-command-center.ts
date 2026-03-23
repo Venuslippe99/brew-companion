@@ -75,6 +75,15 @@ export type HomeActionLane = {
   items: TodayActionItem[];
 };
 
+export type HomeTodayQueueItem = {
+  batch: KombuchaBatch;
+  statusSummary: string;
+  secondarySummary: string;
+  reasonLabel: string;
+  linkTo: string;
+  tone: HomeTone;
+};
+
 export type HomeRosterItem = {
   batch: KombuchaBatch;
   dayNumber: number;
@@ -106,6 +115,7 @@ export type HomeCommandCenter = {
   greetingName?: string;
   stateSentence: string;
   primaryFocus: HomePrimaryFocus;
+  todayQueue: HomeTodayQueueItem[];
   snapshotStats: HomeSnapshotStat[];
   actionLanes: HomeActionLane[];
   activeRoster: HomeRosterItem[];
@@ -334,6 +344,32 @@ function buildActionLanes(items: TodayActionItem[]) {
       items: grouped[key].sort(sortActionItems),
     }))
     .filter((lane) => lane.items.length > 0);
+}
+
+function buildTodayQueue(args: {
+  items: TodayActionItem[];
+  primaryFocus: HomePrimaryFocus;
+}) {
+  const primaryBatchId =
+    args.primaryFocus.kind === "batch" || args.primaryFocus.kind === "quiet"
+      ? args.primaryFocus.item.batch.id
+      : null;
+
+  return args.items
+    .filter((item) => item.batch.id !== primaryBatchId)
+    .slice(0, 4)
+    .map((item) => {
+      const focusReason = getFocusReason(item);
+
+      return {
+        batch: item.batch,
+        statusSummary: item.statusSummary,
+        secondarySummary: item.secondarySummary,
+        reasonLabel: focusReason.label,
+        linkTo: item.linkTo,
+        tone: focusReason.tone,
+      } satisfies HomeTodayQueueItem;
+    });
 }
 
 function buildRoster(items: TodayActionItem[], activeBatches: KombuchaBatch[]) {
@@ -726,6 +762,10 @@ export function buildHomeCommandCenter(args: {
       recentMovementCount: recentMovement.length,
     }),
     primaryFocus,
+    todayQueue: buildTodayQueue({
+      items: actionItems,
+      primaryFocus,
+    }),
     snapshotStats,
     actionLanes,
     activeRoster: buildRoster(actionItems, activeBatches),

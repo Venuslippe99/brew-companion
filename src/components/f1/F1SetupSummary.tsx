@@ -19,15 +19,15 @@ export function F1SetupSummary({
     <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          Live setup summary
+          Batch review
         </p>
         <h3 className="mt-1 text-lg font-semibold text-foreground">
-          Review today's F1 setup
+          What you are about to brew
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           {selectedRecipeName
-            ? `Defaults came from ${selectedRecipeName}, but the values below reflect what you are brewing today.`
-            : "This summary is based on the actual values you have entered for this batch."}
+            ? `${selectedRecipeName} gave you the starting point, and these details show what this batch will save today.`
+            : "These details reflect the setup you are about to save for this batch."}
         </p>
       </div>
 
@@ -88,7 +88,7 @@ export function F1SetupSummary({
       ) : null}
 
       <div className="rounded-xl border border-primary/10 bg-background p-3">
-        <p className="text-xs text-muted-foreground">Plain-language summary</p>
+        <p className="text-xs text-muted-foreground">Quick read</p>
         <p className="mt-1 text-sm text-foreground">{summary.plainLanguageSummary}</p>
       </div>
     </div>

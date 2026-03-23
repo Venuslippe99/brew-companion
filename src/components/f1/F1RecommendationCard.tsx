@@ -8,6 +8,34 @@ type F1RecommendationCardProps = {
   onApply?: (card: F1RecommendationCardModel) => void;
 };
 
+function getSourceLabel(sourceType: F1RecommendationCardModel["sourceType"]) {
+  switch (sourceType) {
+    case "baseline":
+      return "Based on a standard kombucha setup";
+    case "transition":
+      return "Because this batch changes direction";
+    case "similar_setups":
+      return "Based on similar past batches";
+    case "lineage":
+      return "Based on this culture line";
+    case "outcomes":
+      return "Based on how past batches turned out";
+    default:
+      return "Based on a mix of setup and history";
+  }
+}
+
+function getConfidenceLabel(confidence: F1RecommendationCardModel["confidence"]) {
+  switch (confidence) {
+    case "high":
+      return "Strong signal";
+    case "moderate":
+      return "Fairly solid signal";
+    default:
+      return "Light signal";
+  }
+}
+
 function getCautionClasses(cautionLevel: F1RecommendationCardModel["cautionLevel"]) {
   switch (cautionLevel) {
     case "high":
@@ -31,16 +59,17 @@ export function F1RecommendationCard({
     <div className={`rounded-2xl border p-4 ${getCautionClasses(card.cautionLevel)}`}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="space-y-1">
-          <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.18em]">
+          <div className="flex flex-wrap gap-2 text-[11px] font-medium">
             <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
-              {card.sourceType.replace(/_/g, " ")}
+              {getSourceLabel(card.sourceType)}
             </span>
             <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
-              {card.confidence} confidence
+              {getConfidenceLabel(card.confidence)}
             </span>
             {card.evidenceCount > 0 ? (
               <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
-                {card.evidenceCount} related
+                {card.evidenceCount} similar batch
+                {card.evidenceCount === 1 ? "" : "es"}
               </span>
             ) : null}
           </div>
@@ -57,7 +86,7 @@ export function F1RecommendationCard({
             size="sm"
             onClick={() => onApply(card)}
           >
-            {applied ? "Applied" : card.applyAction.label}
+            {applied ? "Using this change" : card.applyAction.label || "Use this change"}
           </Button>
         ) : null}
       </div>

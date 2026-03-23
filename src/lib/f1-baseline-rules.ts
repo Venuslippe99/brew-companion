@@ -219,9 +219,9 @@ function buildStarterCard(
       id: "baseline-starter-low",
       category: "starter_recommendation",
       priority: 95,
-      title: "Starter looks lighter than the usual baseline",
+      title: "Starter looks a little light for this volume",
       summary:
-        "About 10% starter liquid is the clearest standard baseline for a batch like this.",
+        "Around 10% starter liquid is a simple, low-risk place to start for a batch like this.",
       explanation:
         "Your starter ratio is below the usual 10% v/v baseline. Acidic starter liquid matters more than pellicle size for conservative setup guidance, so a little more starter is the safest first adjustment.",
       sourceType: "baseline",
@@ -264,10 +264,10 @@ function buildStarterCard(
 
   return {
     id: "baseline-starter-standard",
-    category: "starter_recommendation",
-    priority: 48,
-    title: "Starter is in the standard baseline range",
-    summary: "About 10% starter liquid is a clear, conservative F1 baseline.",
+      category: "starter_recommendation",
+      priority: 48,
+      title: "Starter amount looks right for a steady start",
+      summary: "Around 10% starter liquid is a calm everyday range for F1.",
     explanation:
       "Your starter ratio sits near the usual 10% v/v baseline, which is a straightforward default for beginner-friendly F1 guidance.",
     sourceType: "baseline",
@@ -497,8 +497,8 @@ function buildTeaBaseCard(metrics: F1BaselineMetrics): F1RecommendationCard {
         id: "baseline-tea-base-black",
         category: "tea_base_recommendation",
         priority: 35,
-        title: "Black tea is a conservative continuity baseline",
-        summary: "Black tea is the clearest beginner-friendly baseline for routine culture continuity.",
+        title: "Black tea is a steady everyday choice",
+        summary: "Black tea is the clearest beginner-friendly reference point for routine batches.",
         explanation:
           "Black tea is the most conservative default inside the core kombucha lineage model, so it works well as a calm reference point.",
         sourceType: "baseline",
@@ -684,7 +684,7 @@ function buildTimingCard(timing: BatchTimingResult | null): F1RecommendationCard
     id: "baseline-timing-expectation",
     category: "timing_expectation",
     priority: 40,
-    title: "Timing baseline is still an estimate",
+    title: "Timing is still a rough guide",
     summary: `This setup points to a first tasting window around Day ${timing.windowStartDay}-${timing.windowEndDay}.`,
     explanation:
       `${timing.explanation} Practical F1 expectations often center around roughly 7 to 10 days, but temperature and starter ratio can move that window.`,
