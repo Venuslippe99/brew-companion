@@ -24,6 +24,7 @@ import {
   type TasteTestImpression,
 } from "@/lib/batch-quick-logs";
 import { loadCurrentF2Setup, type LoadedF2Setup } from "@/lib/f2-current-setup";
+import { loadBatchF1Setup, type LoadedF1Setup } from "@/lib/f1-setups";
 import { loadBatchLineage, type BatchLineage } from "@/lib/lineage";
 import {
   getOutcomeForPhase,
@@ -93,6 +94,7 @@ export default function BatchDetail() {
   const [timelineEntries, setTimelineEntries] = useState<BatchTimelineEntry[]>([]);
   const [phaseOutcomes, setPhaseOutcomes] = useState<PhaseOutcomeRow[]>([]);
   const [lineage, setLineage] = useState<BatchLineage | null>(null);
+  const [currentF1Setup, setCurrentF1Setup] = useState<LoadedF1Setup | null>(null);
   const [currentF2Setup, setCurrentF2Setup] = useState<LoadedF2Setup | null>(null);
   const [loading, setLoading] = useState(true);
   const [timelineLoading, setTimelineLoading] = useState(true);
@@ -155,6 +157,16 @@ export default function BatchDetail() {
     } catch (error) {
       console.error("Load current F2 setup error:", error);
       setCurrentF2Setup(null);
+    }
+  };
+
+  const loadF1SetupSummary = async (batchId: string) => {
+    try {
+      const setup = await loadBatchF1Setup(batchId);
+      setCurrentF1Setup(setup);
+    } catch (error) {
+      console.error("Load current F1 setup error:", error);
+      setCurrentF1Setup(null);
     }
   };
 
@@ -384,6 +396,7 @@ export default function BatchDetail() {
 
     void loadTimelineEntries(id);
     void loadPhaseOutcomeRows(id);
+    void loadF1SetupSummary(id);
     void loadF2SetupSummary(id);
   }, [id]);
 
@@ -708,6 +721,7 @@ export default function BatchDetail() {
               outcomesLoading={outcomesLoading}
               lineage={lineage}
               lineageLoading={lineageLoading}
+              currentF1Setup={currentF1Setup}
               currentF2Setup={currentF2Setup}
               onOpenOutcome={setActiveOutcomePhase}
               onStartF2={handleStartF2}

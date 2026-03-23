@@ -51,6 +51,7 @@ export type F1RecipeDraft = {
   targetPreference: F1TargetPreference;
   defaultRoomTempC: number | null;
   defaultNotes: string;
+  preferredVesselId: string | null;
   isFavorite: boolean;
 };
 
@@ -80,6 +81,7 @@ export type F1RecipeSummary = Pick<
   | "targetPreference"
   | "defaultRoomTempC"
   | "defaultNotes"
+  | "preferredVesselId"
   | "isFavorite"
   | "archivedAt"
   | "updatedAt"
@@ -118,6 +120,7 @@ export function createEmptyF1RecipeDraft(): F1RecipeDraft {
     targetPreference: "balanced",
     defaultRoomTempC: 23,
     defaultNotes: "",
+    preferredVesselId: null,
     isFavorite: false,
   };
 }

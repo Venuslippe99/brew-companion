@@ -32,6 +32,7 @@ function mapRecipeRow(row: Tables<"f1_recipes">): F1Recipe {
     defaultRoomTempC:
       row.default_room_temp_c !== null ? Number(row.default_room_temp_c) : null,
     defaultNotes: row.default_notes || "",
+    preferredVesselId: row.preferred_vessel_id,
     isFavorite: row.is_favorite,
     archivedAt: row.archived_at,
     createdAt: row.created_at,
@@ -57,6 +58,7 @@ function toRecipeInsert(userId: string, draft: F1RecipeDraft): TablesInsert<"f1_
     target_preference: draft.targetPreference,
     default_room_temp_c: draft.defaultRoomTempC,
     default_notes: draft.defaultNotes.trim() || null,
+    preferred_vessel_id: draft.preferredVesselId,
     is_favorite: draft.isFavorite,
   };
 }
@@ -78,6 +80,7 @@ function toRecipeUpdate(draft: F1RecipeDraft): TablesUpdate<"f1_recipes"> {
     target_preference: draft.targetPreference,
     default_room_temp_c: draft.defaultRoomTempC,
     default_notes: draft.defaultNotes.trim() || null,
+    preferred_vessel_id: draft.preferredVesselId,
     is_favorite: draft.isFavorite,
   };
 }
@@ -161,6 +164,7 @@ export async function duplicateF1Recipe(args: {
     targetPreference: args.recipe.targetPreference,
     defaultRoomTempC: args.recipe.defaultRoomTempC,
     defaultNotes: "",
+    preferredVesselId: args.recipe.preferredVesselId,
     isFavorite: false,
   };
 

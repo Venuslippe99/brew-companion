@@ -15,6 +15,7 @@ import {
 } from "@/lib/batch-detail-view";
 import type { BatchTimingResult } from "@/lib/batch-timing";
 import type { BatchStage, BatchStatus, KombuchaBatch } from "@/lib/batches";
+import type { LoadedF1Setup } from "@/lib/f1-setups";
 import type { LoadedF2Setup } from "@/lib/f2-current-setup";
 import type { BatchLineage } from "@/lib/lineage";
 import {
@@ -45,6 +46,70 @@ function RecipeSnapshot({ batch }: { batch: KombuchaBatch }) {
           <p className="mt-1 font-medium capitalize text-foreground">{value}</p>
         </div>
       ))}
+    </div>
+  );
+}
+
+function getJsonRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+function getJsonString(record: Record<string, unknown> | null, key: string) {
+  return record && typeof record[key] === "string" ? (record[key] as string) : null;
+}
+
+function getJsonNumber(record: Record<string, unknown> | null, key: string) {
+  return record && typeof record[key] === "number" ? (record[key] as number) : null;
+}
+
+function F1SetupSnapshot({ setup }: { setup: LoadedF1Setup }) {
+  const snapshot = getJsonRecord(setup.setupSnapshotJson);
+  const recipeContext = getJsonRecord(snapshot?.recipeContext);
+  const vesselContext = getJsonRecord(snapshot?.vesselContext);
+  const fitContext = getJsonRecord(snapshot?.fitContext);
+
+  return (
+    <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+      <div>
+        <p className="text-xs text-muted-foreground">Setup origin</p>
+        <p className="mt-1 font-medium capitalize text-foreground">
+          {getJsonString(recipeContext, "origin") || "scratch"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Recipe snapshot</p>
+        <p className="mt-1 font-medium text-foreground">
+          {getJsonString(recipeContext, "recipeNameSnapshot") || "No linked recipe"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Vessel snapshot</p>
+        <p className="mt-1 font-medium text-foreground">
+          {getJsonString(vesselContext, "vesselNameSnapshot") || "Manual vessel"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Fit state</p>
+        <p className="mt-1 font-medium capitalize text-foreground">
+          {(getJsonString(fitContext, "fitState") || "unknown").replace(/_/g, " ")}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Fill ratio</p>
+        <p className="mt-1 font-medium text-foreground">
+          {getJsonNumber(fitContext, "fillRatioPercent") !== null
+            ? `${getJsonNumber(fitContext, "fillRatioPercent")}%`
+            : "Not calculated"}
+        </p>
+      </div>
+      <div>
+        <p className="text-xs text-muted-foreground">Setup saved</p>
+        <p className="mt-1 font-medium text-foreground">
+          {new Date(setup.createdAt).toLocaleDateString()}
+        </p>
+      </div>
     </div>
   );
 }
@@ -154,6 +219,7 @@ export function BatchOverviewSurface({
   outcomesLoading,
   lineage,
   lineageLoading,
+  currentF1Setup,
   currentF2Setup,
   onOpenOutcome,
   onStartF2,
@@ -172,6 +238,7 @@ export function BatchOverviewSurface({
   outcomesLoading: boolean;
   lineage: BatchLineage | null;
   lineageLoading: boolean;
+  currentF1Setup: LoadedF1Setup | null;
   currentF2Setup: LoadedF2Setup | null;
   onOpenOutcome: (phase: "f1" | "f2") => void;
   onStartF2: () => Promise<void>;
@@ -279,6 +346,17 @@ export function BatchOverviewSurface({
               defaultOpen={!shouldCollapseChapterByDefault(batch, "first_fermentation")}
             >
               <div className="space-y-4">
+                {currentF1Setup && (
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                      Saved First Fermentation setup
+                    </p>
+                    <div className="mt-3">
+                      <F1SetupSnapshot setup={currentF1Setup} />
+                    </div>
+                  </div>
+                )}
+
                 <div className="rounded-2xl border border-border bg-background p-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                     Base recipe
@@ -310,6 +388,17 @@ export function BatchOverviewSurface({
                 />
               </div>
             </BatchPhaseCollapse>
+          )}
+
+          {isF1Stage && currentF1Setup && (
+            <div className="rounded-2xl border border-border bg-background p-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Saved First Fermentation setup
+              </p>
+              <div className="mt-3">
+                <F1SetupSnapshot setup={currentF1Setup} />
+              </div>
+            </div>
           )}
         </div>
 

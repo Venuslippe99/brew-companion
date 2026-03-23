@@ -24,17 +24,20 @@ import {
   setF1RecipeArchived,
   setF1RecipeFavorite,
 } from "@/lib/f1-recipes";
+import { loadFermentationVessels } from "@/lib/f1-vessels";
 import {
   createEmptyF1RecipeDraft,
   type F1RecipeDraft,
   type F1RecipeSummary,
 } from "@/lib/f1-recipe-types";
+import type { FermentationVesselSummary } from "@/lib/f1-vessel-types";
 
 export default function F1Recipes() {
   const navigate = useNavigate();
   const { user } = useAuth();
 
   const [recipes, setRecipes] = useState<F1RecipeSummary[]>([]);
+  const [availableVessels, setAvailableVessels] = useState<FermentationVesselSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showArchived, setShowArchived] = useState(false);
   const [editorOpen, setEditorOpen] = useState(false);
@@ -61,8 +64,19 @@ export default function F1Recipes() {
     }
   };
 
+  const loadVessels = async () => {
+    try {
+      const loaded = await loadFermentationVessels({ includeArchived: true });
+      setAvailableVessels(loaded);
+    } catch (error) {
+      console.error("Load fermentation vessels for recipes error:", error);
+      toast.error(error instanceof Error ? error.message : "Could not load vessels.");
+    }
+  };
+
   useEffect(() => {
     void loadRecipes();
+    void loadVessels();
   }, []);
 
   const openCreate = () => {
@@ -89,6 +103,7 @@ export default function F1Recipes() {
       targetPreference: recipe.targetPreference,
       defaultRoomTempC: recipe.defaultRoomTempC,
       defaultNotes: recipe.defaultNotes || "",
+      preferredVesselId: recipe.preferredVesselId,
       isFavorite: recipe.isFavorite,
     });
     setEditorOpen(true);
@@ -163,6 +178,9 @@ export default function F1Recipes() {
               <Button variant="outline" onClick={() => navigate("/new-batch")}>
                 Back to New Batch
               </Button>
+              <Button variant="outline" onClick={() => navigate("/f1-vessels")}>
+                Manage vessels
+              </Button>
               <Button onClick={openCreate}>
                 <Plus className="h-4 w-4" /> New recipe
               </Button>
@@ -198,6 +216,12 @@ export default function F1Recipes() {
               <ScrollReveal key={recipe.id} delay={index * 0.04}>
                 <F1RecipeCard
                   recipe={recipe}
+                  preferredVesselLabel={
+                    recipe.preferredVesselId
+                      ? availableVessels.find((vessel) => vessel.id === recipe.preferredVesselId)
+                          ?.name || "Saved vessel"
+                      : null
+                  }
                   onEdit={openEdit}
                   onDuplicate={async (selected) => {
                     if (!user?.id) {
@@ -276,6 +300,8 @@ export default function F1Recipes() {
             draft={editorDraft}
             saving={savingRecipe}
             submitLabel={editingRecipeId ? "Save recipe changes" : "Save recipe"}
+            availableVessels={availableVessels}
+            onManageVessels={() => navigate("/f1-vessels")}
             onChange={setEditorDraft}
             onSubmit={handleSave}
           />

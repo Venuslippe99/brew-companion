@@ -394,6 +394,80 @@ export type Database = {
           },
         ]
       }
+      batch_f1_setups: {
+        Row: {
+          batch_id: string
+          created_at: string
+          created_by_user_id: string
+          fit_notes_json: Json
+          fit_state:
+            | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
+            | null
+          id: string
+          selected_recipe_id: string | null
+          selected_vessel_id: string | null
+          setup_snapshot_json: Json
+          updated_at: string
+        }
+        Insert: {
+          batch_id: string
+          created_at?: string
+          created_by_user_id: string
+          fit_notes_json?: Json
+          fit_state?:
+            | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
+            | null
+          id?: string
+          selected_recipe_id?: string | null
+          selected_vessel_id?: string | null
+          setup_snapshot_json?: Json
+          updated_at?: string
+        }
+        Update: {
+          batch_id?: string
+          created_at?: string
+          created_by_user_id?: string
+          fit_notes_json?: Json
+          fit_state?:
+            | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
+            | null
+          id?: string
+          selected_recipe_id?: string | null
+          selected_vessel_id?: string | null
+          setup_snapshot_json?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "batch_f1_setups_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "batch_dashboard_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_f1_setups_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: true
+            referencedRelation: "kombucha_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_f1_setups_selected_recipe_id_fkey"
+            columns: ["selected_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "f1_recipes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_f1_setups_selected_vessel_id_fkey"
+            columns: ["selected_vessel_id"]
+            isOneToOne: false
+            referencedRelation: "fermentation_vessels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       batch_logs: {
         Row: {
           batch_id: string
@@ -761,6 +835,7 @@ export type Database = {
           id: string
           is_favorite: boolean
           name: string
+          preferred_vessel_id: string | null
           sugar_amount_unit: string
           sugar_amount_value: number
           sugar_type: string
@@ -786,6 +861,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean
           name: string
+          preferred_vessel_id?: string | null
           sugar_amount_unit: string
           sugar_amount_value: number
           sugar_type: string
@@ -811,6 +887,7 @@ export type Database = {
           id?: string
           is_favorite?: boolean
           name?: string
+          preferred_vessel_id?: string | null
           sugar_amount_unit?: string
           sugar_amount_value?: number
           sugar_type?: string
@@ -822,6 +899,59 @@ export type Database = {
           tea_amount_value?: number
           tea_source_form?: string
           tea_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "f1_recipes_preferred_vessel_id_fkey"
+            columns: ["preferred_vessel_id"]
+            isOneToOne: false
+            referencedRelation: "fermentation_vessels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fermentation_vessels: {
+        Row: {
+          archived_at: string | null
+          capacity_ml: number | null
+          created_at: string
+          f1_suitability: Database["public"]["Enums"]["f1_vessel_suitability_enum"]
+          id: string
+          is_favorite: boolean
+          material_type: Database["public"]["Enums"]["fermentation_vessel_material_enum"]
+          name: string
+          notes: string | null
+          recommended_max_fill_ml: number | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          capacity_ml?: number | null
+          created_at?: string
+          f1_suitability?: Database["public"]["Enums"]["f1_vessel_suitability_enum"]
+          id?: string
+          is_favorite?: boolean
+          material_type: Database["public"]["Enums"]["fermentation_vessel_material_enum"]
+          name: string
+          notes?: string | null
+          recommended_max_fill_ml?: number | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          capacity_ml?: number | null
+          created_at?: string
+          f1_suitability?: Database["public"]["Enums"]["f1_vessel_suitability_enum"]
+          id?: string
+          is_favorite?: boolean
+          material_type?: Database["public"]["Enums"]["fermentation_vessel_material_enum"]
+          name?: string
+          notes?: string | null
+          recommended_max_fill_ml?: number | null
           updated_at?: string
           user_id?: string
         }
@@ -1437,6 +1567,24 @@ export type Database = {
         | "balanced"
         | "tart"
         | "too_sour"
+      f1_vessel_fit_state_enum:
+        | "roomy"
+        | "good_fit"
+        | "tight_fit"
+        | "overfilled"
+      f1_vessel_suitability_enum:
+        | "recommended"
+        | "acceptable"
+        | "caution"
+        | "not_recommended"
+      fermentation_vessel_material_enum:
+        | "glass"
+        | "ceramic_glazed_food_safe"
+        | "food_grade_plastic"
+        | "unknown_plastic"
+        | "stainless_steel"
+        | "reactive_metal"
+        | "other"
       flavour_category_enum:
         | "berries"
         | "citrus"
@@ -1665,6 +1813,22 @@ export const Constants = {
         "balanced",
         "tart",
         "too_sour",
+      ],
+      f1_vessel_fit_state_enum: ["roomy", "good_fit", "tight_fit", "overfilled"],
+      f1_vessel_suitability_enum: [
+        "recommended",
+        "acceptable",
+        "caution",
+        "not_recommended",
+      ],
+      fermentation_vessel_material_enum: [
+        "glass",
+        "ceramic_glazed_food_safe",
+        "food_grade_plastic",
+        "unknown_plastic",
+        "stainless_steel",
+        "reactive_metal",
+        "other",
       ],
       flavour_category_enum: [
         "berries",

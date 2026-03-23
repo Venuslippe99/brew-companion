@@ -4,6 +4,7 @@ import type { F1RecipeSummary } from "@/lib/f1-recipe-types";
 type F1RecipeCardProps = {
   recipe: F1RecipeSummary;
   compact?: boolean;
+  preferredVesselLabel?: string | null;
   onSelect?: (recipe: F1RecipeSummary) => void;
   onEdit?: (recipe: F1RecipeSummary) => void;
   onDuplicate?: (recipe: F1RecipeSummary) => void;
@@ -15,6 +16,7 @@ type F1RecipeCardProps = {
 export function F1RecipeCard({
   recipe,
   compact = false,
+  preferredVesselLabel,
   onSelect,
   onEdit,
   onDuplicate,
@@ -77,6 +79,13 @@ export function F1RecipeCard({
           <p className="font-medium text-foreground">{recipe.defaultStarterLiquidMl}ml</p>
         </div>
       </div>
+
+      {preferredVesselLabel ? (
+        <div className="mt-3 rounded-xl border border-primary/10 bg-primary/5 p-3 text-sm">
+          <p className="text-xs text-muted-foreground">Preferred vessel default</p>
+          <p className="mt-1 font-medium text-foreground">{preferredVesselLabel}</p>
+        </div>
+      ) : null}
 
       {!compact && (onEdit || onDuplicate || onArchiveToggle || onFavoriteToggle || onDelete) ? (
         <div className="mt-4 flex flex-wrap gap-2">

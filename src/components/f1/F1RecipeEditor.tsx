@@ -11,11 +11,14 @@ import {
   F1_TEA_TYPES,
   type F1RecipeDraft,
 } from "@/lib/f1-recipe-types";
+import type { FermentationVesselSummary } from "@/lib/f1-vessel-types";
 
 type F1RecipeEditorProps = {
   draft: F1RecipeDraft;
   saving?: boolean;
   submitLabel: string;
+  availableVessels?: FermentationVesselSummary[];
+  onManageVessels?: () => void;
   onChange: (nextDraft: F1RecipeDraft) => void;
   onSubmit: () => void;
 };
@@ -30,6 +33,8 @@ export function F1RecipeEditor({
   draft,
   saving = false,
   submitLabel,
+  availableVessels = [],
+  onManageVessels,
   onChange,
   onSubmit,
 }: F1RecipeEditorProps) {
@@ -227,6 +232,35 @@ export function F1RecipeEditor({
             }
             placeholder="Optional"
           />
+        </div>
+
+        <div className="space-y-2 sm:col-span-2">
+          <div className="flex items-center justify-between gap-3">
+            <Label htmlFor="f1-recipe-vessel">Preferred vessel</Label>
+            {onManageVessels ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onManageVessels}>
+                Manage vessels
+              </Button>
+            ) : null}
+          </div>
+          <select
+            id="f1-recipe-vessel"
+            value={draft.preferredVesselId || ""}
+            onChange={(event) =>
+              update("preferredVesselId", event.target.value || null)
+            }
+            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+          >
+            <option value="">No preferred vessel</option>
+            {availableVessels.map((vessel) => (
+              <option key={vessel.id} value={vessel.id}>
+                {vessel.name}
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-muted-foreground">
+            This only sets a default. You can still change the actual vessel in New Batch before saving.
+          </p>
         </div>
       </div>
 
