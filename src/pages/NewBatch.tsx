@@ -6,6 +6,7 @@ import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { F1RecipeEditor } from "@/components/f1/F1RecipeEditor";
 import { F1RecipePicker } from "@/components/f1/F1RecipePicker";
+import { F1RecommendationSection } from "@/components/f1/F1RecommendationSection";
 import { F1SetupSummary } from "@/components/f1/F1SetupSummary";
 import { F1VesselPicker } from "@/components/f1/F1VesselPicker";
 import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
@@ -26,6 +27,14 @@ import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
 import { loadF1Recipes, saveF1Recipe } from "@/lib/f1-recipes";
 import { saveBatchF1Setup } from "@/lib/f1-setups";
 import { loadFermentationVessels, saveFermentationVessel } from "@/lib/f1-vessels";
+import {
+  buildF1Recommendations,
+  loadF1RecommendationHistoryContext,
+} from "@/lib/f1-recommendations";
+import type {
+  F1RecommendationCard,
+  F1RecommendationSnapshot,
+} from "@/lib/f1-recommendation-types";
 import {
   applyRecipeToBatchSetup,
   buildRecipeDraftFromBatchSetup,
@@ -127,6 +136,13 @@ export default function NewBatch() {
   const [starterSourceOptions, setStarterSourceOptions] = useState<LineageBatchSummary[]>([]);
   const [starterSourceLoading, setStarterSourceLoading] = useState(false);
   const [starterSourceBatchId, setStarterSourceBatchId] = useState<string | null>(null);
+  const [recommendationHistoryLoading, setRecommendationHistoryLoading] = useState(false);
+  const [recommendationHistory, setRecommendationHistory] = useState<
+    Awaited<ReturnType<typeof loadF1RecommendationHistoryContext>>
+  >([]);
+  const [appliedAdjustments, setAppliedAdjustments] = useState<
+    F1RecommendationSnapshot["appliedAdjustments"]
+  >([]);
   const [form, setForm] = useState<NewBatchForm>(() => buildInitialForm(brewAgainState));
 
   const update = <K extends keyof NewBatchForm>(key: K, value: NewBatchForm[K]) =>
@@ -252,6 +268,74 @@ export default function NewBatch() {
     [form, selectedVessel]
   );
 
+  const recommendationDraft = useMemo(
+    () => ({
+      brewDate: form.brewDate,
+      setup: batchSetupFields,
+      selectedRecipeId: selectedRecipe?.id || null,
+      selectedVessel,
+      starterSourceBatchId,
+      brewAgainSourceBatchId: brewAgainState?.sourceSummary.sourceBatchId || null,
+    }),
+    [
+      batchSetupFields,
+      brewAgainState?.sourceSummary.sourceBatchId,
+      form.brewDate,
+      selectedRecipe?.id,
+      selectedVessel,
+      starterSourceBatchId,
+    ]
+  );
+
+  useEffect(() => {
+    if (!user?.id) {
+      setRecommendationHistory([]);
+      return;
+    }
+
+    let isActive = true;
+    setRecommendationHistoryLoading(true);
+
+    void loadF1RecommendationHistoryContext({
+      userId: user.id,
+      draft: recommendationDraft,
+    })
+      .then((history) => {
+        if (isActive) {
+          setRecommendationHistory(history);
+        }
+      })
+      .catch((error) => {
+        console.error("Load recommendation history error:", error);
+        if (isActive) {
+          setRecommendationHistory([]);
+        }
+      })
+      .finally(() => {
+        if (isActive) {
+          setRecommendationHistoryLoading(false);
+        }
+      });
+
+    return () => {
+      isActive = false;
+    };
+  }, [recommendationDraft, user?.id]);
+
+  const recommendations = useMemo(
+    () =>
+      buildF1Recommendations({
+        draft: recommendationDraft,
+        history: recommendationHistory,
+        appliedAdjustments,
+      }),
+    [
+      appliedAdjustments,
+      recommendationHistory,
+      recommendationDraft,
+    ]
+  );
+
   const applyRecipeDefaults = (recipe: F1RecipeSummary) => {
     const recipeFields = applyRecipeToBatchSetup(recipe);
 
@@ -347,6 +431,29 @@ export default function NewBatch() {
     }
   };
 
+  const handleApplyRecommendation = (card: F1RecommendationCard) => {
+    if (!card.applyAction) {
+      return;
+    }
+
+    const { field, value } = card.applyAction;
+
+    if (field === "starterLiquidMl" || field === "sugarG" || field === "teaAmountValue") {
+      update(field, Number(value) as NewBatchForm[typeof field]);
+    }
+
+    if (field === "teaType" || field === "sugarType") {
+      update(field, String(value) as NewBatchForm[typeof field]);
+    }
+
+    setAppliedAdjustments((current) => {
+      const next = current.filter((item) => item.recommendationId !== card.id);
+      return [...next, { recommendationId: card.id, field, value }];
+    });
+
+    toast.success("Applied recommendation to today's draft.");
+  };
+
   const handleCreate = async () => {
     if (!user) {
       toast.error("You must be logged in to create a batch.");
@@ -414,6 +521,8 @@ export default function NewBatch() {
         starterSourceType: starterSourceBatchId ? "previous_batch" : "manual",
         starterSourceBatchId,
         brewAgainSourceBatchId: brewAgainState?.sourceSummary.sourceBatchId || null,
+        recommendationSnapshot: recommendations.snapshot,
+        acceptedRecommendationIds: appliedAdjustments.map((item) => item.recommendationId),
       });
 
       toast.success("Batch created.");
@@ -554,6 +663,15 @@ export default function NewBatch() {
             setup={batchSetupFields}
             selectedRecipeName={selectedRecipe?.name || null}
             selectedVessel={selectedVessel}
+          />
+        </ScrollReveal>
+
+        <ScrollReveal delay={0.11}>
+          <F1RecommendationSection
+            cards={recommendations.cards}
+            loadingHistory={recommendationHistoryLoading}
+            appliedRecommendationIds={appliedAdjustments.map((item) => item.recommendationId)}
+            onApply={handleApplyRecommendation}
           />
         </ScrollReveal>
 

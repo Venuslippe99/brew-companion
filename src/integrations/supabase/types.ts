@@ -396,6 +396,7 @@ export type Database = {
       }
       batch_f1_setups: {
         Row: {
+          accepted_recommendation_ids_json: Json
           batch_id: string
           created_at: string
           created_by_user_id: string
@@ -404,12 +405,15 @@ export type Database = {
             | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
             | null
           id: string
+          recommendation_engine_version: string | null
+          recommendation_snapshot_json: Json
           selected_recipe_id: string | null
           selected_vessel_id: string | null
           setup_snapshot_json: Json
           updated_at: string
         }
         Insert: {
+          accepted_recommendation_ids_json?: Json
           batch_id: string
           created_at?: string
           created_by_user_id: string
@@ -418,12 +422,15 @@ export type Database = {
             | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
             | null
           id?: string
+          recommendation_engine_version?: string | null
+          recommendation_snapshot_json?: Json
           selected_recipe_id?: string | null
           selected_vessel_id?: string | null
           setup_snapshot_json?: Json
           updated_at?: string
         }
         Update: {
+          accepted_recommendation_ids_json?: Json
           batch_id?: string
           created_at?: string
           created_by_user_id?: string
@@ -432,6 +439,8 @@ export type Database = {
             | Database["public"]["Enums"]["f1_vessel_fit_state_enum"]
             | null
           id?: string
+          recommendation_engine_version?: string | null
+          recommendation_snapshot_json?: Json
           selected_recipe_id?: string | null
           selected_vessel_id?: string | null
           setup_snapshot_json?: Json

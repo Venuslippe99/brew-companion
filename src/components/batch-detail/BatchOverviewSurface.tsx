@@ -64,52 +64,103 @@ function getJsonNumber(record: Record<string, unknown> | null, key: string) {
   return record && typeof record[key] === "number" ? (record[key] as number) : null;
 }
 
+function getJsonArray(record: Record<string, unknown> | null, key: string) {
+  return record && Array.isArray(record[key]) ? (record[key] as unknown[]) : [];
+}
+
 function F1SetupSnapshot({ setup }: { setup: LoadedF1Setup }) {
   const snapshot = getJsonRecord(setup.setupSnapshotJson);
   const recipeContext = getJsonRecord(snapshot?.recipeContext);
   const vesselContext = getJsonRecord(snapshot?.vesselContext);
   const fitContext = getJsonRecord(snapshot?.fitContext);
+  const recommendationSnapshot = getJsonRecord(setup.recommendationSnapshotJson);
+  const recommendationCards = getJsonArray(recommendationSnapshot, "cards");
+  const acceptedRecommendationIds = Array.isArray(setup.acceptedRecommendationIdsJson)
+    ? setup.acceptedRecommendationIdsJson
+    : [];
 
   return (
-    <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
-      <div>
-        <p className="text-xs text-muted-foreground">Setup origin</p>
-        <p className="mt-1 font-medium capitalize text-foreground">
-          {getJsonString(recipeContext, "origin") || "scratch"}
-        </p>
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
+        <div>
+          <p className="text-xs text-muted-foreground">Setup origin</p>
+          <p className="mt-1 font-medium capitalize text-foreground">
+            {getJsonString(recipeContext, "origin") || "scratch"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Recipe snapshot</p>
+          <p className="mt-1 font-medium text-foreground">
+            {getJsonString(recipeContext, "recipeNameSnapshot") || "No linked recipe"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Vessel snapshot</p>
+          <p className="mt-1 font-medium text-foreground">
+            {getJsonString(vesselContext, "vesselNameSnapshot") || "Manual vessel"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Fit state</p>
+          <p className="mt-1 font-medium capitalize text-foreground">
+            {(getJsonString(fitContext, "fitState") || "unknown").replace(/_/g, " ")}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Fill ratio</p>
+          <p className="mt-1 font-medium text-foreground">
+            {getJsonNumber(fitContext, "fillRatioPercent") !== null
+              ? `${getJsonNumber(fitContext, "fillRatioPercent")}%`
+              : "Not calculated"}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-muted-foreground">Setup saved</p>
+          <p className="mt-1 font-medium text-foreground">
+            {new Date(setup.createdAt).toLocaleDateString()}
+          </p>
+        </div>
       </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Recipe snapshot</p>
-        <p className="mt-1 font-medium text-foreground">
-          {getJsonString(recipeContext, "recipeNameSnapshot") || "No linked recipe"}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Vessel snapshot</p>
-        <p className="mt-1 font-medium text-foreground">
-          {getJsonString(vesselContext, "vesselNameSnapshot") || "Manual vessel"}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Fit state</p>
-        <p className="mt-1 font-medium capitalize text-foreground">
-          {(getJsonString(fitContext, "fitState") || "unknown").replace(/_/g, " ")}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Fill ratio</p>
-        <p className="mt-1 font-medium text-foreground">
-          {getJsonNumber(fitContext, "fillRatioPercent") !== null
-            ? `${getJsonNumber(fitContext, "fillRatioPercent")}%`
-            : "Not calculated"}
-        </p>
-      </div>
-      <div>
-        <p className="text-xs text-muted-foreground">Setup saved</p>
-        <p className="mt-1 font-medium text-foreground">
-          {new Date(setup.createdAt).toLocaleDateString()}
-        </p>
-      </div>
+
+      {recommendationCards.length > 0 ? (
+        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 space-y-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                Setup-time guidance memory
+              </p>
+              <p className="mt-1 text-sm text-foreground">
+                Kombloom saved {recommendationCards.length} recommendation
+                {recommendationCards.length === 1 ? "" : "s"} when this batch was created.
+              </p>
+            </div>
+            <div className="text-xs text-muted-foreground">
+              {acceptedRecommendationIds.length} applied
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {recommendationCards.slice(0, 3).map((cardValue, index) => {
+              const card = getJsonRecord(cardValue);
+
+              return (
+                <div key={`${getJsonString(card, "id") || index}`} className="rounded-xl border border-primary/10 bg-background p-3">
+                  <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <span>{getJsonString(card, "sourceType") || "saved"}</span>
+                    <span>{getJsonString(card, "confidence") || "saved"}</span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-foreground">
+                    {getJsonString(card, "title") || "Saved recommendation"}
+                  </p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    {getJsonString(card, "summary") || getJsonString(card, "explanation") || "Saved with the F1 setup snapshot."}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

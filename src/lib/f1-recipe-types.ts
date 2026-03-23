@@ -23,6 +23,7 @@ export const F1_SUGAR_TYPES = [
   "White sugar",
   "Raw sugar",
   "Brown sugar",
+  "Honey",
   "Other",
 ] as const;
 export const F1_SUGAR_AMOUNT_UNITS = ["g"] as const;

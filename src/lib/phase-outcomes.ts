@@ -47,6 +47,28 @@ export async function loadPhaseOutcomes(batchId: string) {
   return (data || []) as PhaseOutcomeRow[];
 }
 
+export async function loadF1OutcomesForBatches(batchIds: string[]) {
+  const uniqueBatchIds = Array.from(new Set(batchIds.filter(Boolean)));
+
+  if (uniqueBatchIds.length === 0) {
+    return new Map<string, PhaseOutcomeRow>();
+  }
+
+  const { data, error } = await supabase
+    .from("batch_phase_outcomes")
+    .select("*")
+    .eq("phase", "f1")
+    .in("batch_id", uniqueBatchIds);
+
+  if (error) {
+    throw new Error(`Could not load F1 outcomes for recommendation history: ${error.message}`);
+  }
+
+  return new Map(
+    ((data || []) as PhaseOutcomeRow[]).map((row) => [row.batch_id, row] as const)
+  );
+}
+
 export function getOutcomeForPhase(
   outcomes: PhaseOutcomeRow[],
   phase: PhaseOutcomePhase
