@@ -1,5 +1,6 @@
 import type { ComponentProps } from "react";
 import { BrewAgainLauncher } from "@/components/brew-again/BrewAgainLauncher";
+import { BatchHeroQuickActions } from "@/components/batch-detail/BatchHeroQuickActions";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
 import type {
@@ -19,6 +20,10 @@ export function BatchDetailHero({
   currentF2Setup,
   f1Outcome,
   f2Outcome,
+  canLogTasteTest,
+  photoSupported,
+  onAddNote,
+  onAddTasteTest,
   onStartBrewAgain,
 }: {
   batch: KombuchaBatch;
@@ -28,6 +33,10 @@ export function BatchDetailHero({
   currentF2Setup: LoadedF2Setup | null;
   f1Outcome?: PhaseOutcomeRow;
   f2Outcome?: PhaseOutcomeRow;
+  canLogTasteTest: boolean;
+  photoSupported: boolean;
+  onAddNote: () => void;
+  onAddTasteTest: () => void;
   onStartBrewAgain: ComponentProps<typeof BrewAgainLauncher>["onContinue"];
 }) {
   const heroCopy = getHeroCopy({
@@ -47,11 +56,12 @@ export function BatchDetailHero({
             <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
               {heroCopy.eyebrow}
             </p>
-            <h1 className="mt-2 font-display text-2xl font-semibold leading-tight text-foreground lg:text-3xl">
-              {batch.name}
+            <h1 className="mt-2 font-display text-3xl font-semibold leading-tight text-foreground lg:text-4xl">
+              {heroCopy.title}
             </h1>
+            <p className="mt-2 text-sm font-medium text-foreground/80">{batch.name}</p>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground lg:text-base">
-              {heroCopy.title}. {heroCopy.summary}
+              {heroCopy.summary}
             </p>
 
             <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -66,6 +76,17 @@ export function BatchDetailHero({
                 </span>
               ))}
             </div>
+
+            {batch.status !== "completed" && batch.status !== "archived" && (
+              <div className="mt-4">
+                <BatchHeroQuickActions
+                  canLogTasteTest={canLogTasteTest}
+                  photoSupported={photoSupported}
+                  onAddNote={onAddNote}
+                  onAddTasteTest={onAddTasteTest}
+                />
+              </div>
+            )}
           </div>
 
           <div className="shrink-0 text-right">

@@ -9,6 +9,7 @@ import { BatchDetailSegmentedNav } from "@/components/batch-detail/BatchDetailSe
 import { BatchOverviewSurface } from "@/components/batch-detail/BatchOverviewSurface";
 import { BatchJournal } from "@/components/batch-detail/BatchJournal";
 import { BatchAssistantSurface } from "@/components/batch-detail/BatchAssistantSurface";
+import { BatchQuickLogDrawer } from "@/components/batch-detail/BatchQuickLogDrawer";
 import { PhaseOutcomeDrawer } from "@/components/outcomes/PhaseOutcomeDrawer";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -18,6 +19,10 @@ import { getDayNumber, getStageLabel, type BatchStage, type BatchStatus, type Ko
 import { getBatchStageTiming } from "@/lib/batch-timing";
 import { buildBatchJournal } from "@/lib/batch-journal";
 import type { BatchReminder, BatchSurface, BatchTimelineEntry } from "@/lib/batch-detail-view";
+import {
+  saveBatchQuickLog,
+  type TasteTestImpression,
+} from "@/lib/batch-quick-logs";
 import { loadCurrentF2Setup, type LoadedF2Setup } from "@/lib/f2-current-setup";
 import { loadBatchLineage, type BatchLineage } from "@/lib/lineage";
 import {
@@ -35,6 +40,7 @@ type BatchReminderRow = Pick<
 >;
 
 type WorkflowAction = "start-f2" | "still-fermenting";
+type QuickLogMode = "note" | "taste_test" | null;
 
 function getLogTitle(logType: string) {
   switch (logType) {
@@ -67,6 +73,14 @@ function getLogTitle(logType: string) {
   }
 }
 
+function getStructuredPayload(
+  value: Tables<"batch_logs">["structured_payload"]
+): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
 export default function BatchDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -87,6 +101,8 @@ export default function BatchDetail() {
   const [actionLoading, setActionLoading] = useState<WorkflowAction | null>(null);
   const [activeOutcomePhase, setActiveOutcomePhase] = useState<"f1" | "f2" | null>(null);
   const [outcomeSaving, setOutcomeSaving] = useState(false);
+  const [activeQuickLogMode, setActiveQuickLogMode] = useState<QuickLogMode>(null);
+  const [quickLogSaving, setQuickLogSaving] = useState(false);
 
   const timing = useMemo(() => {
     if (!batch) {
@@ -154,7 +170,7 @@ export default function BatchDetail() {
           .order("created_at", { ascending: false }),
         supabase
           .from("batch_logs")
-          .select("id, logged_at, log_type, note")
+          .select("id, logged_at, log_type, note, structured_payload")
           .eq("batch_id", batchId)
           .order("logged_at", { ascending: false }),
       ]);
@@ -177,14 +193,31 @@ export default function BatchDetail() {
       toStage: row.to_stage,
     }));
 
-    const logEntries: BatchTimelineEntry[] = (logRows || []).map((row) => ({
-      id: `log-${row.id}`,
-      eventAt: row.logged_at,
-      title: getLogTitle(row.log_type),
-      subtitle: row.note,
-      source: "log",
-      logType: row.log_type,
-    }));
+    const logEntries: BatchTimelineEntry[] = (logRows || []).map((row) => {
+      const structuredPayload = getStructuredPayload(row.structured_payload);
+
+      return {
+        id: `log-${row.id}`,
+        eventAt: row.logged_at,
+        title: getLogTitle(row.log_type),
+        subtitle: row.note,
+        source: "log",
+        logType: row.log_type,
+        stageAtLog:
+          structuredPayload &&
+          "stage_at_log" in structuredPayload &&
+          typeof structuredPayload.stage_at_log === "string"
+            ? (structuredPayload.stage_at_log as BatchStage)
+            : undefined,
+        sourceHint:
+          structuredPayload &&
+          "source" in structuredPayload &&
+          typeof structuredPayload.source === "string"
+            ? structuredPayload.source
+            : undefined,
+        structuredPayload,
+      };
+    });
 
     const merged = [...stageEntries, ...logEntries].sort(
       (left, right) =>
@@ -212,9 +245,14 @@ export default function BatchDetail() {
           current_stage,
           brew_started_at,
           f2_started_at,
+          f1_recipe_id,
           total_volume_ml,
           tea_type,
+          tea_source_form,
+          tea_amount_value,
+          tea_amount_unit,
           sugar_g,
+          sugar_type,
           starter_liquid_ml,
           scoby_present,
           avg_room_temp_c,
@@ -248,9 +286,15 @@ export default function BatchDetail() {
         currentStage: batchRow.current_stage,
         brewStartedAt: batchRow.brew_started_at,
         f2StartedAt: batchRow.f2_started_at || undefined,
+        f1RecipeId: batchRow.f1_recipe_id || undefined,
         totalVolumeMl: batchRow.total_volume_ml,
         teaType: batchRow.tea_type,
+        teaSourceForm: batchRow.tea_source_form || undefined,
+        teaAmountValue:
+          batchRow.tea_amount_value !== null ? Number(batchRow.tea_amount_value) : undefined,
+        teaAmountUnit: batchRow.tea_amount_unit || undefined,
         sugarG: Number(batchRow.sugar_g),
+        sugarType: batchRow.sugar_type || undefined,
         starterLiquidMl: Number(batchRow.starter_liquid_ml),
         scobyPresent: batchRow.scoby_present,
         avgRoomTempC: Number(batchRow.avg_room_temp_c),
@@ -539,6 +583,53 @@ export default function BatchDetail() {
     }
   };
 
+  const handleSaveQuickLog = async ({
+    mode,
+    note,
+    tasteImpression,
+  }: {
+    mode: Exclude<QuickLogMode, null>;
+    note: string;
+    tasteImpression?: TasteTestImpression;
+  }) => {
+    if (!batch || !user?.id) {
+      toast.error("You need to be signed in to save a quick note.");
+      return;
+    }
+
+    setQuickLogSaving(true);
+
+    try {
+      await saveBatchQuickLog({
+        batchId: batch.id,
+        userId: user.id,
+        logType: mode === "note" ? "note_only" : "taste_test",
+        note:
+          mode === "taste_test" && tasteImpression
+            ? `${tasteImpression.replace(/_/g, " ")}. ${note}`.trim()
+            : note,
+        stageAtLog: batch.currentStage,
+        structuredPayload:
+          mode === "taste_test"
+            ? {
+                taste_impression: tasteImpression,
+              }
+            : undefined,
+      });
+
+      setActiveQuickLogMode(null);
+      toast.success(mode === "note" ? "Brewing note saved." : "Taste test saved.");
+      void loadTimelineEntries(batch.id);
+    } catch (error) {
+      console.error("Save quick log error:", error);
+      toast.error(
+        error instanceof Error ? error.message : "Could not save this quick log."
+      );
+    } finally {
+      setQuickLogSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <AppLayout>
@@ -583,6 +674,12 @@ export default function BatchDetail() {
           currentF2Setup={currentF2Setup}
           f1Outcome={f1Outcome}
           f2Outcome={f2Outcome}
+          canLogTasteTest={["f1_active", "f1_check_window", "f1_extended"].includes(
+            batch.currentStage
+          )}
+          photoSupported={false}
+          onAddNote={() => setActiveQuickLogMode("note")}
+          onAddTasteTest={() => setActiveQuickLogMode("taste_test")}
           onStartBrewAgain={({ mode, plan, enabledSuggestionIds }) => {
             navigate("/new-batch", {
               state: applyBrewAgainSelection({
@@ -694,6 +791,24 @@ export default function BatchDetail() {
           }
         }}
         onSave={handleSaveOutcome}
+      />
+
+      <BatchQuickLogDrawer
+        mode={activeQuickLogMode === "taste_test" ? "taste_test" : "note"}
+        open={activeQuickLogMode !== null}
+        saving={quickLogSaving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setActiveQuickLogMode(null);
+          }
+        }}
+        onSave={({ note, tasteImpression }) =>
+          handleSaveQuickLog({
+            mode: activeQuickLogMode === "taste_test" ? "taste_test" : "note",
+            note,
+            tasteImpression,
+          })
+        }
       />
     </AppLayout>
   );

@@ -1,42 +1,83 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronDown, ChevronUp, FlaskConical } from "lucide-react";
+import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
+import { F1RecipeEditor } from "@/components/f1/F1RecipeEditor";
+import { F1RecipePicker } from "@/components/f1/F1RecipePicker";
+import { F1SetupSummary } from "@/components/f1/F1SetupSummary";
 import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
 import { Button } from "@/components/ui/button";
-import { useLocation, useNavigate } from "react-router-dom";
-import { useUser } from "@/contexts/UserContext";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
 import { getPhaseOutcomeLabel } from "@/lib/phase-outcome-options";
 import { isBrewAgainNavigationState } from "@/lib/brew-again";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
+import { loadF1Recipes, saveF1Recipe } from "@/lib/f1-recipes";
+import {
+  applyRecipeToBatchSetup,
+  buildRecipeDraftFromBatchSetup,
+  createEmptyF1RecipeDraft,
+  F1_TARGET_PREFERENCES,
+  F1_TEA_AMOUNT_UNITS,
+  F1_TEA_SOURCE_FORMS,
+  F1_TEA_TYPES,
+  F1_SUGAR_TYPES,
+  F1_VESSEL_TYPES,
+  type F1BatchSetupFields,
+  type F1RecipeDraft,
+  type F1RecipeSummary,
+} from "@/lib/f1-recipe-types";
 import { loadStarterSourceCandidates, type LineageBatchSummary } from "@/lib/lineage";
-import { FlaskConical, ChevronDown, ChevronUp } from "lucide-react";
 
-const teaTypes = ["Black tea", "Green tea", "Oolong tea", "White tea", "Black & green blend", "Green & white blend"];
-const vesselTypes = ["Glass jar", "Ceramic crock", "Food-grade plastic"];
-const preferences = ["sweeter", "balanced", "tart"] as const;
-
-type NewBatchForm = {
+type NewBatchForm = F1BatchSetupFields & {
   name: string;
   brewDate: string;
-  totalVolumeMl: number;
-  teaType: string;
-  sugarG: number;
-  starterLiquidMl: number;
-  scobyPresent: boolean;
-  avgRoomTempC: number;
-  vesselType: string;
-  targetPreference: (typeof preferences)[number];
   initialPh: string;
-  initialNotes: string;
 };
+
+const teaSourceFormLabels: Record<NewBatchForm["teaSourceForm"], string> = {
+  tea_bags: "Tea bags",
+  loose_leaf: "Loose leaf",
+  other: "Other",
+};
+
+function buildInitialForm(brewAgainState: BrewAgainNavigationState | null): NewBatchForm {
+  return {
+    name: brewAgainState?.prefill.name || "",
+    brewDate: brewAgainState?.prefill.brewDate || new Date().toISOString().split("T")[0],
+    totalVolumeMl: brewAgainState?.prefill.totalVolumeMl || 3800,
+    teaType: brewAgainState?.prefill.teaType || "Black tea",
+    teaSourceForm: brewAgainState?.prefill.teaSourceForm || "tea_bags",
+    teaAmountValue: brewAgainState?.prefill.teaAmountValue || 8,
+    teaAmountUnit: brewAgainState?.prefill.teaAmountUnit || "bags",
+    sugarG: brewAgainState?.prefill.sugarG || 200,
+    sugarType: brewAgainState?.prefill.sugarType || "Cane sugar",
+    starterLiquidMl: brewAgainState?.prefill.starterLiquidMl || 380,
+    scobyPresent: brewAgainState?.prefill.scobyPresent ?? true,
+    avgRoomTempC: brewAgainState?.prefill.avgRoomTempC || 23,
+    vesselType: brewAgainState?.prefill.vesselType || "Glass jar",
+    targetPreference: brewAgainState?.prefill.targetPreference || "balanced",
+    initialPh: brewAgainState?.prefill.initialPh || "",
+    initialNotes: brewAgainState?.prefill.initialNotes || "",
+  };
+}
 
 export default function NewBatch() {
   const location = useLocation();
   const navigate = useNavigate();
   const { isBeginner } = useUser();
   const { user } = useAuth();
+
   const brewAgainState = isBrewAgainNavigationState(location.state)
     ? (location.state as BrewAgainNavigationState)
     : null;
@@ -44,28 +85,44 @@ export default function NewBatch() {
 
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [recipePickerOpen, setRecipePickerOpen] = useState(false);
+  const [saveRecipeOpen, setSaveRecipeOpen] = useState(false);
+  const [recipeSaving, setRecipeSaving] = useState(false);
+  const [recipeLoading, setRecipeLoading] = useState(false);
+  const [selectedRecipe, setSelectedRecipe] = useState<F1RecipeSummary | null>(null);
+  const [availableRecipes, setAvailableRecipes] = useState<F1RecipeSummary[]>([]);
+  const [recipeDraft, setRecipeDraft] = useState<F1RecipeDraft>(createEmptyF1RecipeDraft());
+
   const [starterSourceOptions, setStarterSourceOptions] = useState<LineageBatchSummary[]>([]);
   const [starterSourceLoading, setStarterSourceLoading] = useState(false);
   const [starterSourceBatchId, setStarterSourceBatchId] = useState<string | null>(null);
-
-  const [form, setForm] = useState<NewBatchForm>({
-    name: brewAgainState?.prefill.name || "",
-    brewDate: brewAgainState?.prefill.brewDate || new Date().toISOString().split("T")[0],
-    totalVolumeMl: brewAgainState?.prefill.totalVolumeMl || 3800,
-    teaType: brewAgainState?.prefill.teaType || "Black tea",
-    sugarG: brewAgainState?.prefill.sugarG || 200,
-    starterLiquidMl: brewAgainState?.prefill.starterLiquidMl || 380,
-    scobyPresent: brewAgainState?.prefill.scobyPresent ?? true,
-    avgRoomTempC: brewAgainState?.prefill.avgRoomTempC || 23,
-    vesselType: brewAgainState?.prefill.vesselType || "Glass jar",
-    targetPreference:
-      brewAgainState?.prefill.targetPreference || ("balanced" as typeof preferences[number]),
-    initialPh: brewAgainState?.prefill.initialPh || "",
-    initialNotes: brewAgainState?.prefill.initialNotes || "",
-  });
+  const [form, setForm] = useState<NewBatchForm>(() => buildInitialForm(brewAgainState));
 
   const update = <K extends keyof NewBatchForm>(key: K, value: NewBatchForm[K]) =>
-    setForm((f) => ({ ...f, [key]: value }));
+    setForm((current) => ({ ...current, [key]: value }));
+
+  const loadRecipes = async () => {
+    setRecipeLoading(true);
+
+    try {
+      const loaded = await loadF1Recipes();
+      setAvailableRecipes(loaded);
+    } catch (error) {
+      console.error("Load F1 recipes error:", error);
+      toast.error(error instanceof Error ? error.message : "Could not load recipes.");
+    } finally {
+      setRecipeLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!user?.id) {
+      setAvailableRecipes([]);
+      return;
+    }
+
+    void loadRecipes();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user?.id) {
@@ -115,19 +172,85 @@ export default function NewBatch() {
     };
   }, [recommendedStarterSourceBatchId, user?.id]);
 
+  const batchSetupFields = useMemo<F1BatchSetupFields>(
+    () => ({
+      totalVolumeMl: form.totalVolumeMl,
+      teaType: form.teaType,
+      teaSourceForm: form.teaSourceForm,
+      teaAmountValue: form.teaAmountValue,
+      teaAmountUnit: form.teaAmountUnit,
+      sugarG: form.sugarG,
+      sugarType: form.sugarType,
+      starterLiquidMl: form.starterLiquidMl,
+      scobyPresent: form.scobyPresent,
+      avgRoomTempC: form.avgRoomTempC,
+      vesselType: form.vesselType,
+      targetPreference: form.targetPreference,
+      initialNotes: form.initialNotes,
+    }),
+    [form]
+  );
+
+  const applyRecipeDefaults = (recipe: F1RecipeSummary) => {
+    const recipeFields = applyRecipeToBatchSetup(recipe);
+
+    setSelectedRecipe(recipe);
+    setForm((current) => ({
+      ...current,
+      ...recipeFields,
+    }));
+  };
+
+  const openSaveRecipeDialog = () => {
+    setRecipeDraft(
+      buildRecipeDraftFromBatchSetup(batchSetupFields, {
+        name: selectedRecipe?.name || form.name.trim() || "",
+        description: selectedRecipe?.description || "",
+        isFavorite: selectedRecipe?.isFavorite || false,
+      })
+    );
+    setSaveRecipeOpen(true);
+  };
+
+  const handleSaveRecipe = async () => {
+    if (!user?.id) {
+      toast.error("You need to be signed in to save recipes.");
+      return;
+    }
+
+    setRecipeSaving(true);
+
+    try {
+      const saved = await saveF1Recipe({
+        userId: user.id,
+        draft: recipeDraft,
+      });
+
+      setSelectedRecipe(saved);
+      setSaveRecipeOpen(false);
+      toast.success("Recipe saved and linked to this batch setup.");
+      await loadRecipes();
+    } catch (error) {
+      console.error("Save F1 recipe from New Batch error:", error);
+      toast.error(error instanceof Error ? error.message : "Could not save recipe.");
+    } finally {
+      setRecipeSaving(false);
+    }
+  };
+
   const handleCreate = async () => {
     if (!user) {
-      alert("You must be logged in to create a batch.");
+      toast.error("You must be logged in to create a batch.");
       return;
     }
 
     if (!form.name.trim()) {
-      alert("Please enter a batch name.");
+      toast.error("Please enter a batch name.");
       return;
     }
 
     if (!form.brewDate) {
-      alert("Please select a brew date.");
+      toast.error("Please select a brew date.");
       return;
     }
 
@@ -144,9 +267,14 @@ export default function NewBatch() {
         brew_again_source_batch_id: brewAgainState?.sourceSummary.sourceBatchId || null,
         starter_source_type: starterSourceBatchId ? "previous_batch" : "manual",
         starter_source_batch_id: starterSourceBatchId,
+        f1_recipe_id: selectedRecipe?.id || null,
         total_volume_ml: form.totalVolumeMl,
         tea_type: form.teaType,
+        tea_source_form: form.teaSourceForm,
+        tea_amount_value: form.teaAmountValue,
+        tea_amount_unit: form.teaAmountUnit,
         sugar_g: form.sugarG,
+        sugar_type: form.sugarType,
         starter_liquid_ml: form.starterLiquidMl,
         scoby_present: form.scobyPresent,
         avg_room_temp_c: form.avgRoomTempC,
@@ -160,16 +288,17 @@ export default function NewBatch() {
 
     if (error) {
       console.error("Create batch error:", error);
-      alert(error.message);
+      toast.error(error.message);
       return;
     }
 
+    toast.success("Batch created.");
     navigate("/batches");
   };
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-6 pb-8">
+      <div className="max-w-3xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-6 pb-10">
         <ScrollReveal>
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
@@ -177,24 +306,70 @@ export default function NewBatch() {
             </div>
             <div>
               <h1 className="font-display text-2xl font-semibold text-foreground">New Batch</h1>
-              <p className="text-sm text-muted-foreground">Kombucha — First Fermentation</p>
+              <p className="text-sm text-muted-foreground">Kombucha - First Fermentation</p>
             </div>
           </div>
         </ScrollReveal>
 
-        {isBeginner && (
-          <ScrollReveal delay={0.05}>
-            <div className="bg-honey-light border border-primary/10 rounded-xl p-4">
+        {isBeginner ? (
+          <ScrollReveal delay={0.04}>
+            <div className="rounded-2xl border border-primary/10 bg-honey-light p-4">
               <p className="text-sm text-foreground">
-                Fill in what you know — the more detail you add, the better your readiness estimates will be.
-                Required fields are marked with *.
+                Start from scratch or load a saved recipe. Recipes store reusable defaults, while the form below should reflect what you are actually brewing today.
               </p>
             </div>
           </ScrollReveal>
-        )}
+        ) : null}
 
-        {brewAgainState && (
-          <ScrollReveal delay={0.06}>
+        <ScrollReveal delay={0.06}>
+          <div className="rounded-2xl border border-border bg-card p-4 space-y-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                  Recipe source
+                </p>
+                <h2 className="mt-1 text-lg font-semibold text-foreground">
+                  {selectedRecipe ? selectedRecipe.name : "Build this batch manually"}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {selectedRecipe
+                    ? "Recipe defaults are loaded, but every field below stays editable so the batch records what you actually brewed today."
+                    : "No recipe is linked yet. You can keep going from scratch or load a saved recipe first."}
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <Button type="button" variant="outline" onClick={() => setSelectedRecipe(null)}>
+                  Start from scratch
+                </Button>
+                <Button type="button" onClick={() => setRecipePickerOpen(true)}>
+                  Use saved recipe
+                </Button>
+              </div>
+            </div>
+
+            {selectedRecipe ? (
+              <div className="rounded-xl border border-primary/10 bg-primary/5 p-3 text-sm text-foreground">
+                <p>
+                  Loaded recipe defaults for {selectedRecipe.targetTotalVolumeMl}ml, {selectedRecipe.teaAmountValue}
+                  {selectedRecipe.teaAmountUnit} tea, and {selectedRecipe.sugarAmountValue}
+                  {selectedRecipe.sugarAmountUnit} {selectedRecipe.sugarType}.
+                </p>
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap gap-2">
+              <Button type="button" variant="outline" onClick={openSaveRecipeDialog}>
+                Save current setup as recipe
+              </Button>
+              <Button type="button" variant="ghost" onClick={() => navigate("/f1-recipes")}>
+                Manage recipe library
+              </Button>
+            </div>
+          </div>
+        </ScrollReveal>
+
+        {brewAgainState ? (
+          <ScrollReveal delay={0.08}>
             <div className="rounded-xl border border-primary/15 bg-primary/5 p-4 space-y-3">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -227,7 +402,7 @@ export default function NewBatch() {
                 </div>
               </div>
 
-              {brewAgainState.acceptedSuggestions.length > 0 && (
+              {brewAgainState.acceptedSuggestions.length > 0 ? (
                 <div className="rounded-xl border border-primary/10 bg-background p-3">
                   <p className="text-xs text-muted-foreground">Accepted suggestions</p>
                   <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-foreground">
@@ -236,40 +411,38 @@ export default function NewBatch() {
                     ))}
                   </ul>
                 </div>
-              )}
-
-              <div className="rounded-xl border border-primary/10 bg-background p-3">
-                <p className="text-xs text-muted-foreground">Starter source in this new batch</p>
-                <p className="mt-1 text-sm text-foreground">
-                  {recommendedStarterSourceBatchId
-                    ? "This batch is set to use the repeated batch as the starter source by default. You can change or clear that below."
-                    : "No starter-source link is preselected. You can add one below if you are using starter from a previous batch."}
-                </p>
-              </div>
+              ) : null}
             </div>
           </ScrollReveal>
-        )}
+        ) : null}
 
-        <ScrollReveal delay={0.08}>
+        <ScrollReveal delay={0.1}>
+          <F1SetupSummary
+            setup={batchSetupFields}
+            selectedRecipeName={selectedRecipe?.name || null}
+          />
+        </ScrollReveal>
+
+        <ScrollReveal delay={0.12}>
           <div className="space-y-5">
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Batch Name *</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Batch name *</label>
               <input
                 type="text"
                 placeholder="e.g. Morning Sun Blend"
                 value={form.name}
-                onChange={(e) => update("name", e.target.value)}
+                onChange={(event) => update("name", event.target.value)}
                 className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Brew Date *</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Brew date *</label>
                 <input
                   type="date"
                   value={form.brewDate}
-                  onChange={(e) => update("brewDate", e.target.value)}
+                  onChange={(event) => update("brewDate", event.target.value)}
                   className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
@@ -278,42 +451,118 @@ export default function NewBatch() {
                 <input
                   type="number"
                   value={form.totalVolumeMl}
-                  onChange={(e) => update("totalVolumeMl", Number(e.target.value))}
-                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
+                  onChange={(event) => update("totalVolumeMl", Number(event.target.value))}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Tea Type *</label>
-              <select
-                value={form.teaType}
-                onChange={(e) => update("teaType", e.target.value)}
-                className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
-              >
-                {teaTypes.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Tea type *</label>
+                <select
+                  value={form.teaType}
+                  onChange={(event) => update("teaType", event.target.value)}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {F1_TEA_TYPES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Tea source form *</label>
+                <select
+                  value={form.teaSourceForm}
+                  onChange={(event) =>
+                    update("teaSourceForm", event.target.value as NewBatchForm["teaSourceForm"])
+                  }
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {F1_TEA_SOURCE_FORMS.map((option) => (
+                    <option key={option} value={option}>
+                      {teaSourceFormLabels[option]}
+                    </option>
+                  ))}
+                </select>
+              </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-[1fr_120px] gap-3">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Sugar (g) *</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Tea amount *</label>
+                <input
+                  type="number"
+                  step="0.1"
+                  value={form.teaAmountValue}
+                  onChange={(event) => update("teaAmountValue", Number(event.target.value))}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Unit</label>
+                <select
+                  value={form.teaAmountUnit}
+                  onChange={(event) =>
+                    update("teaAmountUnit", event.target.value as NewBatchForm["teaAmountUnit"])
+                  }
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {F1_TEA_AMOUNT_UNITS.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Sugar amount (g) *</label>
                 <input
                   type="number"
                   value={form.sugarG}
-                  onChange={(e) => update("sugarG", Number(e.target.value))}
-                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
+                  onChange={(event) => update("sugarG", Number(event.target.value))}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Starter (ml) *</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Sugar type *</label>
+                <select
+                  value={form.sugarType}
+                  onChange={(event) => update("sugarType", event.target.value)}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {F1_SUGAR_TYPES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Starter liquid (ml) *</label>
                 <input
                   type="number"
                   value={form.starterLiquidMl}
-                  onChange={(e) => update("starterLiquidMl", Number(e.target.value))}
-                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
+                  onChange={(event) => update("starterLiquidMl", Number(event.target.value))}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Average room temperature (C) *</label>
+                <input
+                  type="number"
+                  step="0.5"
+                  value={form.avgRoomTempC}
+                  onChange={(event) => update("avgRoomTempC", Number(event.target.value))}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
             </div>
@@ -326,48 +575,36 @@ export default function NewBatch() {
               onChange={setStarterSourceBatchId}
             />
 
-            <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Average Room Temperature (°C) *</label>
-              <input
-                type="number"
-                step="0.5"
-                value={form.avgRoomTempC}
-                onChange={(e) => update("avgRoomTempC", Number(e.target.value))}
-                className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring tabular-nums"
-              />
-              {isBeginner && (
-                <p className="text-xs text-muted-foreground mt-1">Room temperature significantly affects fermentation speed. Warmer = faster.</p>
-              )}
-            </div>
-
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">Vessel Type</label>
+                <label className="block text-sm font-medium text-foreground mb-1.5">Vessel type</label>
                 <select
                   value={form.vesselType}
-                  onChange={(e) => update("vesselType", e.target.value)}
-                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring appearance-none"
+                  onChange={(event) => update("vesselType", event.target.value)}
+                  className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 >
-                  {vesselTypes.map((v) => (
-                    <option key={v} value={v}>{v}</option>
+                  {F1_VESSEL_TYPES.map((option) => (
+                    <option key={option} value={option}>
+                      {option}
+                    </option>
                   ))}
                 </select>
               </div>
               <div>
-                <label className="block text-sm font-medium text-foreground mb-1.5">SCOBY Present</label>
-                <div className="flex gap-2 mt-1">
-                  {[true, false].map((val) => (
+                <label className="block text-sm font-medium text-foreground mb-1.5">SCOBY present</label>
+                <div className="flex gap-2">
+                  {[true, false].map((value) => (
                     <button
-                      key={String(val)}
+                      key={String(value)}
                       type="button"
-                      onClick={() => update("scobyPresent", val)}
+                      onClick={() => update("scobyPresent", value)}
                       className={`flex-1 h-11 rounded-lg text-sm font-medium transition-all ${
-                        form.scobyPresent === val
+                        form.scobyPresent === value
                           ? "bg-primary text-primary-foreground"
-                          : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                          : "bg-card border border-border text-muted-foreground"
                       }`}
                     >
-                      {val ? "Yes" : "No"}
+                      {value ? "Yes" : "No"}
                     </button>
                   ))}
                 </div>
@@ -375,20 +612,20 @@ export default function NewBatch() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Taste Target</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">Taste target</label>
               <div className="grid grid-cols-3 gap-2">
-                {preferences.map((p) => (
+                {F1_TARGET_PREFERENCES.map((option) => (
                   <button
-                    key={p}
+                    key={option}
                     type="button"
-                    onClick={() => update("targetPreference", p)}
+                    onClick={() => update("targetPreference", option)}
                     className={`h-11 rounded-lg text-sm font-medium capitalize transition-all ${
-                      form.targetPreference === p
+                      form.targetPreference === option
                         ? "bg-primary text-primary-foreground"
-                        : "bg-card border border-border text-muted-foreground hover:text-foreground"
+                        : "bg-card border border-border text-muted-foreground"
                     }`}
                   >
-                    {p}
+                    {option}
                   </button>
                 ))}
               </div>
@@ -396,14 +633,14 @@ export default function NewBatch() {
 
             <button
               type="button"
-              onClick={() => setShowAdvanced(!showAdvanced)}
+              onClick={() => setShowAdvanced((current) => !current)}
               className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
               {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
               Advanced options
             </button>
 
-            {showAdvanced && (
+            {showAdvanced ? (
               <div className="space-y-4 animate-slide-up">
                 <div>
                   <label className="block text-sm font-medium text-foreground mb-1.5">Initial pH</label>
@@ -412,7 +649,7 @@ export default function NewBatch() {
                     step="0.1"
                     placeholder="e.g. 4.2"
                     value={form.initialPh}
-                    onChange={(e) => update("initialPh", e.target.value)}
+                    onChange={(event) => update("initialPh", event.target.value)}
                     className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                 </div>
@@ -422,24 +659,62 @@ export default function NewBatch() {
                     rows={3}
                     placeholder="Any observations about the setup..."
                     value={form.initialNotes}
-                    onChange={(e) => update("initialNotes", e.target.value)}
+                    onChange={(event) => update("initialNotes", event.target.value)}
                     className="w-full px-3 py-2 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                   />
                 </div>
               </div>
-            )}
+            ) : null}
 
-            <Button
-              size="xl"
-              className="w-full"
-              disabled={!form.name || !form.brewDate || isSaving}
-              onClick={handleCreate}
-            >
-              {isSaving ? "Creating..." : "Create Batch"}
-            </Button>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isSaving}
+                onClick={openSaveRecipeDialog}
+              >
+                Save setup as recipe
+              </Button>
+              <Button
+                size="xl"
+                className="w-full"
+                disabled={!form.name.trim() || !form.brewDate || isSaving}
+                onClick={handleCreate}
+              >
+                {isSaving ? "Creating..." : "Create batch"}
+              </Button>
+            </div>
           </div>
         </ScrollReveal>
       </div>
+
+      <F1RecipePicker
+        open={recipePickerOpen}
+        loading={recipeLoading}
+        recipes={availableRecipes.filter((recipe) => !recipe.archivedAt)}
+        onOpenChange={setRecipePickerOpen}
+        onSelect={applyRecipeDefaults}
+        onManageLibrary={() => navigate("/f1-recipes")}
+      />
+
+      <Dialog open={saveRecipeOpen} onOpenChange={setSaveRecipeOpen}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Save this setup as a recipe</DialogTitle>
+            <DialogDescription>
+              Save reusable defaults from the current setup. This does not create the batch by itself and will not overwrite existing recipes unless you edit them later in the recipe library.
+            </DialogDescription>
+          </DialogHeader>
+
+          <F1RecipeEditor
+            draft={recipeDraft}
+            saving={recipeSaving}
+            submitLabel="Save recipe"
+            onChange={setRecipeDraft}
+            onSubmit={handleSaveRecipe}
+          />
+        </DialogContent>
+      </Dialog>
     </AppLayout>
   );
 }

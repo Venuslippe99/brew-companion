@@ -447,6 +447,40 @@ Status: completed
    - `npm run lint` passed with the same 9 pre-existing `react-refresh/only-export-components` warnings only
    - `npm run test` passed
    - `npm run build` passed with the same existing bundle chunk-size warning
+24. Inspected the shipped redesign files before the refinement pass:
+   - `src/pages/BatchDetail.tsx`
+   - `src/lib/batch-detail-view.ts`
+   - `src/lib/batch-journal.ts`
+   - `src/components/batch-detail/*`
+   - `src/components/f2/F2SetupWizard.tsx`
+   - `src/components/outcomes/PhaseOutcomeCard.tsx`
+   - `src/components/outcomes/PhaseOutcomeDrawer.tsx`
+25. Traced current `batch_logs` writes in:
+   - `src/pages/BatchDetail.tsx`
+   - `src/lib/f2-active-actions.ts`
+   - `src/lib/f2-persistence.ts`
+   - `src/lib/phase-outcomes.ts`
+26. Confirmed the repo has `batch_photos` schema and `photo_added` log types, but no actual frontend photo upload/storage path using Supabase Storage or another live upload flow.
+27. Added `src/lib/batch-quick-logs.ts` plus hero quick-log UI components so BatchDetail can save compact note and F1 taste-test entries without leaving the page.
+28. Refined the hero so the stage-aware message is now the main headline, while the batch name remains visible as supporting context.
+29. Added hero quick-log CTAs:
+   - Add note for all stages
+   - Taste test for `f1_active`, `f1_check_window`, and `f1_extended`
+   - no Add Photo CTA because the repo still lacks a real photo upload/storage path
+30. Implemented Drawer-based quick logging on BatchDetail:
+   - quick notes save to `batch_logs` with `log_type: note_only`
+   - F1 taste tests save to `batch_logs` with `log_type: taste_test`
+   - both include `structured_payload.stage_at_log` for better Journal chapter assignment
+31. Refined Journal shaping so generic note-like logs prefer the saved stage context from `structured_payload.stage_at_log` when present instead of defaulting too aggressively to Finish & Reflection.
+32. Reworked Journal titles and bodies so entries read more like a brewing journal and less like telemetry while staying grounded in real saved data.
+33. Fixed the duplicate F1 outcome display in Overview by keeping it as the active reflection card during First Fermentation and moving it into the historical F1 memory section only after the batch advances.
+34. Refined F2 framing in Overview by keeping the existing wizard/persistence path but giving the inline section warmer chapter framing.
+35. Kept reminder completion as a direct `batch_reminders` update only and did not add Journal-visible reminder-completion history because that would risk implying a real brewing action happened when the user may only have checked off a reminder.
+36. Validation after the refinement pass:
+   - `npx tsc -b` passed
+   - `npm run lint` passed with the same 9 pre-existing `react-refresh/only-export-components` warnings only
+   - `npm run test` passed
+   - `npm run build` passed with the same existing bundle chunk-size warning
 
 ## Decision log
 1. Recommend a hybrid three-surface BatchDetail model: `Overview`, `Journal`, and `Assistant`.
@@ -463,10 +497,14 @@ Status: completed
 12. Keep reminder completion lightweight in MVP by updating `batch_reminders` directly without adding extra log writes.
 13. Reuse `F2SetupWizard` inline inside Overview instead of splitting its saved-view and setup-view code in the same pass.
 14. Skip new schema work; the redesign ships entirely on existing batch, reminder, lineage, F2, and phase-outcome reads/writes.
+15. Do not ship a fake Add Photo CTA in BatchDetail because the repo still lacks a real frontend upload/storage path.
+16. Use `batch_logs` plus `structured_payload.stage_at_log` for quick note and taste-test capture so Journal chapter placement can improve without schema changes.
+17. Keep quick Taste Test as a capture action only; it must not change stage by itself.
+18. Do not add Journal-visible reminder-completion history in this pass because completing a reminder is not always the same as performing the underlying brewing action.
 
 ## Open questions
 1. `F2SetupWizard` now sits inline in Overview to avoid duplicating persistence behavior, but a later pass could still split its saved-state view from its setup flow if the section feels too long in practice.
-2. The new Journal is narrative and chapter-based, but freeform notes and photos still depend on existing sparse log data. A later pass could deepen that story once richer journal inputs exist.
+2. The repo still has no real frontend photo upload/storage flow, so photo capture remains deferred until a genuine path is added.
 
 ## Done when
 1. The plan clearly compares three realistic redesign directions and recommends one.

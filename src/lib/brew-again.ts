@@ -34,7 +34,22 @@ function buildBasePrefill(batch: KombuchaBatch): BrewAgainPrefill {
     brewDate: todayDateValue(),
     totalVolumeMl: batch.totalVolumeMl,
     teaType: batch.teaType,
+    teaSourceForm:
+      batch.teaSourceForm === "tea_bags" ||
+      batch.teaSourceForm === "loose_leaf" ||
+      batch.teaSourceForm === "other"
+        ? batch.teaSourceForm
+        : "tea_bags",
+    teaAmountValue: batch.teaAmountValue || 8,
+    teaAmountUnit:
+      batch.teaAmountUnit === "bags" ||
+      batch.teaAmountUnit === "g" ||
+      batch.teaAmountUnit === "tbsp" ||
+      batch.teaAmountUnit === "tsp"
+        ? batch.teaAmountUnit
+        : "bags",
     sugarG: batch.sugarG,
+    sugarType: batch.sugarType || "Cane sugar",
     starterLiquidMl: batch.starterLiquidMl,
     scobyPresent: batch.scobyPresent,
     avgRoomTempC: batch.avgRoomTempC,

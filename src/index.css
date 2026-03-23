@@ -225,3 +225,24 @@
     font-variant-numeric: tabular-nums;
   }
 }
+
+@layer components {
+  .home-canvas {
+    background:
+      radial-gradient(circle at top, hsl(var(--honey-light) / 0.95), transparent 34%),
+      radial-gradient(circle at 85% 12%, hsl(var(--sage-light) / 0.75), transparent 28%),
+      linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
+  }
+
+  .home-hero-surface {
+    @apply rounded-[30px] border bg-card shadow-[0_18px_50px_-28px_hsl(var(--tea)/0.28)];
+  }
+
+  .home-panel-surface {
+    @apply rounded-[28px] border bg-card shadow-[0_14px_40px_-30px_hsl(var(--tea)/0.24)];
+  }
+
+  .home-utility-surface {
+    @apply rounded-[22px] border bg-card px-4 py-4 shadow-[0_10px_30px_-26px_hsl(var(--tea)/0.22)];
+  }
+}

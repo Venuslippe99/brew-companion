@@ -21,9 +21,14 @@ export interface KombuchaBatch {
   currentStage: BatchStage;
   brewStartedAt: string;
   f2StartedAt?: string;
+  f1RecipeId?: string;
   totalVolumeMl: number;
   teaType: string;
+  teaSourceForm?: string;
+  teaAmountValue?: number;
+  teaAmountUnit?: string;
   sugarG: number;
+  sugarType?: string;
   starterLiquidMl: number;
   scobyPresent: boolean;
   avgRoomTempC: number;

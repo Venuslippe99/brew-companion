@@ -1,6 +1,7 @@
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import type { BatchJournalSection } from "@/lib/batch-journal";
 import { BatchJournalEntry } from "@/components/batch-detail/BatchJournalEntry";
+import { BatchJournalRecap } from "@/components/batch-detail/BatchJournalRecap";
 
 export function BatchJournal({
   sections,
@@ -35,18 +36,13 @@ export function BatchJournal({
             </div>
 
             <div className="space-y-5">
-              {section.groups.map((group) => (
-                <div key={`${section.chapter}-${group.dateLabel}`} className="space-y-3">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    {group.dateLabel}
-                  </p>
-                  <div className="space-y-3">
-                    {group.entries.map((entry) => (
-                      <BatchJournalEntry key={entry.id} entry={entry} />
-                    ))}
-                  </div>
-                </div>
-              ))}
+              <BatchJournalRecap recap={section.recap} />
+
+              <div className="space-y-3">
+                {section.entries.map((entry) => (
+                  <BatchJournalEntry key={entry.id} entry={entry} />
+                ))}
+              </div>
             </div>
           </section>
         </ScrollReveal>

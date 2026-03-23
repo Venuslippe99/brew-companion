@@ -749,6 +749,84 @@ export type Database = {
           },
         ]
       }
+      f1_recipes: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          default_notes: string | null
+          default_room_temp_c: number | null
+          default_scoby_present: boolean
+          default_starter_liquid_ml: number
+          description: string | null
+          id: string
+          is_favorite: boolean
+          name: string
+          sugar_amount_unit: string
+          sugar_amount_value: number
+          sugar_type: string
+          target_preference:
+            | Database["public"]["Enums"]["brewing_goal_enum"]
+            | null
+          target_total_volume_ml: number
+          tea_amount_unit: string
+          tea_amount_value: number
+          tea_source_form: string
+          tea_type: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          default_notes?: string | null
+          default_room_temp_c?: number | null
+          default_scoby_present?: boolean
+          default_starter_liquid_ml: number
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          name: string
+          sugar_amount_unit: string
+          sugar_amount_value: number
+          sugar_type: string
+          target_preference?:
+            | Database["public"]["Enums"]["brewing_goal_enum"]
+            | null
+          target_total_volume_ml: number
+          tea_amount_unit: string
+          tea_amount_value: number
+          tea_source_form: string
+          tea_type: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          default_notes?: string | null
+          default_room_temp_c?: number | null
+          default_scoby_present?: boolean
+          default_starter_liquid_ml?: number
+          description?: string | null
+          id?: string
+          is_favorite?: boolean
+          name?: string
+          sugar_amount_unit?: string
+          sugar_amount_value?: number
+          sugar_type?: string
+          target_preference?:
+            | Database["public"]["Enums"]["brewing_goal_enum"]
+            | null
+          target_total_volume_ml?: number
+          tea_amount_unit?: string
+          tea_amount_value?: number
+          tea_source_form?: string
+          tea_type?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       f2_recipe_items: {
         Row: {
           amount_per_500: number
@@ -1034,6 +1112,7 @@ export type Database = {
           discard_reason: string | null
           discarded_at: string | null
           f2_started_at: string | null
+          f1_recipe_id: string | null
           id: string
           initial_notes: string | null
           initial_observations: string | null
@@ -1050,9 +1129,13 @@ export type Database = {
           starter_source_type: Database["public"]["Enums"]["starter_source_type_enum"]
           status: Database["public"]["Enums"]["batch_status_enum"]
           sugar_g: number
+          sugar_type: string | null
           target_preference:
             | Database["public"]["Enums"]["brewing_goal_enum"]
             | null
+          tea_amount_unit: string | null
+          tea_amount_value: number | null
+          tea_source_form: string | null
           tea_strength_notes: string | null
           tea_type: string
           total_volume_ml: number
@@ -1075,6 +1158,7 @@ export type Database = {
           discard_reason?: string | null
           discarded_at?: string | null
           f2_started_at?: string | null
+          f1_recipe_id?: string | null
           id?: string
           initial_notes?: string | null
           initial_observations?: string | null
@@ -1091,9 +1175,13 @@ export type Database = {
           starter_source_type?: Database["public"]["Enums"]["starter_source_type_enum"]
           status?: Database["public"]["Enums"]["batch_status_enum"]
           sugar_g: number
+          sugar_type?: string | null
           target_preference?:
             | Database["public"]["Enums"]["brewing_goal_enum"]
             | null
+          tea_amount_unit?: string | null
+          tea_amount_value?: number | null
+          tea_source_form?: string | null
           tea_strength_notes?: string | null
           tea_type: string
           total_volume_ml: number
@@ -1116,6 +1204,7 @@ export type Database = {
           discard_reason?: string | null
           discarded_at?: string | null
           f2_started_at?: string | null
+          f1_recipe_id?: string | null
           id?: string
           initial_notes?: string | null
           initial_observations?: string | null
@@ -1132,9 +1221,13 @@ export type Database = {
           starter_source_type?: Database["public"]["Enums"]["starter_source_type_enum"]
           status?: Database["public"]["Enums"]["batch_status_enum"]
           sugar_g?: number
+          sugar_type?: string | null
           target_preference?:
             | Database["public"]["Enums"]["brewing_goal_enum"]
             | null
+          tea_amount_unit?: string | null
+          tea_amount_value?: number | null
+          tea_source_form?: string | null
           tea_strength_notes?: string | null
           tea_type?: string
           total_volume_ml?: number
@@ -1155,6 +1248,13 @@ export type Database = {
             columns: ["brew_again_source_batch_id"]
             isOneToOne: false
             referencedRelation: "kombucha_batches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "kombucha_batches_f1_recipe_id_fkey"
+            columns: ["f1_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "f1_recipes"
             referencedColumns: ["id"]
           },
           {

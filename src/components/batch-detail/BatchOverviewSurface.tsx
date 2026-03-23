@@ -25,6 +25,7 @@ import {
 } from "@/lib/phase-outcomes";
 
 type WorkflowAction = "start-f2" | "still-fermenting";
+const F1_STAGES: BatchStage[] = ["f1_active", "f1_check_window", "f1_extended"];
 
 function RecipeSnapshot({ batch }: { batch: KombuchaBatch }) {
   const items = [
@@ -106,9 +107,7 @@ function OverviewSupportingPanel({
 }) {
   const f1Outcome = getOutcomeForPhase(outcomes, "f1");
   const f2Outcome = getOutcomeForPhase(outcomes, "f2");
-  const showF1Card = ["f1_active", "f1_check_window", "f1_extended"].includes(
-    batch.currentStage
-  );
+  const showF1Card = F1_STAGES.includes(batch.currentStage);
   const f2ContextSummary = currentF2Setup
     ? `${currentF2Setup.bottleCount} bottles planned with ${currentF2Setup.desiredCarbonationLevel} carbonation at ${currentF2Setup.ambientTempC}°C.`
     : undefined;
@@ -196,6 +195,7 @@ export function BatchOverviewSurface({
   const f1Outcome = getOutcomeForPhase(outcomes, "f1");
   const f2Outcome = getOutcomeForPhase(outcomes, "f2");
   const chapterLabel = getCurrentPhaseLabel(batch.currentStage);
+  const isF1Stage = F1_STAGES.includes(batch.currentStage);
   const showF2Inline = [
     "f2_setup",
     "f2_active",
@@ -237,11 +237,20 @@ export function BatchOverviewSurface({
 
           {showF2Inline && (
             <BatchPhaseCollapse
-              title={`Current ${chapterLabel} details`}
-              description="Keep the setup, bottle plan, and live actions close to the main flow instead of hiding them behind a separate tab."
+              title={`Inside ${chapterLabel}`}
+              description="This chapter keeps the bottle plan, flavour setup, and live F2 actions in the main brewing journey instead of sending you to a utility tab."
               defaultOpen={!shouldCollapseChapterByDefault(batch, "second_fermentation")}
             >
               <div className="space-y-4">
+                <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
+                  <p className="text-xs font-semibold uppercase tracking-wider text-primary">
+                    Second Fermentation chapter
+                  </p>
+                  <p className="mt-2 text-sm text-foreground">
+                    Use this section to set up bottles, follow carbonation progress, and keep the flavour plan attached to the same batch story.
+                  </p>
+                </div>
+
                 {currentF2Setup && (
                   <div className="rounded-2xl border border-border bg-background p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
@@ -263,7 +272,7 @@ export function BatchOverviewSurface({
             </BatchPhaseCollapse>
           )}
 
-          {(batch.currentStage !== "f1_active") && (
+          {!isF1Stage && (
             <BatchPhaseCollapse
               title="First Fermentation memory"
               description="Keep the base recipe, timing window, and F1 reflection close by without letting old details crowd the current chapter."

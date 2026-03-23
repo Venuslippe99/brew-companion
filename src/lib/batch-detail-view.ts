@@ -29,6 +29,9 @@ export type BatchTimelineEntry = {
   logType?: string;
   fromStage?: BatchStage | null;
   toStage?: BatchStage | null;
+  stageAtLog?: BatchStage | null;
+  sourceHint?: string | null;
+  structuredPayload?: Record<string, unknown> | null;
 };
 
 export type BatchJourneyChapter =

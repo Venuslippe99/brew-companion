@@ -33,11 +33,15 @@ export type TodayActionItem = {
   currentStageLabel: string;
   nextAction: string;
   timing: BatchTimingResult | null;
+  timingStatus?: BatchTimingStatus;
   section: TodayActionSectionKey;
   statusSummary: string;
   secondarySummary: string;
   attentionLabel?: string;
   cautionLevel: BatchCautionLevel;
+  topReminderDueAt?: string;
+  topReminderUrgency?: TodayActionReminder["urgencyLevel"];
+  updatedRecently: boolean;
   linkTo: string;
 };
 
@@ -239,6 +243,25 @@ export function buildTodayActionSections(args: {
   reminders: TodayActionReminder[];
   now?: Date;
 }): TodayActionSection[] {
+  return SECTION_ORDER.map((key) => {
+    const sectionItems = buildTodayActionItems(args)
+      .filter((item) => item.section === key)
+      .sort((a, b) => new Date(b.batch.updatedAt).getTime() - new Date(a.batch.updatedAt).getTime());
+
+    return {
+      key,
+      title: SECTION_META[key].title,
+      description: SECTION_META[key].description,
+      items: sectionItems,
+    };
+  }).filter((section) => section.items.length > 0);
+}
+
+export function buildTodayActionItems(args: {
+  batches: KombuchaBatch[];
+  reminders: TodayActionReminder[];
+  now?: Date;
+}): TodayActionItem[] {
   const now = args.now ?? new Date();
   const remindersByBatchId = new Map<string, TodayActionReminder[]>();
 
@@ -253,12 +276,13 @@ export function buildTodayActionSections(args: {
     remindersByBatchId.set(reminder.batchId, [reminder]);
   });
 
-  const items = args.batches
+  return args.batches
     .filter((batch) => batch.status === "active" && ACTIVE_STAGES.has(batch.currentStage))
     .map((batch) => {
       const batchReminders = [...(remindersByBatchId.get(batch.id) || [])].sort(
         (a, b) => new Date(a.dueAt).getTime() - new Date(b.dueAt).getTime()
       );
+      const topReminder = batchReminders[0];
       const timing = getBatchStageTiming({
         brew_started_at: batch.brewStartedAt,
         f2_started_at: batch.f2StartedAt,
@@ -276,11 +300,15 @@ export function buildTodayActionSections(args: {
         now,
       });
 
+      const updatedRecently =
+        now.getTime() - new Date(batch.updatedAt).getTime() <= 1000 * 60 * 60 * 24;
+
       return {
         batch,
         currentStageLabel: getStageLabel(batch.currentStage),
         nextAction: getNextAction(batch),
         timing,
+        timingStatus: timing?.status,
         section,
         statusSummary: getStatusSummary({
           batch,
@@ -300,20 +328,10 @@ export function buildTodayActionSections(args: {
           timingStatus: timing?.status,
         }),
         cautionLevel: batch.cautionLevel,
+        topReminderDueAt: topReminder?.dueAt,
+        topReminderUrgency: topReminder?.urgencyLevel,
+        updatedRecently,
         linkTo: `/batch/${batch.id}`,
       } satisfies TodayActionItem;
     });
-
-  return SECTION_ORDER.map((key) => {
-    const sectionItems = items
-      .filter((item) => item.section === key)
-      .sort((a, b) => new Date(b.batch.updatedAt).getTime() - new Date(a.batch.updatedAt).getTime());
-
-    return {
-      key,
-      title: SECTION_META[key].title,
-      description: SECTION_META[key].description,
-      items: sectionItems,
-    };
-  }).filter((section) => section.items.length > 0);
 }

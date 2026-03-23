@@ -13,7 +13,11 @@ export type BrewAgainPrefill = {
   brewDate: string;
   totalVolumeMl: number;
   teaType: string;
+  teaSourceForm?: "tea_bags" | "loose_leaf" | "other";
+  teaAmountValue?: number;
+  teaAmountUnit?: "bags" | "g" | "tbsp" | "tsp";
   sugarG: number;
+  sugarType?: string;
   starterLiquidMl: number;
   scobyPresent: boolean;
   avgRoomTempC: number;

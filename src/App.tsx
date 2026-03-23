@@ -9,6 +9,7 @@ import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import Index from "./pages/Index";
 import MyBatches from "./pages/MyBatches";
 import NewBatch from "./pages/NewBatch";
+import F1Recipes from "./pages/F1Recipes";
 import BatchDetail from "./pages/BatchDetail";
 import BatchLineage from "./pages/BatchLineage";
 import Guides from "./pages/Guides";
@@ -37,6 +38,7 @@ const App = () => (
               <Route path="/" element={<ProtectedRoute><Index /></ProtectedRoute>} />
               <Route path="/batches" element={<ProtectedRoute><MyBatches /></ProtectedRoute>} />
               <Route path="/new-batch" element={<ProtectedRoute><NewBatch /></ProtectedRoute>} />
+              <Route path="/f1-recipes" element={<ProtectedRoute><F1Recipes /></ProtectedRoute>} />
               <Route path="/batch/:id" element={<ProtectedRoute><BatchDetail /></ProtectedRoute>} />
               <Route path="/batch/:id/lineage" element={<ProtectedRoute><BatchLineage /></ProtectedRoute>} />
               <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
