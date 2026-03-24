@@ -338,7 +338,7 @@ Validation:
 4. `npm run build`
 5. Confirm Home still reads from `kombucha_batches`, `batch_reminders`, and `batch_timeline_view`
 
-Status: pending
+Status: completed
 
 ### Milestone 3: Replace bulky Home surfaces with calmer variants
 Goal:
@@ -370,7 +370,7 @@ Validation:
 4. `npm run build`
 5. Confirm quick-log drawer behavior and navigation targets still work
 
-Status: pending
+Status: completed
 
 ### Milestone 4: Rewrite user-facing homepage copy
 Goal:
@@ -397,7 +397,7 @@ Validation:
 5. `npm run test`
 6. `npm run build`
 
-Status: pending
+Status: completed
 
 ### Milestone 5: Final polish and validation
 Goal:
@@ -424,7 +424,7 @@ Validation:
 4. `npm run build`
 5. Distinguish pre-existing failures from any new ones
 
-Status: pending
+Status: completed
 
 ## Progress log
 1. Read `AGENTS.md` and `PLANS.md` to confirm repo guidance, validation expectations, and plan structure.
@@ -437,6 +437,36 @@ Status: pending
 8. Inspected `src/components/home/HomeBatchRoster.tsx`, `src/components/home/HomeRecentMovement.tsx`, `src/components/home/HomeSnapshotStrip.tsx`, and `src/components/home/HomeSupportPanel.tsx` and confirmed Home currently has too many top-level card-heavy chapters.
 9. Inspected `src/index.css` and confirmed the current shared Home surface classes contribute to too many similarly weighted panels.
 10. Confirmed that no schema change is expected and that Home data loading plus quick-log persistence must remain compatible.
+11. Reworked `src/lib/home-command-center.ts` to expose a compact `todayQueue` derived from the existing prioritized Home items without changing Home reads or quick-log eligibility logic.
+12. Rebuilt `src/pages/Index.tsx` so the route now centers on a Today column and a secondary utility/browse/help column instead of rendering the snapshot strip, action lanes, and extra My Batches prompt as separate full-weight sections.
+13. Added `src/components/home/HomeTodayQueue.tsx` as the compact “also worth checking” surface that reuses existing Home prioritization instead of preserving the current bulky lane chapter.
+14. Milestone 2 validation:
+    - `npx tsc -b`: passed
+    - `npm run lint`: passed with the same pre-existing `react-refresh/only-export-components` warnings in shared UI/context files
+    - `npm run test`: passed
+    - `npm run build`: passed with the same pre-existing Browserslist age notice and large chunk warning
+15. Redesigned the shared Home surface treatment in `src/index.css` so the header is lighter and the panel/utility shadows are calmer, reducing the “many premium cards” effect.
+16. Simplified `HomePrimaryFocusCard` by collapsing the extra support boxes into a single quieter explanation block and a lighter quick-action note.
+17. Redesigned `HomeQuickLogDock`, `HomeBatchRoster`, `HomeRecentMovement`, and `HomeSupportPanel` so they behave more like utility, browse, context, and help sections instead of competing dashboard chapters.
+18. Moved the My Batches deep-browse path into the “Your brews” area so Home no longer needs a separate standalone promo block.
+19. Milestone 3 validation:
+    - `npx tsc -b`: passed
+    - `npm run lint`: passed with the same pre-existing `react-refresh/only-export-components` warnings in shared UI/context files
+    - `npm run test`: passed
+    - `npm run build`: passed with the same pre-existing Browserslist age notice and large chunk warning
+20. Rewrote visible Home copy across the active route path, including Today queue wording, quick-action descriptions, recent-activity titles, recent-activity event phrasing, and help-card support language so the page no longer reads like a dashboard made of internal modules.
+21. Adjusted helper-derived Home strings in `src/lib/home-command-center.ts` where needed so recent-activity items and quick-action labels stay consistent with the calmer product copy on the page.
+22. Milestone 4 validation:
+    - `npx tsc -b`: passed
+    - `npm run lint`: passed with the same pre-existing `react-refresh/only-export-components` warnings in shared UI/context files
+    - `npm run test`: passed
+    - `npm run build`: passed with the same pre-existing Browserslist age notice and large chunk warning
+23. Final polish confirmed the simplified Home hierarchy keeps Today dominant, keeps quick actions compact, preserves the existing Home read paths, and retains quick-log plus navigation compatibility without adding schema work.
+24. Milestone 5 validation:
+    - `npx tsc -b`: passed
+    - `npm run lint`: passed with the same pre-existing `react-refresh/only-export-components` warnings in shared UI/context files
+    - `npm run test`: passed
+    - `npm run build`: passed with the same pre-existing Browserslist age notice and large chunk warning
 
 ## Decision log
 1. The existing `buildHomeCommandCenter(...)` helper should remain the main Home logic source instead of moving prioritization into `Index.tsx`.
@@ -449,9 +479,15 @@ Status: pending
 8. Copy rewrite is a required part of implementation, not optional polish.
 9. No schema change is expected for this overhaul.
 10. Home data-loading, quick-log submission, and route/navigation compatibility must remain unchanged at the persistence contract level.
+11. The snapshot strip should be removed from the Home route rather than retained by default, because the new hierarchy is clearer without another top-of-page stats band.
+12. A compact Today queue is preferable to preserving `HomeActionLanes`, because it keeps prioritization while cutting dashboard-like visual weight.
+13. The My Batches path should live inside the brews-browse surface instead of appearing as a separate bottom promo section.
+14. The header should become a lighter orientation surface so the primary focus card stays the dominant top element.
+15. Visible Home copy should be rewritten partly at the helper layer, not only inside components, so recent-activity titles and quick-action descriptions match the calmer user-facing tone everywhere they appear.
+16. The help panel should choose iconography and supporting text from the destination action so assistant and guide links feel intentional instead of sharing generic card treatments.
 
 ## Open questions
-1. Whether the final implementation should fully remove `HomeSnapshotStrip` from Home or retain a much smaller embedded stats cue inside another section if hierarchy still needs a compact overview.
+1. None at the moment.
 
 ## Done when
 1. `src/pages/Index.tsx` renders a materially simpler Home composition with fewer major sections.

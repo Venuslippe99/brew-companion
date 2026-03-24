@@ -12,23 +12,26 @@ export function HomeRecentMovement({
   const navigate = useNavigate();
 
   return (
-    <section id={id} className="space-y-4">
+    <section id={id} className="home-panel-surface px-5 py-5">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          Recent movement
+          Recent changes
         </p>
-        <h2 className="mt-2 font-display text-2xl font-semibold text-foreground">
-          A short narrative of what changed recently
+        <h2 className="mt-2 text-xl font-semibold text-foreground">
+          What changed lately
         </h2>
+        <p className="mt-2 text-sm text-muted-foreground">
+          A quieter look at what changed across your brews.
+        </p>
       </div>
 
-      <div className="space-y-3">
+      <div className="mt-4 space-y-3">
         {items.map((item) => (
           <button
             key={item.id}
             type="button"
             onClick={() => navigate(item.linkTo)}
-            className="home-utility-surface w-full text-left transition-all duration-200 hover:-translate-y-0.5"
+            className="w-full rounded-[20px] border border-border/75 bg-background/85 px-4 py-4 text-left transition-all duration-200 hover:-translate-y-0.5"
           >
             <div className="flex items-start justify-between gap-4">
               <div className="min-w-0">

@@ -37,7 +37,7 @@ function getActionCopy(action: HomeQuickLogAction["key"]) {
       return {
         title: "Log a taste test",
         description:
-          "Capture a quick F1 taste impression without forcing a stage change from Home.",
+          "Save a quick taste note without changing the batch stage from Home.",
         noteLabel: "What stood out?",
         notePlaceholder: "Short, practical tasting note",
         saveLabel: "Save taste test",
@@ -46,7 +46,7 @@ function getActionCopy(action: HomeQuickLogAction["key"]) {
       return {
         title: "Log a temperature check",
         description:
-          "Capture the room temperature for this batch and add a note only if it helps.",
+          "Save the room temperature for this batch and add a note only if it helps.",
         noteLabel: "Optional note",
         notePlaceholder: "Anything unusual about the room or setup?",
         saveLabel: "Save temperature check",
@@ -55,7 +55,7 @@ function getActionCopy(action: HomeQuickLogAction["key"]) {
       return {
         title: "Log a carbonation check",
         description:
-          "Keep a quick note on fizz or bottle pressure without moving the batch to a new stage.",
+          "Save a quick note on fizz or bottle pressure without moving the batch to a new stage.",
         noteLabel: "What did you notice?",
         notePlaceholder: "Short carbonation or pressure note",
         saveLabel: "Save carbonation check",
@@ -63,7 +63,7 @@ function getActionCopy(action: HomeQuickLogAction["key"]) {
     case "note_only":
       return {
         title: "Add a brewing note",
-        description: "Capture a quick observation while the batch is already top of mind.",
+        description: "Save a short observation while the batch is already top of mind.",
         noteLabel: "Your note",
         notePlaceholder: "What do you want to remember?",
         saveLabel: "Save note",
@@ -141,28 +141,29 @@ export function HomeQuickLogDock({
         : note.trim().length > 0);
 
   return (
-    <section id={id} className="space-y-4">
+    <section id={id} className="home-panel-surface px-5 py-5">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-            Quick log dock
+            Quick actions
           </p>
-          <h2 className="mt-2 font-display text-2xl font-semibold text-foreground">
-            Capture useful checks without leaving Home
+          <h2 className="mt-2 text-xl font-semibold text-foreground">
+            Log a quick check
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Home quick logs are intentionally safe: they record observations only and do not change stage.
+            Save a taste note, temperature check, carbonation check, or short observation without
+            changing the batch stage.
           </p>
         </div>
-        <div className="hidden rounded-[22px] border border-border bg-background/80 px-4 py-3 text-sm text-muted-foreground lg:block">
+        <div className="hidden rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground lg:block">
           <div className="flex items-center gap-2">
-            <CameraOff className="h-4 w-4 text-copper" />
-            Photo logging stays deferred until the upload flow is ready.
+            <CameraOff className="h-3.5 w-3.5 text-copper" />
+            Photo logging is still coming later
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <div className="mt-4 grid grid-cols-2 gap-3">
         {actions.map((action) => {
           const Icon = iconMap[action.key];
           const disabled = action.eligibleBatchIds.length === 0;
@@ -173,7 +174,7 @@ export function HomeQuickLogDock({
               type="button"
               disabled={disabled}
               onClick={() => setOpenActionKey(action.key)}
-              className="home-utility-surface text-left transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
+              className="rounded-[20px] border border-border/75 bg-background/85 px-4 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
             >
               <div className="flex items-start justify-between gap-3">
                 <span className="rounded-full bg-honey-light/70 p-2 text-primary">
@@ -201,7 +202,7 @@ export function HomeQuickLogDock({
 
               <div className="space-y-5 overflow-y-auto px-4 pb-3">
                 <label className="block space-y-1">
-                  <span className="text-sm text-muted-foreground">Batch</span>
+                  <span className="text-sm text-muted-foreground">Which batch?</span>
                   <select
                     value={selectedBatchId}
                     onChange={(event) => setSelectedBatchId(event.target.value)}
@@ -264,7 +265,7 @@ export function HomeQuickLogDock({
 
               <DrawerFooter>
                 <Button variant="outline" disabled={saving} onClick={() => setOpenActionKey(null)}>
-                  Cancel
+                  Close
                 </Button>
                 <Button
                   disabled={!canSubmit || saving}

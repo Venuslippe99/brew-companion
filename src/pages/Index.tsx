@@ -3,15 +3,13 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
-import { HomeActionLanes } from "@/components/home/HomeActionLanes";
 import { HomeBatchRoster } from "@/components/home/HomeBatchRoster";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { HomePrimaryFocusCard } from "@/components/home/HomePrimaryFocusCard";
 import { HomeQuickLogDock } from "@/components/home/HomeQuickLogDock";
 import { HomeRecentMovement } from "@/components/home/HomeRecentMovement";
-import { HomeSnapshotStrip } from "@/components/home/HomeSnapshotStrip";
 import { HomeSupportPanel } from "@/components/home/HomeSupportPanel";
-import { Button } from "@/components/ui/button";
+import { HomeTodayQueue } from "@/components/home/HomeTodayQueue";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUser } from "@/contexts/UserContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -305,49 +303,52 @@ export default function Dashboard() {
   return (
     <AppLayout>
       <div className="home-canvas min-h-screen">
-        <div className="mx-auto max-w-6xl space-y-6 px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-          <ScrollReveal>
-            <HomeHeader
-              activeBatchCount={commandCenter.activeBatchCount}
-              stateSentence={commandCenter.stateSentence}
-              displayName={commandCenter.greetingName}
-              onOpenSettings={() => navigate("/settings")}
-            />
-          </ScrollReveal>
-
-          <ScrollReveal delay={0.04}>
-            <HomePrimaryFocusCard
-              primaryFocus={commandCenter.primaryFocus}
-              quickLogActions={commandCenter.quickLogActions}
-              onOpenQuickLog={handlePrimaryQuickLog}
-            />
-          </ScrollReveal>
-
-          {loading ? (
-            <section className="home-panel-surface px-5 py-8 text-center">
-              <p className="text-sm text-muted-foreground">Loading your command center...</p>
-            </section>
-          ) : commandCenter.activeBatchCount === 0 ? (
-            <>
-              <ScrollReveal delay={0.08}>
-                <HomeSupportPanel context={commandCenter.supportContext} />
-              </ScrollReveal>
-            </>
-          ) : (
-            <>
-              <ScrollReveal delay={0.08}>
-                <HomeSnapshotStrip stats={commandCenter.snapshotStats} />
+        <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)] xl:items-start">
+            <div className="space-y-6">
+              <ScrollReveal>
+                <HomeHeader
+                  activeBatchCount={commandCenter.activeBatchCount}
+                  stateSentence={loading ? "Loading today's brews..." : commandCenter.stateSentence}
+                  displayName={commandCenter.greetingName}
+                  onOpenSettings={() => navigate("/settings")}
+                />
               </ScrollReveal>
 
-              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.9fr)]">
-                <div className="space-y-6">
-                  {commandCenter.actionLanes.length > 0 ? (
-                    <ScrollReveal delay={0.1}>
-                      <HomeActionLanes lanes={commandCenter.actionLanes} id="home-lanes" />
+              <ScrollReveal delay={0.04}>
+                <HomePrimaryFocusCard
+                  primaryFocus={commandCenter.primaryFocus}
+                  quickLogActions={commandCenter.quickLogActions}
+                  onOpenQuickLog={handlePrimaryQuickLog}
+                />
+              </ScrollReveal>
+
+              {loading ? (
+                <section className="home-panel-surface px-5 py-8 text-center">
+                  <p className="text-sm text-muted-foreground">Loading your brews for today...</p>
+                </section>
+              ) : commandCenter.activeBatchCount > 0 ? (
+                <>
+                  <ScrollReveal delay={0.08}>
+                    <HomeTodayQueue id="home-today-queue" items={commandCenter.todayQueue} />
+                  </ScrollReveal>
+
+                  {commandCenter.recentMovement.length > 0 ? (
+                    <ScrollReveal delay={0.16}>
+                      <HomeRecentMovement
+                        id="home-movement"
+                        items={commandCenter.recentMovement}
+                      />
                     </ScrollReveal>
                   ) : null}
+                </>
+              ) : null}
+            </div>
 
-                  <ScrollReveal delay={0.14}>
+            <div className="space-y-6">
+              {!loading && commandCenter.activeBatchCount > 0 ? (
+                <>
+                  <ScrollReveal delay={0.1}>
                     <HomeQuickLogDock
                       id="home-quick-log"
                       actions={commandCenter.quickLogActions}
@@ -359,47 +360,17 @@ export default function Dashboard() {
                     />
                   </ScrollReveal>
 
-                  {commandCenter.recentMovement.length > 0 ? (
-                    <ScrollReveal delay={0.18}>
-                      <HomeRecentMovement
-                        id="home-movement"
-                        items={commandCenter.recentMovement}
-                      />
-                    </ScrollReveal>
-                  ) : null}
-                </div>
-
-                <div className="space-y-6">
-                  <ScrollReveal delay={0.12}>
+                  <ScrollReveal delay={0.14}>
                     <HomeBatchRoster id="home-roster" items={commandCenter.activeRoster} />
                   </ScrollReveal>
+                </>
+              ) : null}
 
-                  <ScrollReveal delay={0.16}>
-                    <HomeSupportPanel context={commandCenter.supportContext} />
-                  </ScrollReveal>
-
-                  <ScrollReveal delay={0.2}>
-                    <section className="home-utility-surface">
-                      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-                        Need a broader view?
-                      </p>
-                      <h2 className="mt-2 text-lg font-semibold text-foreground">
-                        Use My Batches for inventory and deep browsing
-                      </h2>
-                      <p className="mt-2 text-sm text-muted-foreground">
-                        Home keeps the day concise. Use My Batches when you want search, sort, and the full list.
-                      </p>
-                      <div className="mt-4">
-                        <Button variant="outline" onClick={() => navigate("/batches")}>
-                          Open My Batches
-                        </Button>
-                      </div>
-                    </section>
-                  </ScrollReveal>
-                </div>
-              </div>
-            </>
-          )}
+              <ScrollReveal delay={0.2}>
+                <HomeSupportPanel context={commandCenter.supportContext} />
+              </ScrollReveal>
+            </div>
+          </div>
         </div>
       </div>
     </AppLayout>

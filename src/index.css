@@ -234,15 +234,19 @@
       linear-gradient(180deg, hsl(var(--background)), hsl(var(--background)));
   }
 
+  .home-header-surface {
+    @apply rounded-[24px] border bg-card/80 shadow-[0_12px_30px_-28px_hsl(var(--tea)/0.22)] backdrop-blur;
+  }
+
   .home-hero-surface {
     @apply rounded-[30px] border bg-card shadow-[0_18px_50px_-28px_hsl(var(--tea)/0.28)];
   }
 
   .home-panel-surface {
-    @apply rounded-[28px] border bg-card shadow-[0_14px_40px_-30px_hsl(var(--tea)/0.24)];
+    @apply rounded-[28px] border bg-card shadow-[0_12px_32px_-28px_hsl(var(--tea)/0.2)];
   }
 
   .home-utility-surface {
-    @apply rounded-[22px] border bg-card px-4 py-4 shadow-[0_10px_30px_-26px_hsl(var(--tea)/0.22)];
+    @apply rounded-[22px] border bg-card px-4 py-4 shadow-[0_8px_24px_-24px_hsl(var(--tea)/0.18)];
   }
 }

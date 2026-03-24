@@ -30,7 +30,7 @@ export function HomeTodayQueue({
           Today
         </p>
         <h2 className="mt-2 text-xl font-semibold text-foreground">
-          Also worth checking
+          Keep an eye on these too
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           A few more brews to keep in sight after the main focus.

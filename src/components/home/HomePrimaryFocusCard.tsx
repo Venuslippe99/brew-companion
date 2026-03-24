@@ -92,39 +92,37 @@ export function HomePrimaryFocusCard({
 
   return (
     <section className={cn("home-hero-surface px-5 py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}>
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-            {primaryFocus.eyebrow}
-          </p>
-          <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground lg:text-[2.8rem]">
-            {primaryFocus.title}
-          </h2>
-          <div className="mt-4 flex flex-wrap items-center gap-2">
-            <StageIndicator stage={primaryFocus.item.batch.currentStage} size="md" />
-            <CautionBadge level={primaryFocus.item.cautionLevel} />
-            <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
-              Day {dayNumber}
-            </span>
-            <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-copper">
-              {primaryFocus.reasonLabel}
-            </span>
-          </div>
-          <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground lg:text-base">
-            {primaryFocus.summary}
-          </p>
-        </div>
+      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
+        {primaryFocus.eyebrow}
+      </p>
+      <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground lg:text-[2.8rem]">
+        {primaryFocus.title}
+      </h2>
 
-        <div className="shrink-0 rounded-[24px] border border-border/70 bg-background/80 px-5 py-4 text-left lg:w-[220px]">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Why this is surfaced
-          </p>
-          <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
-          <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-            <Clock3 className="h-3.5 w-3.5" />
-            {primaryFocus.item.secondarySummary}
-          </p>
-        </div>
+      <div className="mt-4 flex flex-wrap items-center gap-2">
+        <StageIndicator stage={primaryFocus.item.batch.currentStage} size="md" />
+        <CautionBadge level={primaryFocus.item.cautionLevel} />
+        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
+          Day {dayNumber}
+        </span>
+        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-copper">
+          {primaryFocus.reasonLabel}
+        </span>
+      </div>
+
+      <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground lg:text-base">
+        {primaryFocus.summary}
+      </p>
+
+      <div className="mt-5 rounded-[22px] border border-border/70 bg-background/80 px-4 py-4">
+        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          Why this matters today
+        </p>
+        <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
+        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Clock3 className="h-3.5 w-3.5" />
+          {primaryFocus.item.secondarySummary}
+        </p>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -149,11 +147,8 @@ export function HomePrimaryFocusCard({
       </div>
 
       {preferredQuickLog ? (
-        <div className="mt-5 rounded-[22px] border border-border/70 bg-background/80 px-4 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Ready from here
-          </p>
-          <p className="mt-1 text-sm text-muted-foreground">{preferredQuickLog.description}</p>
+        <div className="mt-4 text-sm text-muted-foreground">
+          {preferredQuickLog.description}
         </div>
       ) : null}
     </section>

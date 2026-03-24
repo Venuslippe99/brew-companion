@@ -249,7 +249,7 @@ function getFocusReason(item: TodayActionItem) {
       return {
         label: "Action today",
         explanation:
-          "There is a clear next step waiting today, so Home is surfacing this batch before quieter work.",
+          "There is a clear next step waiting today, so this batch belongs near the top of the page.",
         tone: "warm" as const,
       };
     case "ready_now":
@@ -418,17 +418,17 @@ function buildMovementItems(args: {
       case "stage_event":
         return `${batchName} changed stage`;
       case "log":
-        if (row.title === "taste_test") return `${batchName} got a taste check`;
-        if (row.title === "carbonation_check") return `${batchName} got a carbonation check`;
-        if (row.title === "temp_check") return `${batchName} got a temperature check`;
-        if (row.title === "note_only") return `${batchName} got a new note`;
-        return `${batchName} got a fresh update`;
+        if (row.title === "taste_test") return `${batchName} had a taste check`;
+        if (row.title === "carbonation_check") return `${batchName} had a carbonation check`;
+        if (row.title === "temp_check") return `${batchName} got a temperature reading`;
+        if (row.title === "note_only") return `${batchName} got a note`;
+        return `${batchName} was updated`;
       case "reminder_completed":
-        return `${batchName} checked off a reminder`;
+        return `${batchName} completed a reminder`;
       case "note":
-        return `${batchName} got a journal note`;
+        return `${batchName} got a journal entry`;
       case "photo":
-        return `${batchName} got a new photo`;
+        return `${batchName} got a photo`;
       default:
         return `${batchName} moved recently`;
     }
@@ -568,25 +568,25 @@ function buildQuickLogActions(args: {
     {
       key: "taste_test",
       label: "Taste test",
-      description: "Capture a quick F1 taste impression without changing stage.",
+      description: "Save a quick taste note without changing this batch's stage.",
       eligible: (batch) => ["f1_active", "f1_check_window", "f1_extended"].includes(batch.currentStage),
     },
     {
       key: "temp_check",
       label: "Temperature check",
-      description: "Log the room temperature for any active batch.",
+      description: "Save the room temperature for any active brew.",
       eligible: () => true,
     },
     {
       key: "carbonation_check",
       label: "Carbonation check",
-      description: "Track fizz checks for bottles already in or near F2.",
+      description: "Save a quick fizz check for bottles already in or close to F2.",
       eligible: (batch) => ["f2_active", "refrigerate_now", "chilled_ready"].includes(batch.currentStage),
     },
     {
       key: "note_only",
       label: "Add note",
-      description: "Capture a practical observation while you are here.",
+      description: "Save a short note while the batch is top of mind.",
       eligible: () => true,
     },
   ];
@@ -645,9 +645,9 @@ export function buildHomeCommandCenter(args: {
     primaryFocus = {
       kind: "empty",
       eyebrow: "Welcome back",
-      title: "Your command center is ready for the next brew",
+      title: "Ready for your next brew?",
       summary:
-        "Start a first batch, revisit the basics, or open the assistant if you want a calmer refresher before brewing again.",
+        "Start a batch, revisit the basics, or open the assistant if you want a calm refresher before brewing again.",
       tone: "calm",
       primaryAction: { label: "Start a batch", to: "/new-batch" },
       secondaryAction: { label: "Browse guides", to: "/guides" },
@@ -676,7 +676,7 @@ export function buildHomeCommandCenter(args: {
       reasonLabel: quietViewItem ? getFocusReason(quietViewItem).label : "Calm brewing day",
       explanation:
         quietViewItem?.secondarySummary ||
-        "Use the roster below to keep all active brews visible even when nothing needs immediate action.",
+        "Use your brews list below to keep everything visible even when nothing needs urgent attention.",
       primaryAction: {
         label: quietAnchorBatch ? "Open batch" : "View batches",
         to: quietAnchorBatch ? `/batch/${quietAnchorBatch.id}` : "/batches",
@@ -689,7 +689,7 @@ export function buildHomeCommandCenter(args: {
 
     primaryFocus = {
       kind: "batch",
-      eyebrow: `Daily command center - ${formatTodayDate(now)}`,
+      eyebrow: `Today - ${formatTodayDate(now)}`,
       title: primaryItem.batch.name,
       summary: primaryItem.statusSummary,
       tone: focusReason.tone,
