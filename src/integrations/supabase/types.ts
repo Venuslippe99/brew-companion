@@ -165,6 +165,7 @@ export type Database = {
           created_at: string
           custom_flavour_name: string | null
           extra_sugar_g: number
+          f2_bottle_group_id: string | null
           f2_setup_id: string
           flavour_preset_id: string | null
           id: string
@@ -182,6 +183,7 @@ export type Database = {
           created_at?: string
           custom_flavour_name?: string | null
           extra_sugar_g?: number
+          f2_bottle_group_id?: string | null
           f2_setup_id: string
           flavour_preset_id?: string | null
           id?: string
@@ -199,6 +201,7 @@ export type Database = {
           created_at?: string
           custom_flavour_name?: string | null
           extra_sugar_g?: number
+          f2_bottle_group_id?: string | null
           f2_setup_id?: string
           flavour_preset_id?: string | null
           id?: string
@@ -210,6 +213,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "batch_bottles_f2_bottle_group_id_fkey"
+            columns: ["f2_bottle_group_id"]
+            isOneToOne: false
+            referencedRelation: "batch_f2_bottle_groups"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "batch_bottles_f2_setup_id_fkey"
             columns: ["f2_setup_id"]
@@ -233,9 +243,15 @@ export type Database = {
           bottle_type: Database["public"]["Enums"]["bottle_type_enum"]
           created_at: string
           f2_setup_id: string
+          guided_mode: boolean
           group_label: string | null
           headspace_ml: number
           id: string
+          recipe_description_snapshot: string | null
+          recipe_mode: string
+          recipe_name_snapshot: string | null
+          recipe_snapshot_json: Json
+          selected_recipe_id: string | null
           sort_order: number
           target_fill_ml: number
           updated_at: string
@@ -246,9 +262,15 @@ export type Database = {
           bottle_type: Database["public"]["Enums"]["bottle_type_enum"]
           created_at?: string
           f2_setup_id: string
+          guided_mode?: boolean
           group_label?: string | null
           headspace_ml?: number
           id?: string
+          recipe_description_snapshot?: string | null
+          recipe_mode?: string
+          recipe_name_snapshot?: string | null
+          recipe_snapshot_json?: Json
+          selected_recipe_id?: string | null
           sort_order?: number
           target_fill_ml: number
           updated_at?: string
@@ -259,9 +281,15 @@ export type Database = {
           bottle_type?: Database["public"]["Enums"]["bottle_type_enum"]
           created_at?: string
           f2_setup_id?: string
+          guided_mode?: boolean
           group_label?: string | null
           headspace_ml?: number
           id?: string
+          recipe_description_snapshot?: string | null
+          recipe_mode?: string
+          recipe_name_snapshot?: string | null
+          recipe_snapshot_json?: Json
+          selected_recipe_id?: string | null
           sort_order?: number
           target_fill_ml?: number
           updated_at?: string
@@ -272,6 +300,13 @@ export type Database = {
             columns: ["f2_setup_id"]
             isOneToOne: false
             referencedRelation: "batch_f2_setups"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "batch_f2_bottle_groups_selected_recipe_id_fkey"
+            columns: ["selected_recipe_id"]
+            isOneToOne: false
+            referencedRelation: "f2_recipes"
             referencedColumns: ["id"]
           },
         ]

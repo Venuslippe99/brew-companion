@@ -1,4 +1,3 @@
-import F2SetupWizard from "@/components/f2/F2SetupWizard";
 import { BatchLineageSection } from "@/components/lineage/BatchLineageSection";
 import { PhaseOutcomeCard } from "@/components/outcomes/PhaseOutcomeCard";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
@@ -7,6 +6,7 @@ import { BatchReminderPanel } from "@/components/batch-detail/BatchReminderPanel
 import { BatchCurrentPhaseCard } from "@/components/batch-detail/BatchCurrentPhaseCard";
 import { BatchPhaseCollapse } from "@/components/batch-detail/BatchPhaseCollapse";
 import { BatchCompletedSummary } from "@/components/batch-detail/BatchCompletedSummary";
+import { Button } from "@/components/ui/button";
 import type { BrewAgainPlan, BrewAgainMode } from "@/lib/brew-again-types";
 import {
   getCurrentPhaseLabel,
@@ -262,7 +262,6 @@ function OverviewSupportingPanel({
 
 export function BatchOverviewSurface({
   batch,
-  userId,
   reminders,
   onCompleteReminder,
   timing,
@@ -274,14 +273,12 @@ export function BatchOverviewSurface({
   currentF2Setup,
   onOpenOutcome,
   onStartF2,
+  onOpenF2Chapter,
   onStillFermenting,
   actionLoading,
-  onF2Started,
-  onBatchStateChanged,
   onStartBrewAgain,
 }: {
   batch: KombuchaBatch;
-  userId?: string;
   reminders: BatchReminder[];
   onCompleteReminder: (reminderId: string) => void;
   timing: BatchTimingResult | null;
@@ -293,16 +290,9 @@ export function BatchOverviewSurface({
   currentF2Setup: LoadedF2Setup | null;
   onOpenOutcome: (phase: "f1" | "f2") => void;
   onStartF2: () => Promise<void>;
+  onOpenF2Chapter: () => void;
   onStillFermenting: () => Promise<void>;
   actionLoading: WorkflowAction | null;
-  onF2Started: (args: { f2StartedAt: string; nextAction: string }) => void;
-  onBatchStateChanged: (args: {
-    currentStage: BatchStage;
-    updatedAt: string;
-    nextAction: string;
-    status: BatchStatus;
-    completedAt?: string;
-  }) => void;
   onStartBrewAgain: (args: {
     mode: BrewAgainMode;
     plan: BrewAgainPlan;
@@ -349,6 +339,7 @@ export function BatchOverviewSurface({
               currentF2Setup={currentF2Setup}
               actionLoading={actionLoading}
               onStartF2={onStartF2}
+              onOpenF2Chapter={onOpenF2Chapter}
               onStillFermenting={onStillFermenting}
             />
           )}
@@ -356,7 +347,7 @@ export function BatchOverviewSurface({
           {showF2Inline && (
             <BatchPhaseCollapse
               title={`Inside ${chapterLabel}`}
-              description="This chapter keeps the bottle plan, flavour setup, and live F2 actions in the main brewing journey instead of sending you to a utility tab."
+              description="Second Fermentation now opens as a dedicated bottling chapter, while this overview keeps the summary close to the rest of the batch story."
               defaultOpen={!shouldCollapseChapterByDefault(batch, "second_fermentation")}
             >
               <div className="space-y-4">
@@ -365,16 +356,33 @@ export function BatchOverviewSurface({
                     Second Fermentation chapter
                   </p>
                   <p className="mt-2 text-sm text-foreground">
-                    Use this section to set up bottles, follow carbonation progress, and keep the flavour plan attached to the same batch story.
+                    Open the dedicated bottling setup to build bottle groups, assign flavour plans, and follow the saved F2 chapter.
                   </p>
                 </div>
 
-                <F2SetupWizard
-                  batch={batch}
-                  userId={userId}
-                  onF2Started={onF2Started}
-                  onBatchStateChanged={onBatchStateChanged}
-                />
+                <div className="rounded-2xl border border-border bg-background p-4 space-y-4">
+                  {currentF2Setup ? (
+                    <>
+                      <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                        Saved F2 summary
+                      </p>
+                      <F2Snapshot setup={currentF2Setup} />
+                    </>
+                  ) : (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium text-foreground">
+                        Bottling setup is ready to open.
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Build bottle groups, assign different flavour plans per group, and review the full bottling run in a dedicated setup view.
+                      </p>
+                    </div>
+                  )}
+
+                  <Button type="button" onClick={onOpenF2Chapter}>
+                    {currentF2Setup ? "Open F2 chapter" : "Open bottling setup"}
+                  </Button>
+                </div>
               </div>
             </BatchPhaseCollapse>
           )}

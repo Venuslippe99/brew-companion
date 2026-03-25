@@ -416,14 +416,14 @@ export default function BatchDetail() {
     logType: "taste_test" | "moved_to_f2";
     note: string;
     successMessage: string;
-  }) => {
+  }): Promise<boolean> => {
     if (!batch) {
-      return;
+      return false;
     }
 
     if (!user?.id) {
       toast.error("You need to be signed in to update this batch.");
-      return;
+      return false;
     }
 
     const nowIso = new Date().toISOString();
@@ -498,16 +498,18 @@ export default function BatchDetail() {
       if (auxiliaryWriteFailed) {
         toast.message("The stage changed, but one of the Journal entries could not be saved.");
       }
+      return true;
     } catch (error) {
       console.error("Batch workflow action error:", error);
       toast.error("Couldn't update this batch.");
+      return false;
     } finally {
       setActionLoading(null);
     }
   };
 
   const handleStartF2 = async () => {
-    await applyWorkflowAction({
+    const moved = await applyWorkflowAction({
       action: "start-f2",
       nextStage: "f2_setup",
       nextAction: "Configure bottles and flavourings for F2",
@@ -516,6 +518,10 @@ export default function BatchDetail() {
       note: "User marked the batch as ready and moved into Second Fermentation setup.",
       successMessage: "Moved to Second Fermentation setup.",
     });
+
+    if (moved) {
+      navigate(`/batch/${batch?.id}/f2/setup`);
+    }
   };
 
   const handleStillFermenting = async () => {
@@ -713,7 +719,6 @@ export default function BatchDetail() {
           {activeSurface === "overview" && (
             <BatchOverviewSurface
               batch={batch}
-              userId={userId}
               reminders={reminders}
               onCompleteReminder={handleCompleteReminder}
               timing={timing}
@@ -725,40 +730,9 @@ export default function BatchDetail() {
               currentF2Setup={currentF2Setup}
               onOpenOutcome={setActiveOutcomePhase}
               onStartF2={handleStartF2}
+              onOpenF2Chapter={() => navigate(`/batch/${batch.id}/f2/setup`)}
               onStillFermenting={handleStillFermenting}
               actionLoading={actionLoading}
-              onF2Started={({ f2StartedAt, nextAction }) => {
-                setBatch((current) =>
-                  current
-                    ? {
-                        ...current,
-                        currentStage: "f2_active",
-                        f2StartedAt,
-                        nextAction,
-                        updatedAt: f2StartedAt,
-                      }
-                    : current
-                );
-                setActiveSurface("overview");
-                void loadTimelineEntries(batch.id);
-                void loadF2SetupSummary(batch.id);
-              }}
-              onBatchStateChanged={({ currentStage, updatedAt, nextAction, status, completedAt }) => {
-                setBatch((current) =>
-                  current
-                    ? {
-                        ...current,
-                        currentStage,
-                        nextAction,
-                        status,
-                        completedAt,
-                        updatedAt,
-                      }
-                    : current
-                );
-                void loadTimelineEntries(batch.id);
-                void loadF2SetupSummary(batch.id);
-              }}
               onStartBrewAgain={({ mode, plan, enabledSuggestionIds }) => {
                 navigate("/new-batch", {
                   state: applyBrewAgainSelection({

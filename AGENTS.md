@@ -83,6 +83,16 @@ Then summarize:
 2. What was implemented
 3. Any follow-up risks or recommended next steps
 
+## Copy Architecture Rules
+
+1. Keep meaningful user-facing copy in feature-specific copy modules under `src/copy/` when practical.
+2. Prefer feature-level files such as `src/copy/f1-new-batch.ts`, `src/copy/f2-setup.ts`, or `src/copy/home.ts` over one global copy file.
+3. Extract and wire page titles, section headings, helper text, field labels, placeholders, warnings, empty states, CTA labels, review copy, and user-facing toast messages when working in a feature.
+4. Keep dynamic user-facing strings in typed copy helpers/functions instead of assembling them inline in components.
+5. Do not rewrite existing copy during extraction unless the task explicitly asks for copy changes.
+6. Very small local fragments such as tiny units or punctuation glue may remain inline when extraction would reduce clarity.
+7. New multi-step flows and major page work should follow the copy-module structure by default.
+
 ## Response Expectations
 
 1. Start by stating which files or areas you will inspect.

@@ -8,6 +8,7 @@ import type {
   F2SetupSummary,
   F2RiskLevel,
   F2CarbonationLevel,
+  F2BottleGroupRecipeDraft,
   FlavourPresetSummary,
 } from "@/lib/f2-types";
 
@@ -92,6 +93,28 @@ export function buildGuidedRecipeItems(args: {
   });
 }
 
+export function getEffectiveBottleGroupRecipeItems(args: {
+  recipe: F2BottleGroupRecipeDraft;
+  flavourPresetMap: Record<string, FlavourPresetSummary>;
+  desiredCarbonationLevel: F2CarbonationLevel;
+}): F2RecipeItemDraft[] {
+  const { recipe, flavourPresetMap, desiredCarbonationLevel } = args;
+
+  if (recipe.mode === "none") {
+    return [];
+  }
+
+  if (!recipe.guidedMode) {
+    return recipe.recipeItems;
+  }
+
+  return buildGuidedRecipeItems({
+    recipeItems: recipe.recipeItems,
+    flavourPresetMap,
+    desiredCarbonationLevel,
+  });
+}
+
 export function calculateBottlePlan(
   bottleSizeMl: number,
   headspaceMl: number,
@@ -120,29 +143,31 @@ export function calculateBottlePlan(
 
 function mergeIngredientTotals(
   totals: Map<string, F2IngredientTotal>,
-  item: F2ScaledRecipeItem
+  item: F2ScaledRecipeItem,
+  multiplier = 1
 ) {
   const name = getIngredientDisplayName(item);
   const key = `${name}__${item.unit}`;
+  const scaledTotal = item.scaledAmount * multiplier;
 
   const existing = totals.get(key);
 
   if (existing) {
-    existing.totalAmount += item.scaledAmount;
+    existing.totalAmount += scaledTotal;
     return;
   }
 
   totals.set(key, {
     name,
     unit: item.unit,
-    totalAmount: item.scaledAmount,
+    totalAmount: scaledTotal,
   });
 }
 
 function getRiskLevel(
   ambientTempC: number,
   bottleGroups: F2BottleGroupDraft[],
-  recipeItems: F2RecipeItemDraft[]
+  bottleGroupPlans: F2BottleGroupPlan[]
 ): { riskLevel: F2RiskLevel; riskNotes: string[] } {
   const notes: string[] = [];
   let score = 0;
@@ -151,9 +176,9 @@ function getRiskLevel(
     (group) => group.bottleType === "plastic_test_bottle"
   );
 
-  const liquidSugarLoad = recipeItems
-    .filter((item) => isLiquidUnit(item.unit))
-    .reduce((sum, item) => sum + item.amountPer500, 0);
+  const liquidSugarLoad = bottleGroupPlans.reduce((max, groupPlan) => {
+    return Math.max(max, groupPlan.totalLiquidAdditionsMlPerBottle);
+  }, 0);
 
   if (ambientTempC >= 26) {
     score += 2;
@@ -204,15 +229,17 @@ export function calculateF2SetupSummary(args: {
   totalF1AvailableMl: number;
   reserveForStarterMl: number;
   ambientTempC: number;
+  desiredCarbonationLevel: F2CarbonationLevel;
   bottleGroups: F2BottleGroupDraft[];
-  recipeItems: F2RecipeItemDraft[];
+  flavourPresetMap: Record<string, FlavourPresetSummary>;
 }): F2SetupSummary {
   const {
     totalF1AvailableMl,
     reserveForStarterMl,
     ambientTempC,
+    desiredCarbonationLevel,
     bottleGroups,
-    recipeItems,
+    flavourPresetMap,
   } = args;
 
   const normalizedTotalF1AvailableMl = Math.max(0, totalF1AvailableMl);
@@ -247,10 +274,33 @@ export function calculateF2SetupSummary(args: {
       continue;
     }
 
+    if (group.recipe.mode !== "none" && group.recipe.recipeItems.length === 0) {
+      validationErrors.push(
+        `${group.groupLabel?.trim() || "A bottle group"} needs at least one ingredient for its flavour plan.`
+      );
+      continue;
+    }
+
+    if (
+      (group.recipe.mode === "saved" || group.recipe.mode === "preset") &&
+      !group.recipe.selectedRecipeId
+    ) {
+      validationErrors.push(
+        `${group.groupLabel?.trim() || "A bottle group"} needs a selected recipe.`
+      );
+      continue;
+    }
+
+    const effectiveRecipeItems = getEffectiveBottleGroupRecipeItems({
+      recipe: group.recipe,
+      flavourPresetMap,
+      desiredCarbonationLevel,
+    });
+
     const bottlePlan = calculateBottlePlan(
       group.bottleSizeMl,
       group.headspaceMl,
-      recipeItems
+      effectiveRecipeItems
     );
 
     if (bottlePlan.targetFillMl <= 0) {
@@ -260,10 +310,18 @@ export function calculateF2SetupSummary(args: {
     }
 
     for (const item of bottlePlan.scaledItems) {
-      mergeIngredientTotals(ingredientTotalsMap, item);
+      mergeIngredientTotals(ingredientTotalsMap, item, group.bottleCount);
+    }
+
+    const ingredientTotalsForGroupMap = new Map<string, F2IngredientTotal>();
+    for (const item of bottlePlan.scaledItems) {
+      mergeIngredientTotals(ingredientTotalsForGroupMap, item, group.bottleCount);
     }
 
     const groupTotalKombuchaMl = bottlePlan.kombuchaMl * group.bottleCount;
+    const totalLiquidAdditionsMl =
+      bottlePlan.totalLiquidAdditionsMl * group.bottleCount;
+    const groupTotalTargetFillMl = bottlePlan.targetFillMl * group.bottleCount;
 
     bottleGroupPlans.push({
       groupId: group.id,
@@ -271,15 +329,31 @@ export function calculateF2SetupSummary(args: {
       bottleSizeMl: group.bottleSizeMl,
       bottleType: group.bottleType,
       headspaceMl: group.headspaceMl,
+      groupLabel: group.groupLabel,
+      recipeMode: group.recipe.mode,
+      selectedRecipeId: group.recipe.selectedRecipeId || null,
+      guidedMode: group.recipe.guidedMode,
+      recipeName: group.recipe.recipeName?.trim() || null,
+      recipeDescription: group.recipe.recipeDescription?.trim() || null,
+      effectiveRecipeItems,
       targetFillMlPerBottle: bottlePlan.targetFillMl,
       kombuchaMlPerBottle: bottlePlan.kombuchaMl,
+      totalLiquidAdditionsMlPerBottle: bottlePlan.totalLiquidAdditionsMl,
       scaledItemsPerBottle: bottlePlan.scaledItems,
+      ingredientTotalsForGroup: Array.from(ingredientTotalsForGroupMap.values()).map(
+        (item) => ({
+          ...item,
+          totalAmount: Number(item.totalAmount.toFixed(2)),
+        })
+      ),
+      totalTargetFillMl: groupTotalTargetFillMl,
+      totalLiquidAdditionsMl,
       totalKombuchaMl: groupTotalKombuchaMl,
     });
 
     totalBottleCount += group.bottleCount;
     totalPlannedBottleVolumeMl += group.bottleSizeMl * group.bottleCount;
-    totalTargetFillMl += bottlePlan.targetFillMl * group.bottleCount;
+    totalTargetFillMl += groupTotalTargetFillMl;
     totalKombuchaNeededMl += groupTotalKombuchaMl;
   }
 
@@ -288,10 +362,6 @@ export function calculateF2SetupSummary(args: {
 
   if (bottleGroups.length === 0) {
     validationErrors.push("Add at least one bottle group.");
-  }
-
-  if (recipeItems.length === 0) {
-    validationErrors.push("Add at least one recipe ingredient.");
   }
 
   if (normalizedReserveForStarterMl > normalizedTotalF1AvailableMl) {
@@ -304,7 +374,11 @@ export function calculateF2SetupSummary(args: {
     validationErrors.push("Your bottle plan uses more kombucha than your F1 batch can provide.");
   }
 
-  const { riskLevel, riskNotes } = getRiskLevel(ambientTempC, bottleGroups, recipeItems);
+  const { riskLevel, riskNotes } = getRiskLevel(
+    ambientTempC,
+    bottleGroups,
+    bottleGroupPlans
+  );
 
   return {
     totalF1AvailableMl: normalizedTotalF1AvailableMl,

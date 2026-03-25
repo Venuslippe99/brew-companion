@@ -13,6 +13,7 @@ import F1Recipes from "./pages/F1Recipes";
 import F1Vessels from "./pages/F1Vessels";
 import BatchDetail from "./pages/BatchDetail";
 import BatchLineage from "./pages/BatchLineage";
+import F2Setup from "./pages/F2Setup";
 import Guides from "./pages/Guides";
 import GuideDetail from "./pages/GuideDetail";
 import Assistant from "./pages/Assistant";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/f1-recipes" element={<ProtectedRoute><F1Recipes /></ProtectedRoute>} />
               <Route path="/f1-vessels" element={<ProtectedRoute><F1Vessels /></ProtectedRoute>} />
               <Route path="/batch/:id" element={<ProtectedRoute><BatchDetail /></ProtectedRoute>} />
+              <Route path="/batch/:id/f2/setup" element={<ProtectedRoute><F2Setup /></ProtectedRoute>} />
               <Route path="/batch/:id/lineage" element={<ProtectedRoute><BatchLineage /></ProtectedRoute>} />
               <Route path="/assistant" element={<ProtectedRoute><Assistant /></ProtectedRoute>} />
               <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

@@ -16,6 +16,17 @@ export type F2IngredientForm =
 export type F2CarbonationLevel = "light" | "balanced" | "strong";
 export type F2RiskLevel = "low" | "moderate" | "high";
 export type F2RecipeSourceTab = "my" | "presets" | "create";
+export type F2GroupRecipeMode = "none" | "saved" | "preset" | "custom";
+
+export type F2BottleGroupRecipeDraft = {
+  mode: F2GroupRecipeMode;
+  selectedRecipeId?: string | null;
+  guidedMode: boolean;
+  recipeName?: string;
+  recipeDescription?: string;
+  saveRecipe?: boolean;
+  recipeItems: F2RecipeItemDraft[];
+};
 
 export type F2BottleGroupDraft = {
   id: string;
@@ -24,6 +35,7 @@ export type F2BottleGroupDraft = {
   bottleType: F2BottleType;
   headspaceMl: number;
   groupLabel?: string;
+  recipe: F2BottleGroupRecipeDraft;
 };
 
 export type F2RecipeItemDraft = {
@@ -50,8 +62,6 @@ export type F2SetupDraft = {
   ambientTempC: number;
   desiredCarbonationLevel: F2CarbonationLevel;
   bottleGroups: F2BottleGroupDraft[];
-  selectedRecipe?: F2RecipeDraft;
-  saveRecipe: boolean;
 };
 
 export type F2ScaledRecipeItem = F2RecipeItemDraft & {
@@ -71,9 +81,20 @@ export type F2BottleGroupPlan = {
   bottleSizeMl: number;
   bottleType: F2BottleType;
   headspaceMl: number;
+  groupLabel?: string;
+  recipeMode: F2GroupRecipeMode;
+  selectedRecipeId?: string | null;
+  guidedMode: boolean;
+  recipeName: string | null;
+  recipeDescription: string | null;
+  effectiveRecipeItems: F2RecipeItemDraft[];
   targetFillMlPerBottle: number;
   kombuchaMlPerBottle: number;
+  totalLiquidAdditionsMlPerBottle: number;
   scaledItemsPerBottle: F2ScaledRecipeItem[];
+  ingredientTotalsForGroup: F2IngredientTotal[];
+  totalTargetFillMl: number;
+  totalLiquidAdditionsMl: number;
   totalKombuchaMl: number;
 };
 

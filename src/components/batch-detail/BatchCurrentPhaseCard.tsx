@@ -18,6 +18,7 @@ export function BatchCurrentPhaseCard({
   currentF2Setup,
   actionLoading,
   onStartF2,
+  onOpenF2Chapter,
   onStillFermenting,
 }: {
   batch: KombuchaBatch;
@@ -25,6 +26,7 @@ export function BatchCurrentPhaseCard({
   currentF2Setup: LoadedF2Setup | null;
   actionLoading: WorkflowAction | null;
   onStartF2: () => Promise<void>;
+  onOpenF2Chapter: () => void;
   onStillFermenting: () => Promise<void>;
 }) {
   const showWorkflowActions =
@@ -35,6 +37,11 @@ export function BatchCurrentPhaseCard({
   const summaryChips = getPhaseSummaryChips({ batch, currentF2Setup });
   const phaseLabel = getCurrentPhaseLabel(batch.currentStage);
   const isF1Stage = F1_TIMING_STAGES.includes(batch.currentStage);
+  const showF2ChapterButton =
+    batch.currentStage === "f2_setup" ||
+    batch.currentStage === "f2_active" ||
+    batch.currentStage === "refrigerate_now" ||
+    batch.currentStage === "chilled_ready";
 
   return (
     <ScrollReveal delay={0.04}>
@@ -195,6 +202,23 @@ export function BatchCurrentPhaseCard({
                 {actionLoading === "still-fermenting" ? "Saving..." : "Keep fermenting"}
               </Button>
             </div>
+          </div>
+        )}
+
+        {showF2ChapterButton && (
+          <div className="mt-5 rounded-2xl border border-border bg-background p-4">
+            <p className="text-sm font-semibold text-foreground">
+              Open the F2 chapter
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              The bottle setup and saved Second Fermentation summary now live in a
+              dedicated bottling view.
+            </p>
+            <Button className="mt-4" onClick={onOpenF2Chapter}>
+              {batch.currentStage === "f2_setup"
+                ? "Open bottling setup"
+                : "Open F2 chapter"}
+            </Button>
           </div>
         )}
       </section>

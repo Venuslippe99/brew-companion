@@ -74,6 +74,14 @@ Every plan that touches schema must explicitly check:
 4. Frontend write paths
 5. Existing stored data compatibility
 
+
+
+Every plan that touches major UI or user-facing workflows must explicitly check:
+
+1. Whether meaningful user-facing copy should be added to or updated in a feature copy module under `src/copy/`
+2. Whether dynamic copy should be moved into typed copy helpers instead of inline string assembly
+3. Whether copy extraction is preserving existing wording versus intentionally changing it
+
 ## Required structure for every plan
 
 Use this structure exactly.
@@ -117,6 +125,12 @@ List risks such as:
 4. Missing timeline/history updates
 5. Validation gaps
 6. UI confusion for beginners
+
+## Copy and content impact
+List:
+1. Which feature copy module(s) are affected
+2. Whether copy is being extracted only or intentionally changed
+3. Any dynamic copy helpers that must be updated
 
 ## Milestones
 
