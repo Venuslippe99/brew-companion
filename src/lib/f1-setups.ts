@@ -7,6 +7,7 @@ import {
   type F1RecommendationHistoryEntry,
   type F1RecommendationSnapshot,
 } from "@/lib/f1-recommendation-types";
+import type { F1RecipeGeneratorResult } from "@/lib/f1-generator-types";
 import { buildF1VesselFitResult, type F1VesselFitResult } from "@/lib/f1-vessel-fit";
 import type { F1BatchSetupFields, F1RecipeSummary } from "@/lib/f1-recipe-types";
 import type { SelectedF1Vessel } from "@/lib/f1-vessel-types";
@@ -38,6 +39,12 @@ type SaveBatchF1SetupArgs = {
   starterSourceType: "manual" | "previous_batch";
   starterSourceBatchId: string | null;
   brewAgainSourceBatchId: string | null;
+  generatedRecipe?: F1RecipeGeneratorResult | null;
+  manualOverrides?: {
+    teaG: number | null;
+    sugarG: number | null;
+    starterMl: number | null;
+  };
   recommendationSnapshot?: F1RecommendationSnapshot | null;
   acceptedRecommendationIds?: string[];
 };
@@ -206,7 +213,7 @@ function buildFitNotesJson(fit: F1VesselFitResult): Json {
 }
 
 function buildSetupSnapshotJson(args: SaveBatchF1SetupArgs, fit: F1VesselFitResult): Json {
-  const { origin, setup, selectedRecipe, selectedVessel } = args;
+  const { origin, setup, selectedRecipe, selectedVessel, generatedRecipe, manualOverrides } = args;
 
   return {
     actualComposition: {
@@ -253,6 +260,34 @@ function buildSetupSnapshotJson(args: SaveBatchF1SetupArgs, fit: F1VesselFitResu
       starterSourceBatchId: args.starterSourceBatchId,
       brewAgainSourceBatchId: args.brewAgainSourceBatchId,
     },
+    generatorContext: generatedRecipe
+      ? {
+          systemRecommendation: {
+            recommendedTeaGPL: generatedRecipe.recommendedTeaGPL,
+            recommendedTeaG: generatedRecipe.recommendedTeaG,
+            recommendedTeaBagsApprox: generatedRecipe.recommendedTeaBagsApprox,
+            effectiveSugarTargetGPL: generatedRecipe.effectiveSugarTargetGPL,
+            effectiveSugarTargetG: generatedRecipe.effectiveSugarTargetG,
+            sugarEquivalentFactorUsed: generatedRecipe.sugarEquivalentFactorUsed,
+            recommendedSugarG: generatedRecipe.recommendedSugarG,
+            starterRatioUsed: generatedRecipe.starterRatioUsed,
+            recommendedStarterMl: generatedRecipe.recommendedStarterMl,
+            teaConfidence: generatedRecipe.teaConfidence,
+            sugarConfidence: generatedRecipe.sugarConfidence,
+            starterConfidence: generatedRecipe.starterConfidence,
+            overallConfidence: generatedRecipe.overallConfidence,
+            lineageStatus: generatedRecipe.lineageStatus,
+            historyAdjustments: generatedRecipe.historyAdjustments,
+            cautionFlags: generatedRecipe.cautionFlags,
+            reasons: generatedRecipe.reasons,
+          },
+          manualOverrides: {
+            teaG: manualOverrides?.teaG ?? null,
+            sugarG: manualOverrides?.sugarG ?? null,
+            starterMl: manualOverrides?.starterMl ?? null,
+          },
+        }
+      : null,
   } satisfies Json;
 }
 

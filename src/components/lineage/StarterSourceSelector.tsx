@@ -29,16 +29,16 @@ export function StarterSourceSelector({
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Culture source for this batch</h3>
+        <h3 className="text-sm font-semibold text-foreground">Starter culture for this brew</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Link a previous batch only if its starter liquid or culture is actually feeding this new
-          batch today.
+          Link a previous batch only if its starter liquid or culture is actually feeding this brew
+          today.
         </p>
       </div>
 
       <div>
         <label className="block text-sm font-medium text-foreground mb-1.5">
-          Which batch supplied the starter?
+          Which batch is feeding this brew?
         </label>
         <select
           value={value || ""}
@@ -57,13 +57,15 @@ export function StarterSourceSelector({
       </div>
 
       {loading && (
-        <p className="text-xs text-muted-foreground">Loading past batches you can link here...</p>
+        <p className="text-xs text-muted-foreground">
+          Loading past batches you can link here...
+        </p>
       )}
 
       {!loading && options.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          No previous batches are in a clearly reusable stage yet, so this batch will start
-          without a linked starter source.
+          No previous batches are in a clearly reusable stage yet, so the app is keeping this brew
+          on the conservative side for now.
         </p>
       )}
 
@@ -83,8 +85,8 @@ export function StarterSourceSelector({
             )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            This gives the app a real reference point if you change tea, sugar, or starter choices
-            from the last linked batch.
+            This gives the recipe a real culture line to work from if your tea, sugar, or starter
+            choices change from the last linked batch.
           </p>
         </div>
       )}
