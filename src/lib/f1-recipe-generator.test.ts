@@ -90,21 +90,40 @@ describe("generateF1RecipeRecommendation", () => {
     const second = generateF1RecipeRecommendation(input);
 
     expect(first).toEqual(second);
-    expect(first.recommendedTeaGPL).toBe(8);
-    expect(first.recommendedTeaG).toBe(30);
-    expect(first.recommendedTeaBagsApprox).toBe(15);
+    expect(first.finalBatchVolumeMl).toBe(3800);
+    expect(first.starterIncludedInTotal).toBe(true);
+    expect(first.freshTeaVolumeMl).toBe(3340);
+    expect(first.recommendedTeaGPL).toBe(6);
+    expect(first.recommendedTeaG).toBe(23);
+    expect(first.recommendedTeaBagsApprox).toBe(12);
     expect(first.effectiveSugarTargetGPL).toBe(75);
     expect(first.effectiveSugarTargetG).toBe(285);
     expect(first.sugarEquivalentFactorUsed).toBe(1);
     expect(first.recommendedSugarG).toBe(285);
     expect(first.reasons).toEqual(
       expect.arrayContaining([
-        expect.stringContaining("Tea is being calculated from an 8 g/L true-tea baseline."),
+        expect.stringContaining("Tea is being calculated from a 6 g/L true-tea baseline"),
         expect.stringContaining(
           "Balanced starts from 75 g/L sucrose-equivalent before sugar-type conversion."
         ),
+        expect.stringContaining("this recipe brews about 3340 ml fresh sweet tea"),
       ])
     );
+  });
+
+  it("uses a lighter default for white tea than black tea", () => {
+    const result = generateF1RecipeRecommendation({
+      totalVolumeMl: 3800,
+      teaType: "White tea",
+      sugarType: "White sugar",
+      targetPreference: "balanced",
+      starterSourceBatchId: null,
+      brewAgainSourceBatchId: null,
+    });
+
+    expect(result.recommendedTeaGPL).toBe(4);
+    expect(result.recommendedTeaG).toBe(15);
+    expect(result.recommendedTeaBagsApprox).toBe(8);
   });
 
   it("uses honey conversion for a 3.8 L balanced honey batch", () => {
@@ -123,6 +142,7 @@ describe("generateF1RecipeRecommendation", () => {
     expect(result.sugarConfidence).toBe("moderate");
     expect(result.starterRatioUsed).toBe(0.12);
     expect(result.recommendedStarterMl).toBe(460);
+    expect(result.freshTeaVolumeMl).toBe(3340);
     expect(result.cautionFlags).toEqual(
       expect.arrayContaining([
         expect.objectContaining({ code: "honey_conversion" }),
@@ -171,6 +191,7 @@ describe("generateF1RecipeRecommendation", () => {
     expect(result.starterRatioUsed).toBe(0.1);
     expect(result.recommendedStarterMl).toBe(380);
     expect(result.starterConfidence).toBe("high");
+    expect(result.freshTeaVolumeMl).toBe(3420);
   });
 
   it("increases tea by 1 g/L when weak tea base repeats in close history", () => {
@@ -196,8 +217,8 @@ describe("generateF1RecipeRecommendation", () => {
       ],
     });
 
-    expect(result.recommendedTeaGPL).toBe(9);
-    expect(result.recommendedTeaG).toBe(34);
+    expect(result.recommendedTeaGPL).toBe(7);
+    expect(result.recommendedTeaG).toBe(27);
     expect(result.historyAdjustments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -233,8 +254,8 @@ describe("generateF1RecipeRecommendation", () => {
       ],
     });
 
-    expect(result.recommendedTeaGPL).toBe(7);
-    expect(result.recommendedTeaG).toBe(27);
+    expect(result.recommendedTeaGPL).toBe(5);
+    expect(result.recommendedTeaG).toBe(19);
     expect(result.historyAdjustments).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

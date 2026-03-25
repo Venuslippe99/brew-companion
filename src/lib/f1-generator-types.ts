@@ -47,6 +47,9 @@ export type F1RecipeGeneratorInput = {
 };
 
 export type F1RecipeGeneratorResult = {
+  finalBatchVolumeMl: number;
+  starterIncludedInTotal: true;
+  freshTeaVolumeMl: number;
   recommendedTeaGPL: number;
   recommendedTeaG: number;
   recommendedTeaBagsApprox: number;

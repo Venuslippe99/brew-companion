@@ -263,6 +263,9 @@ function buildSetupSnapshotJson(args: SaveBatchF1SetupArgs, fit: F1VesselFitResu
     generatorContext: generatedRecipe
       ? {
           systemRecommendation: {
+            finalBatchVolumeMl: generatedRecipe.finalBatchVolumeMl,
+            starterIncludedInTotal: generatedRecipe.starterIncludedInTotal,
+            freshTeaVolumeMl: generatedRecipe.freshTeaVolumeMl,
             recommendedTeaGPL: generatedRecipe.recommendedTeaGPL,
             recommendedTeaG: generatedRecipe.recommendedTeaG,
             recommendedTeaBagsApprox: generatedRecipe.recommendedTeaBagsApprox,

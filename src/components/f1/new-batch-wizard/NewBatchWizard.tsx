@@ -44,7 +44,12 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
         return (
           <VolumeStep
             totalVolumeMl={wizard.state.answers.totalVolumeMl}
+            starterSourceOptions={wizard.starterSourceOptions}
+            starterSourceLoading={wizard.starterSourceLoading}
+            starterSourceBatchId={wizard.state.answers.starterSourceBatchId}
+            recommendedStarterSourceBatchId={wizard.recommendedStarterSourceBatchId}
             onChange={(value) => wizard.updateAnswer("totalVolumeMl", value)}
+            onStarterSourceChange={(value) => wizard.updateAnswer("starterSourceBatchId", value)}
           />
         );
       case "tea":
@@ -98,11 +103,6 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
             overrideSugarG={wizard.state.overrides.sugarG}
             overrideStarterMl={wizard.state.overrides.starterMl}
             requiresManualSugar={wizard.requiresManualSugar}
-            starterSourceOptions={wizard.starterSourceOptions}
-            starterSourceLoading={wizard.starterSourceLoading}
-            starterSourceBatchId={wizard.state.answers.starterSourceBatchId}
-            recommendedStarterSourceBatchId={wizard.recommendedStarterSourceBatchId}
-            onStarterSourceChange={(value) => wizard.updateAnswer("starterSourceBatchId", value)}
             onOverrideChange={wizard.updateOverride}
             recommendationHistoryLoading={wizard.recommendationHistoryLoading}
             secondaryCards={wizard.secondaryCards}

@@ -562,7 +562,7 @@ export function useNewBatchWizard({
   const stepHelperText = useMemo(() => {
     switch (state.step) {
       case "volume":
-        return "Pick the batch size first. The recipe will scale from here.";
+        return "Choose the final batch size first. Starter is included inside that total.";
       case "tea":
         return "Choose the tea base before the app decides how much tea to recommend.";
       case "sugar":
@@ -578,7 +578,7 @@ export function useNewBatchWizard({
       case "recipe":
         return requiresManualSugar
           ? "Add the sugar grams you want to use before you continue."
-          : "This is the first point where manual recipe changes are available.";
+          : "The breakdown below shows the fresh sweet tea to brew inside your final batch size.";
       case "finalize":
         return "Add the final details you want saved with today’s brew.";
       default:

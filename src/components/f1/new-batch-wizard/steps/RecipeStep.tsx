@@ -1,8 +1,6 @@
 import { F1RecommendationSection } from "@/components/f1/F1RecommendationSection";
-import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
 import type { F1RecipeGeneratorResult } from "@/lib/f1-generator-types";
 import type { F1RecommendationCard } from "@/lib/f1-recommendation-types";
-import type { LineageBatchSummary } from "@/lib/lineage";
 
 type RecipeStepProps = {
   generatedRecipe: F1RecipeGeneratorResult | null;
@@ -10,12 +8,7 @@ type RecipeStepProps = {
   overrideSugarG: number | null;
   overrideStarterMl: number | null;
   requiresManualSugar: boolean;
-  starterSourceOptions: LineageBatchSummary[];
-  starterSourceLoading: boolean;
   recommendationHistoryLoading: boolean;
-  starterSourceBatchId: string | null;
-  recommendedStarterSourceBatchId: string | null;
-  onStarterSourceChange: (value: string | null) => void;
   onOverrideChange: (field: "teaG" | "sugarG" | "starterMl", value: number | null) => void;
   secondaryCards: F1RecommendationCard[];
 };
@@ -30,12 +23,7 @@ export function RecipeStep({
   overrideSugarG,
   overrideStarterMl,
   requiresManualSugar,
-  starterSourceOptions,
-  starterSourceLoading,
   recommendationHistoryLoading,
-  starterSourceBatchId,
-  recommendedStarterSourceBatchId,
-  onStarterSourceChange,
   onOverrideChange,
   secondaryCards,
 }: RecipeStepProps) {
@@ -53,6 +41,10 @@ export function RecipeStep({
   const chosenTeaG = overrideTeaG ?? generatedRecipe.recommendedTeaG;
   const chosenSugarG = overrideSugarG ?? generatedRecipe.recommendedSugarG;
   const chosenStarterMl = overrideStarterMl ?? generatedRecipe.recommendedStarterMl;
+  const chosenFreshTeaVolumeMl = Math.max(
+    generatedRecipe.finalBatchVolumeMl - chosenStarterMl,
+    0
+  );
   const hasOverrides =
     overrideTeaG !== null || overrideSugarG !== null || overrideStarterMl !== null;
 
@@ -64,11 +56,42 @@ export function RecipeStep({
         </p>
         <h2 className="mt-2 text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          This is the starting recipe the app would use for this batch from what you&apos;ve told
-          it so far.
+          This is the starting recipe the app would use for this batch from what you&apos;ve told it
+          so far. Your chosen batch size is the final kombucha amount, with starter included inside
+          that total.
         </p>
 
         <div className="mt-6 grid gap-3 lg:grid-cols-3">
+          <div className="rounded-2xl border border-border/80 bg-background p-4">
+            <p className="text-xs text-muted-foreground">Final batch volume</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {generatedRecipe.finalBatchVolumeMl}ml
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Starter is already included in this total
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background p-4">
+            <p className="text-xs text-muted-foreground">Fresh sweet tea to brew</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {generatedRecipe.freshTeaVolumeMl}ml
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Brew this first before adding starter
+            </p>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background p-4">
+            <p className="text-xs text-muted-foreground">Starter to add</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {generatedRecipe.recommendedStarterMl}ml
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {Math.round(generatedRecipe.starterRatioUsed * 100)}% starter inside the final total
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid gap-3 lg:grid-cols-3">
           <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
             <p className="text-xs text-muted-foreground">Tea</p>
             <p className="mt-1 text-lg font-semibold text-foreground">
@@ -202,20 +225,13 @@ export function RecipeStep({
               <p className="mt-2 text-sm text-foreground">
                 {chosenTeaG}g tea,{" "}
                 {chosenSugarG === null ? "manual sugar amount still needed" : `${chosenSugarG}g sugar`},
-                {" "}{chosenStarterMl}ml starter.
+                {" "}{chosenFreshTeaVolumeMl}ml fresh sweet tea, then {chosenStarterMl}ml starter
+                for a final {generatedRecipe.finalBatchVolumeMl}ml batch.
               </p>
             </div>
           ) : null}
         </div>
       </div>
-
-      <StarterSourceSelector
-        options={starterSourceOptions}
-        value={starterSourceBatchId}
-        loading={starterSourceLoading}
-        recommendedBatchId={recommendedStarterSourceBatchId}
-        onChange={onStarterSourceChange}
-      />
 
       <F1RecommendationSection
         cards={secondaryCards}

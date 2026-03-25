@@ -1,6 +1,14 @@
+import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
+import type { LineageBatchSummary } from "@/lib/lineage";
+
 type VolumeStepProps = {
   totalVolumeMl: number;
+  starterSourceOptions: LineageBatchSummary[];
+  starterSourceLoading: boolean;
+  starterSourceBatchId: string | null;
+  recommendedStarterSourceBatchId: string | null;
   onChange: (value: number) => void;
+  onStarterSourceChange: (value: string | null) => void;
 };
 
 const VOLUME_PRESETS = [
@@ -10,17 +18,26 @@ const VOLUME_PRESETS = [
   { label: "8L", value: 8000 },
 ] as const;
 
-export function VolumeStep({ totalVolumeMl, onChange }: VolumeStepProps) {
+export function VolumeStep({
+  totalVolumeMl,
+  starterSourceOptions,
+  starterSourceLoading,
+  starterSourceBatchId,
+  recommendedStarterSourceBatchId,
+  onChange,
+  onStarterSourceChange,
+}: VolumeStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
       <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
         Step 1
       </p>
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
-        How much kombucha do you want to brew?
+        What final batch size do you want to make?
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        Pick the total amount you want to make today. Everything else will scale from this.
+        This is your final kombucha amount, including starter. The recipe will be built inside
+        that total.
       </p>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -41,7 +58,9 @@ export function VolumeStep({ totalVolumeMl, onChange }: VolumeStepProps) {
       </div>
 
       <div className="mt-5 max-w-sm">
-        <label className="mb-1.5 block text-sm font-medium text-foreground">Total volume (ml)</label>
+        <label className="mb-1.5 block text-sm font-medium text-foreground">
+          Final batch volume (ml)
+        </label>
         <input
           type="number"
           min={1}
@@ -49,6 +68,26 @@ export function VolumeStep({ totalVolumeMl, onChange }: VolumeStepProps) {
           onChange={(event) => onChange(event.target.value ? Number(event.target.value) : 0)}
           className="h-12 w-full rounded-xl border border-border bg-background px-4 text-base text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
         />
+      </div>
+
+      <div className="mt-6 border-t border-border/70 pt-5">
+        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          Optional starter link
+        </p>
+        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+          Add this if a previous batch is actually feeding today&apos;s brew. It helps the recipe use
+          the right culture line from the beginning.
+        </p>
+
+        <div className="mt-4 max-w-2xl">
+          <StarterSourceSelector
+            options={starterSourceOptions}
+            value={starterSourceBatchId}
+            loading={starterSourceLoading}
+            recommendedBatchId={recommendedStarterSourceBatchId}
+            onChange={onStarterSourceChange}
+          />
+        </div>
       </div>
     </div>
   );

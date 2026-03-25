@@ -28,6 +28,10 @@ function formatLiters(totalVolumeMl: number) {
   return Number((Math.max(totalVolumeMl, 0) / 1000).toFixed(2)).toString();
 }
 
+function formatTeaBaseline(value: number) {
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
+
 function getConfidenceRank(confidence: F1RecommendationConfidence) {
   if (confidence === "low") {
     return 0;
@@ -224,7 +228,7 @@ export function generateF1RecipeRecommendation(
   const historyAdjustments: F1GeneratorHistoryAdjustment[] = [];
   const cautionFlags: F1GeneratorCautionFlag[] = [];
   const reasons: string[] = [
-    `Tea is being calculated from an ${teaConfig.defaultGramsPerLiter} g/L true-tea baseline.`,
+    `Tea is being calculated from a ${formatTeaBaseline(teaConfig.defaultGramsPerLiter)} g/L true-tea baseline for ${input.teaType.toLowerCase()}.`,
     `${input.targetPreference[0].toUpperCase()}${input.targetPreference.slice(1)} starts from ${sweetnessTarget.sugarEquivalentGramsPerLiter} g/L sucrose-equivalent before sugar-type conversion.`,
   ];
 
@@ -307,13 +311,15 @@ export function generateF1RecipeRecommendation(
       ? CONSERVATIVE_STARTER_RATIO
       : STANDARD_STARTER_RATIO;
   const recommendedStarterMl = roundToNearestTen(input.totalVolumeMl * starterRatioUsed);
+  const finalBatchVolumeMl = Math.max(input.totalVolumeMl, 0);
+  const freshTeaVolumeMl = Math.max(finalBatchVolumeMl - recommendedStarterMl, 0);
   const starterConfidence = getStarterConfidence({
     lineageStatus,
     sugarType: input.sugarType,
   });
 
   reasons.push(
-    `That works out to ${recommendedTeaG} g of tea for ${formatLiters(input.totalVolumeMl)} L, or about ${recommendedTeaBagsApprox} tea bags at roughly 2 g each.`
+    `For a final ${formatLiters(finalBatchVolumeMl)} L batch, this starts with ${recommendedTeaG} g tea, about ${recommendedTeaBagsApprox} tea bags at roughly 2 g each.`
   );
 
   if (sugarEquivalentFactorUsed === null) {
@@ -352,11 +358,15 @@ export function generateF1RecipeRecommendation(
   }
 
   reasons.push(
+    `Starter is included inside the final batch size, so this recipe brews about ${freshTeaVolumeMl} ml fresh sweet tea and then adds ${recommendedStarterMl} ml starter.`
+  );
+
+  reasons.push(
     `${buildStarterReason({
       lineageStatus,
       sugarType: input.sugarType,
       starterRatioUsed,
-    })} That comes to about ${recommendedStarterMl} ml starter.`
+    })} That keeps the final batch at about ${finalBatchVolumeMl} ml total.`
   );
 
   const teaConfidence = teaConfig.confidence;
@@ -367,6 +377,9 @@ export function generateF1RecipeRecommendation(
       : getLowestConfidence(teaConfidence, sugarConfidence, starterConfidence);
 
   return {
+    finalBatchVolumeMl,
+    starterIncludedInTotal: true,
+    freshTeaVolumeMl,
     recommendedTeaGPL,
     recommendedTeaG,
     recommendedTeaBagsApprox,
