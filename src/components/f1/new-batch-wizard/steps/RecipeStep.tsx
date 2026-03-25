@@ -1,9 +1,22 @@
+import { useEffect, useState } from "react";
+import { ChevronDown, ChevronUp, Info, SlidersHorizontal } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { F1RecommendationSection } from "@/components/f1/F1RecommendationSection";
+import type { BatchTimingResult } from "@/lib/batch-timing";
 import type { F1RecipeGeneratorResult } from "@/lib/f1-generator-types";
 import type { F1RecommendationCard } from "@/lib/f1-recommendation-types";
 
 type RecipeStepProps = {
   generatedRecipe: F1RecipeGeneratorResult | null;
+  estimatedF1Timing: BatchTimingResult | null;
   overrideTeaG: number | null;
   overrideSugarG: number | null;
   overrideStarterMl: number | null;
@@ -13,12 +26,15 @@ type RecipeStepProps = {
   secondaryCards: F1RecommendationCard[];
 };
 
+type RecipeDialogView = "calculation" | "context" | null;
+
 function inputValue(value: number | null) {
   return value === null ? "" : value.toString();
 }
 
 export function RecipeStep({
   generatedRecipe,
+  estimatedF1Timing,
   overrideTeaG,
   overrideSugarG,
   overrideStarterMl,
@@ -27,10 +43,23 @@ export function RecipeStep({
   onOverrideChange,
   secondaryCards,
 }: RecipeStepProps) {
+  const [dialogView, setDialogView] = useState<RecipeDialogView>(null);
+  const [showAdjustments, setShowAdjustments] = useState(false);
+
+  useEffect(() => {
+    const hasOverrides =
+      overrideTeaG !== null || overrideSugarG !== null || overrideStarterMl !== null;
+
+    if (requiresManualSugar || hasOverrides) {
+      setShowAdjustments(true);
+    }
+  }, [overrideStarterMl, overrideSugarG, overrideTeaG, requiresManualSugar]);
+
   if (!generatedRecipe) {
     return (
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-        <h2 className="text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
+        <NewBatchWizardProgress currentStep="recipe" />
+        <h2 className="mt-2 text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
         <p className="mt-2 text-sm text-muted-foreground">
           Finish the core setup questions first so the app can build a recipe for you.
         </p>
@@ -41,43 +70,32 @@ export function RecipeStep({
   const chosenTeaG = overrideTeaG ?? generatedRecipe.recommendedTeaG;
   const chosenSugarG = overrideSugarG ?? generatedRecipe.recommendedSugarG;
   const chosenStarterMl = overrideStarterMl ?? generatedRecipe.recommendedStarterMl;
-  const chosenFreshTeaVolumeMl = Math.max(
-    generatedRecipe.finalBatchVolumeMl - chosenStarterMl,
-    0
-  );
+  const chosenFreshTeaVolumeMl = Math.max(generatedRecipe.finalBatchVolumeMl - chosenStarterMl, 0);
   const hasOverrides =
     overrideTeaG !== null || overrideSugarG !== null || overrideStarterMl !== null;
+  const hasMoreContext = recommendationHistoryLoading || secondaryCards.length > 0;
+  const adjustmentsLockedOpen = requiresManualSugar || hasOverrides;
 
   return (
-    <div className="space-y-5">
+    <>
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          Step 7
-        </p>
+        <NewBatchWizardProgress currentStep="recipe" />
         <h2 className="mt-2 text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          This is the starting recipe the app would use for this batch from what you&apos;ve told it
-          so far. Your chosen batch size is the final kombucha amount, with starter included inside
-          that total.
+          Here&apos;s the recipe to brew. Your final batch size already includes the starter.
         </p>
 
-        <div className="mt-6 grid gap-3 lg:grid-cols-3">
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-border/80 bg-background p-4">
             <p className="text-xs text-muted-foreground">Final batch volume</p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.finalBatchVolumeMl}ml
             </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Starter is already included in this total
-            </p>
           </div>
           <div className="rounded-2xl border border-border/80 bg-background p-4">
-            <p className="text-xs text-muted-foreground">Fresh sweet tea to brew</p>
+            <p className="text-xs text-muted-foreground">Fresh tea to brew</p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.freshTeaVolumeMl}ml
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Brew this first before adding starter
             </p>
           </div>
           <div className="rounded-2xl border border-border/80 bg-background p-4">
@@ -85,13 +103,21 @@ export function RecipeStep({
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.recommendedStarterMl}ml
             </p>
+          </div>
+          <div className="rounded-2xl border border-border/80 bg-background p-4">
+            <p className="text-xs text-muted-foreground">Estimated first taste</p>
+            <p className="mt-1 text-lg font-semibold text-foreground">
+              {estimatedF1Timing
+                ? `Day ${estimatedF1Timing.windowStartDay}-${estimatedF1Timing.windowEndDay}`
+                : "Day 6-9"}
+            </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {Math.round(generatedRecipe.starterRatioUsed * 100)}% starter inside the final total
+              {estimatedF1Timing?.windowDateRangeText || "A rough first tasting window"}
             </p>
           </div>
         </div>
 
-        <div className="mt-3 grid gap-3 lg:grid-cols-3">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
             <p className="text-xs text-muted-foreground">Tea</p>
             <p className="mt-1 text-lg font-semibold text-foreground">
@@ -114,135 +140,193 @@ export function RecipeStep({
                 : `${generatedRecipe.effectiveSugarTargetGPL} g/L starting target`}
             </p>
           </div>
-          <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-            <p className="text-xs text-muted-foreground">Starter</p>
-            <p className="mt-1 text-lg font-semibold text-foreground">
-              {generatedRecipe.recommendedStarterMl}ml
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              {Math.round(generatedRecipe.starterRatioUsed * 100)}% starter
-            </p>
-          </div>
         </div>
 
         <div className="mt-5 rounded-2xl border border-border/80 bg-background p-4">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-            Why this is the starting point
-          </p>
-          <div className="mt-3 space-y-2">
-            {generatedRecipe.reasons.map((reason) => (
-              <p key={reason} className="text-sm text-foreground">
-                {reason}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Manual adjustments</h3>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Only open this if you want to change the recommendation.
               </p>
-            ))}
-          </div>
-        </div>
+            </div>
 
-        {generatedRecipe.cautionFlags.length > 0 ? (
-          <div className="mt-4 rounded-2xl border border-honey/40 bg-honey-light/70 p-4">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Worth knowing
-            </p>
-            <div className="mt-2 space-y-2">
-              {generatedRecipe.cautionFlags.map((flag) => (
-                <p key={flag.code} className="text-sm text-foreground">
-                  {flag.message}
-                </p>
-              ))}
+            <div className="flex flex-wrap items-center gap-2">
+              {hasOverrides ? (
+                <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
+                  Adjusted from recommendation
+                </span>
+              ) : null}
+              {!adjustmentsLockedOpen ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowAdjustments((value) => !value)}
+                >
+                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  {showAdjustments ? "Hide manual edits" : "Adjust manually"}
+                  {showAdjustments ? (
+                    <ChevronUp className="ml-2 h-4 w-4" />
+                  ) : (
+                    <ChevronDown className="ml-2 h-4 w-4" />
+                  )}
+                </Button>
+              ) : null}
             </div>
           </div>
-        ) : null}
 
-        <div className="mt-5 space-y-4 rounded-2xl border border-border/80 bg-background p-4">
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Adjust it yourself</h3>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Keep the recommendation as-is, or change the amounts you want to brew with today.
-            </p>
-          </div>
+          {showAdjustments ? (
+            <div className="mt-4 space-y-4">
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Tea (g)
+                  </label>
+                  <input
+                    type="number"
+                    value={inputValue(overrideTeaG)}
+                    onChange={(event) =>
+                      onOverrideChange("teaG", event.target.value ? Number(event.target.value) : null)
+                    }
+                    placeholder={generatedRecipe.recommendedTeaG.toString()}
+                    className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Sugar (g)
+                  </label>
+                  <input
+                    type="number"
+                    value={inputValue(overrideSugarG)}
+                    onChange={(event) =>
+                      onOverrideChange(
+                        "sugarG",
+                        event.target.value ? Number(event.target.value) : null
+                      )
+                    }
+                    placeholder={
+                      generatedRecipe.recommendedSugarG === null
+                        ? "Required"
+                        : generatedRecipe.recommendedSugarG.toString()
+                    }
+                    className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                  {requiresManualSugar ? (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Add the sugar grams you want to use before you continue.
+                    </p>
+                  ) : null}
+                </div>
+                <div>
+                  <label className="mb-1.5 block text-sm font-medium text-foreground">
+                    Starter (ml)
+                  </label>
+                  <input
+                    type="number"
+                    value={inputValue(overrideStarterMl)}
+                    onChange={(event) =>
+                      onOverrideChange(
+                        "starterMl",
+                        event.target.value ? Number(event.target.value) : null
+                      )
+                    }
+                    placeholder={generatedRecipe.recommendedStarterMl.toString()}
+                    className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                  />
+                </div>
+              </div>
 
-          <div className="grid gap-3 sm:grid-cols-3">
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">Tea (g)</label>
-              <input
-                type="number"
-                value={inputValue(overrideTeaG)}
-                onChange={(event) =>
-                  onOverrideChange("teaG", event.target.value ? Number(event.target.value) : null)
-                }
-                placeholder={generatedRecipe.recommendedTeaG.toString()}
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">Sugar (g)</label>
-              <input
-                type="number"
-                value={inputValue(overrideSugarG)}
-                onChange={(event) =>
-                  onOverrideChange(
-                    "sugarG",
-                    event.target.value ? Number(event.target.value) : null
-                  )
-                }
-                placeholder={
-                  generatedRecipe.recommendedSugarG === null
-                    ? "Required"
-                    : generatedRecipe.recommendedSugarG.toString()
-                }
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-              {requiresManualSugar ? (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Add the sugar grams you want to use before you continue.
+              {hasOverrides ? (
+                <p className="text-sm text-muted-foreground">
+                  Brewing {chosenFreshTeaVolumeMl}ml fresh sweet tea, then adding {chosenStarterMl}ml
+                  starter for a final {generatedRecipe.finalBatchVolumeMl}ml batch.
                 </p>
               ) : null}
             </div>
-            <div>
-              <label className="mb-1.5 block text-sm font-medium text-foreground">
-                Starter (ml)
-              </label>
-              <input
-                type="number"
-                value={inputValue(overrideStarterMl)}
-                onChange={(event) =>
-                  onOverrideChange(
-                    "starterMl",
-                    event.target.value ? Number(event.target.value) : null
-                  )
-                }
-                placeholder={generatedRecipe.recommendedStarterMl.toString()}
-                className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
-            </div>
-          </div>
+          ) : null}
+        </div>
 
-          {hasOverrides ? (
-            <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                Your chosen recipe
-              </p>
-              <p className="mt-2 text-sm text-foreground">
-                {chosenTeaG}g tea,{" "}
-                {chosenSugarG === null ? "manual sugar amount still needed" : `${chosenSugarG}g sugar`},
-                {" "}{chosenFreshTeaVolumeMl}ml fresh sweet tea, then {chosenStarterMl}ml starter
-                for a final {generatedRecipe.finalBatchVolumeMl}ml batch.
-              </p>
-            </div>
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Button type="button" variant="ghost" size="sm" onClick={() => setDialogView("calculation")}>
+            <Info className="mr-2 h-4 w-4" />
+            Why this recipe
+          </Button>
+          {hasMoreContext ? (
+            <Button type="button" variant="ghost" size="sm" onClick={() => setDialogView("context")}>
+              More context
+            </Button>
           ) : null}
         </div>
       </div>
 
-      <F1RecommendationSection
-        cards={secondaryCards}
-        loadingHistory={recommendationHistoryLoading}
-        appliedRecommendationIds={[]}
-        onApply={() => {}}
-        eyebrow="Also worth knowing"
-        title="A little extra context"
-        description="These notes stay secondary to the recipe itself. They are here if you want the extra read."
-        maxPrimary={2}
-      />
-    </div>
+      <Dialog open={dialogView !== null} onOpenChange={(open) => !open && setDialogView(null)}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+          {dialogView === "calculation" ? (
+            <>
+              <DialogHeader>
+                <DialogTitle>Why this recipe</DialogTitle>
+                <DialogDescription>
+                  The recommendation starts from your answers, then folds in lineage, history, and
+                  any caution flags.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  {generatedRecipe.reasons.map((reason) => (
+                    <p key={reason} className="text-sm text-foreground">
+                      {reason}
+                    </p>
+                  ))}
+                </div>
+
+                {generatedRecipe.cautionFlags.length > 0 ? (
+                  <div className="rounded-2xl border border-honey/40 bg-honey-light/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+                      Worth checking
+                    </p>
+                    <div className="mt-2 space-y-2">
+                      {generatedRecipe.cautionFlags.map((flag) => (
+                        <p key={flag.code} className="text-sm text-foreground">
+                          {flag.message}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            </>
+          ) : (
+            <>
+              <DialogHeader>
+                <DialogTitle>More context</DialogTitle>
+                <DialogDescription>
+                  Extra notes from similar batches and supporting setup guidance.
+                </DialogDescription>
+              </DialogHeader>
+
+              {hasMoreContext ? (
+                <F1RecommendationSection
+                  cards={secondaryCards}
+                  loadingHistory={recommendationHistoryLoading}
+                  appliedRecommendationIds={[]}
+                  onApply={() => {}}
+                  eyebrow="Extra notes"
+                  title="A little more context"
+                  description="These notes stay secondary to the recipe itself."
+                  maxPrimary={2}
+                />
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  No extra notes are needed for this setup right now.
+                </p>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

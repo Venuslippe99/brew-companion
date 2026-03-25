@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Dialog,
@@ -13,7 +13,6 @@ import { F1VesselPicker } from "@/components/f1/F1VesselPicker";
 import { NewBatchCoachPopup } from "@/components/f1/new-batch-wizard/NewBatchCoachPopup";
 import { NewBatchWizardFooter } from "@/components/f1/new-batch-wizard/NewBatchWizardFooter";
 import { NewBatchWizardHeader } from "@/components/f1/new-batch-wizard/NewBatchWizardHeader";
-import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { FinalizeStep } from "@/components/f1/new-batch-wizard/steps/FinalizeStep";
 import { RecipeStep } from "@/components/f1/new-batch-wizard/steps/RecipeStep";
 import { SugarStep } from "@/components/f1/new-batch-wizard/steps/SugarStep";
@@ -43,6 +42,9 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
       case "volume":
         return (
           <VolumeStep
+            mode={wizard.state.mode}
+            recipeName={wizard.state.selectedRecipe?.name}
+            brewAgainName={brewAgainState?.sourceSummary.sourceBatchName}
             totalVolumeMl={wizard.state.answers.totalVolumeMl}
             starterSourceOptions={wizard.starterSourceOptions}
             starterSourceLoading={wizard.starterSourceLoading}
@@ -50,6 +52,9 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
             recommendedStarterSourceBatchId={wizard.recommendedStarterSourceBatchId}
             onChange={(value) => wizard.updateAnswer("totalVolumeMl", value)}
             onStarterSourceChange={(value) => wizard.updateAnswer("starterSourceBatchId", value)}
+            onChooseRecipe={() => wizard.setRecipePickerOpen(true)}
+            onChooseScratch={wizard.resetToScratch}
+            onChooseBrewAgain={brewAgainState ? wizard.applyBrewAgainPrefill : undefined}
           />
         );
       case "tea":
@@ -99,6 +104,7 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
         return (
           <RecipeStep
             generatedRecipe={wizard.generatedRecipe}
+            estimatedF1Timing={wizard.estimatedF1Timing}
             overrideTeaG={wizard.state.overrides.teaG}
             overrideSugarG={wizard.state.overrides.sugarG}
             overrideStarterMl={wizard.state.overrides.starterMl}
@@ -120,21 +126,24 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
       default:
         return null;
     }
-  }, [wizard]);
+  }, [brewAgainState, wizard]);
+
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [wizard.state.step]);
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl flex-col gap-6 px-4 pb-6 pt-6 lg:px-8 lg:pt-8">
+    <div className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl flex-col gap-4 px-4 pb-6 pt-6 lg:px-8 lg:pt-8">
       <NewBatchWizardHeader
         mode={wizard.state.mode}
         recipeName={wizard.state.selectedRecipe?.name}
         brewAgainName={brewAgainState?.sourceSummary.sourceBatchName}
         onExit={() => navigate("/batches")}
-        onChooseRecipe={() => wizard.setRecipePickerOpen(true)}
-        onChooseScratch={wizard.resetToScratch}
-        onChooseBrewAgain={brewAgainState ? wizard.applyBrewAgainPrefill : undefined}
       />
-
-      <NewBatchWizardProgress currentStep={wizard.state.step} />
 
       <div className="flex-1">{currentStepView}</div>
 

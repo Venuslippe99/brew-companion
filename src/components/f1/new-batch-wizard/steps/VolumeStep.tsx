@@ -1,7 +1,13 @@
+import { Button } from "@/components/ui/button";
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
+import type { NewBatchWizardMode } from "@/components/f1/new-batch-wizard/types";
 import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
 import type { LineageBatchSummary } from "@/lib/lineage";
 
 type VolumeStepProps = {
+  mode: NewBatchWizardMode;
+  recipeName?: string | null;
+  brewAgainName?: string | null;
   totalVolumeMl: number;
   starterSourceOptions: LineageBatchSummary[];
   starterSourceLoading: boolean;
@@ -9,6 +15,9 @@ type VolumeStepProps = {
   recommendedStarterSourceBatchId: string | null;
   onChange: (value: number) => void;
   onStarterSourceChange: (value: string | null) => void;
+  onChooseRecipe: () => void;
+  onChooseScratch: () => void;
+  onChooseBrewAgain?: () => void;
 };
 
 const VOLUME_PRESETS = [
@@ -19,6 +28,9 @@ const VOLUME_PRESETS = [
 ] as const;
 
 export function VolumeStep({
+  mode,
+  recipeName,
+  brewAgainName,
   totalVolumeMl,
   starterSourceOptions,
   starterSourceLoading,
@@ -26,12 +38,13 @@ export function VolumeStep({
   recommendedStarterSourceBatchId,
   onChange,
   onStarterSourceChange,
+  onChooseRecipe,
+  onChooseScratch,
+  onChooseBrewAgain,
 }: VolumeStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 1
-      </p>
+      <NewBatchWizardProgress currentStep="volume" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
         What final batch size do you want to make?
       </h2>
@@ -39,6 +52,39 @@ export function VolumeStep({
         This is your final kombucha amount, including starter. The recipe will be built inside
         that total.
       </p>
+
+      <div className="mt-5 rounded-2xl border border-border/80 bg-background p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+              Starting point
+            </p>
+            <p className="mt-1 text-sm text-foreground">
+              {mode === "recipe" && recipeName
+                ? `Using ${recipeName} as the starting point.`
+                : mode === "brew_again" && brewAgainName
+                  ? `Using ${brewAgainName} as the starting point.`
+                  : "Starting from scratch."}
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            {mode !== "scratch" ? (
+              <Button type="button" variant="outline" size="sm" onClick={onChooseScratch}>
+                Start from scratch
+              </Button>
+            ) : null}
+            <Button type="button" variant="outline" size="sm" onClick={onChooseRecipe}>
+              Use saved recipe
+            </Button>
+            {onChooseBrewAgain ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onChooseBrewAgain}>
+                Use brew again
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
         {VOLUME_PRESETS.map((preset) => (

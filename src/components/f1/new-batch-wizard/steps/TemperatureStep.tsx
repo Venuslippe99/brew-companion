@@ -1,3 +1,5 @@
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
+
 type TemperatureStepProps = {
   avgRoomTempC: number;
   onChange: (value: number) => void;
@@ -6,9 +8,7 @@ type TemperatureStepProps = {
 export function TemperatureStep({ avgRoomTempC, onChange }: TemperatureStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 6
-      </p>
+      <NewBatchWizardProgress currentStep="temperature" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
         What room temperature do you expect?
       </h2>

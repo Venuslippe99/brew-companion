@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import {
   getDefaultSuitabilityForMaterial,
   getVesselMaterialLabel,
@@ -38,9 +39,7 @@ export function VesselStep({
 }: VesselStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 4
-      </p>
+      <NewBatchWizardProgress currentStep="vessel" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">What are you brewing in?</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Choose the vessel for today so the fit can be checked before the recipe is shown.

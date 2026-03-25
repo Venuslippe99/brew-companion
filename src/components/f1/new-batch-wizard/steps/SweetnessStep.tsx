@@ -1,3 +1,4 @@
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { F1_TARGET_PREFERENCES, type F1TargetPreference } from "@/lib/f1-recipe-types";
 
 type SweetnessStepProps = {
@@ -14,9 +15,7 @@ const descriptions: Record<F1TargetPreference, string> = {
 export function SweetnessStep({ targetPreference, onChange }: SweetnessStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 5
-      </p>
+      <NewBatchWizardProgress currentStep="sweetness" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
         How sweet do you want the finished batch to feel?
       </h2>

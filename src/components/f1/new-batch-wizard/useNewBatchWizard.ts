@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
+import { getBatchStageTiming } from "@/lib/batch-timing";
 import {
   buildF1Recommendations,
   loadF1RecommendationHistoryContext,
@@ -109,6 +110,18 @@ function normalizeTargetPreference(value?: string | null): F1TargetPreference {
 
 function todayString() {
   return new Date().toISOString().split("T")[0];
+}
+
+function scrollWizardToTop() {
+  if (typeof window === "undefined") {
+    return;
+  }
+
+  window.scrollTo({
+    top: 0,
+    left: 0,
+    behavior: "auto",
+  });
 }
 
 function createManualDraftForVessel(vesselType: string): FermentationVesselDraft {
@@ -515,6 +528,30 @@ export function useNewBatchWizard({
     });
   }, [finalStarterMl, finalSugarG, finalTeaG, generatedRecipe, state]);
 
+  const estimatedF1Timing = useMemo(() => {
+    if (!generatedRecipe || finalStarterMl === null) {
+      return null;
+    }
+
+    return getBatchStageTiming({
+      brew_started_at: new Date(
+        `${state.metadata.brewDate || todayString()}T12:00:00`
+      ).toISOString(),
+      current_stage: "f1_active",
+      avg_room_temp_c: state.answers.avgRoomTempC,
+      target_preference: state.answers.targetPreference,
+      starter_liquid_ml: finalStarterMl,
+      total_volume_ml: state.answers.totalVolumeMl,
+    });
+  }, [
+    finalStarterMl,
+    generatedRecipe,
+    state.answers.avgRoomTempC,
+    state.answers.targetPreference,
+    state.answers.totalVolumeMl,
+    state.metadata.brewDate,
+  ]);
+
   const vesselFit = useMemo(
     () =>
       buildF1VesselFitResult({
@@ -578,7 +615,7 @@ export function useNewBatchWizard({
       case "recipe":
         return requiresManualSugar
           ? "Add the sugar grams you want to use before you continue."
-          : "The breakdown below shows the fresh sweet tea to brew inside your final batch size.";
+          : "Review the recipe first. Open the extra reasoning only if you want it.";
       case "finalize":
         return "Add the final details you want saved with today’s brew.";
       default:
@@ -997,6 +1034,7 @@ export function useNewBatchWizard({
     if (nextStep) {
       dispatch({ type: "set_coach_popup", popup: null });
       dispatch({ type: "set_step", step: nextStep });
+      scrollWizardToTop();
     }
   };
 
@@ -1005,6 +1043,7 @@ export function useNewBatchWizard({
     if (previousStep) {
       dispatch({ type: "set_coach_popup", popup: null });
       dispatch({ type: "set_step", step: previousStep });
+      scrollWizardToTop();
     }
   };
 
@@ -1012,6 +1051,7 @@ export function useNewBatchWizard({
     dispatch({ type: "hydrate", state: buildInitialWizardState(null) });
     setCustomVesselExpanded(false);
     setDismissedPopupKey(null);
+    scrollWizardToTop();
   };
 
   const applyBrewAgainPrefill = () => {
@@ -1022,6 +1062,7 @@ export function useNewBatchWizard({
     dispatch({ type: "hydrate", state: buildInitialWizardState(brewAgainState) });
     setCustomVesselExpanded(false);
     setDismissedPopupKey(null);
+    scrollWizardToTop();
   };
 
   const applyRecipePrefill = (recipe: F1RecipeSummary) => {
@@ -1055,6 +1096,7 @@ export function useNewBatchWizard({
     dispatch({ type: "hydrate", state: nextState });
     setRecipePickerOpen(false);
     setDismissedPopupKey(null);
+    scrollWizardToTop();
   };
 
   const updateManualVesselDraft = <K extends keyof FermentationVesselDraft>(
@@ -1075,6 +1117,7 @@ export function useNewBatchWizard({
     availableVessels,
     starterSourceOptions,
     generatedRecipe,
+    estimatedF1Timing,
     displaySetup,
     persistedSetup,
     recommendationHistoryLoading: historyLoading,

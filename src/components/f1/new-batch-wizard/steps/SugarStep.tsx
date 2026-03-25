@@ -1,3 +1,4 @@
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { F1_SUGAR_TYPES, type F1SugarType } from "@/lib/f1-recipe-types";
 
 type SugarStepProps = {
@@ -8,9 +9,7 @@ type SugarStepProps = {
 export function SugarStep({ sugarType, onChange }: SugarStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 3
-      </p>
+      <NewBatchWizardProgress currentStep="sugar" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
         What sugar do you want to use?
       </h2>

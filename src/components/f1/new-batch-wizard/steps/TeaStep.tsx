@@ -1,3 +1,4 @@
+import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { F1_TEA_TYPES, type F1TeaType } from "@/lib/f1-recipe-types";
 
 type TeaStepProps = {
@@ -8,9 +9,7 @@ type TeaStepProps = {
 export function TeaStep({ teaType, onChange }: TeaStepProps) {
   return (
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
-      <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-        Step 2
-      </p>
+      <NewBatchWizardProgress currentStep="tea" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">What tea do you want to use?</h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
         Choose the tea base first. The app will calculate how much tea to use after the core
