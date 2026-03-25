@@ -4,10 +4,8 @@ import {
   buildTodayActionItems,
   type TodayActionItem,
   type TodayActionReminder,
-  type TodayActionSectionKey,
 } from "@/lib/today-actions";
 
-type HomeLaneKey = "now" | "next_up" | "recently_moved";
 type HomeTone = "urgent" | "warm" | "calm";
 type HomeQuickLogActionKey =
   | "taste_test"
@@ -23,6 +21,20 @@ export type HomeQuickLogAction = {
   preferredBatchId?: string;
 };
 
+export type HomeCurrentStat = {
+  key: "active" | "f1" | "f2" | "attention";
+  label: string;
+  value: number;
+  helper: string;
+};
+
+export type HomeLifetimeStat = {
+  key: "brewed" | "bottles" | "completed" | "total";
+  label: string;
+  value: string;
+  helper: string;
+};
+
 export type HomePrimaryFocus =
   | {
       kind: "empty";
@@ -34,76 +46,39 @@ export type HomePrimaryFocus =
       secondaryAction: { label: string; to: string };
     }
   | {
-      kind: "quiet";
-      eyebrow: string;
-      title: string;
-      summary: string;
-      tone: HomeTone;
-      item: TodayActionItem;
-      reasonLabel: string;
-      explanation: string;
-      primaryAction: { label: string; to: string };
-      secondaryAction: { label: string; quickLogMode: HomeQuickLogActionKey };
-    }
-  | {
       kind: "batch";
       eyebrow: string;
       title: string;
       summary: string;
       tone: HomeTone;
-      item: TodayActionItem;
+      batch: KombuchaBatch;
       reasonLabel: string;
       explanation: string;
+      statusLine: string;
       primaryAction: { label: string; to: string };
       secondaryAction:
         | { label: string; quickLogMode: HomeQuickLogActionKey }
         | { label: string; to: string };
     };
 
-export type HomeSnapshotStat = {
-  key: "active" | "attention" | "window" | "movement";
-  label: string;
-  value: number;
-  description: string;
-  targetId: string;
-};
-
-export type HomeActionLane = {
-  key: HomeLaneKey;
-  title: string;
-  description: string;
-  items: TodayActionItem[];
-};
-
-export type HomeTodayQueueItem = {
+export type HomeAttentionItem = {
   batch: KombuchaBatch;
+  reasonLabel: string;
   statusSummary: string;
   secondarySummary: string;
-  reasonLabel: string;
   linkTo: string;
   tone: HomeTone;
 };
 
-export type HomeRosterItem = {
-  batch: KombuchaBatch;
-  dayNumber: number;
-  statusLine: string;
-  linkTo: string;
-  tone: HomeTone;
-};
-
-export type HomeRecentMovementItem = {
+export type HomeRecentActivityMiniItem = {
   id: string;
-  batchId: string;
   batchName: string;
-  eventAt: string;
   title: string;
   summary: string;
   linkTo: string;
 };
 
 export type HomeSupportContext = {
-  eyebrow: string;
   title: string;
   summary: string;
   primaryAction: { label: string; to: string };
@@ -114,13 +89,12 @@ export type HomeCommandCenter = {
   activeBatchCount: number;
   greetingName?: string;
   stateSentence: string;
+  currentStats: HomeCurrentStat[];
+  lifetimeStats: HomeLifetimeStat[];
   primaryFocus: HomePrimaryFocus;
-  todayQueue: HomeTodayQueueItem[];
-  snapshotStats: HomeSnapshotStat[];
-  actionLanes: HomeActionLane[];
-  activeRoster: HomeRosterItem[];
-  quickLogActions: HomeQuickLogAction[];
-  recentMovement: HomeRecentMovementItem[];
+  attentionList: HomeAttentionItem[];
+  quickActions: HomeQuickLogAction[];
+  recentActivityMini: HomeRecentActivityMiniItem[];
   supportContext: HomeSupportContext;
 };
 
@@ -129,7 +103,20 @@ type HomeTimelineRow = Pick<
   "id" | "batch_id" | "event_type" | "event_at" | "title" | "subtitle" | "payload"
 >;
 
-const SECTION_PRIORITY: Record<TodayActionSectionKey, number> = {
+const F1_STAGES = new Set<KombuchaBatch["currentStage"]>([
+  "f1_active",
+  "f1_check_window",
+  "f1_extended",
+]);
+
+const F2_STAGES = new Set<KombuchaBatch["currentStage"]>([
+  "f2_setup",
+  "f2_active",
+  "refrigerate_now",
+  "chilled_ready",
+]);
+
+const SECTION_PRIORITY: Record<TodayActionItem["section"], number> = {
   overdue: 0,
   do_now: 1,
   ready_now: 2,
@@ -151,27 +138,8 @@ const TIMING_PRIORITY: Record<NonNullable<TodayActionItem["timingStatus"]>, numb
   too_early: 3,
 };
 
-const LANE_META: Record<HomeLaneKey, { title: string; description: string }> = {
-  now: {
-    title: "Now",
-    description: "These brews have the clearest reason to check or act today.",
-  },
-  next_up: {
-    title: "Next up",
-    description: "Keep these batches in sight as their next useful window gets closer.",
-  },
-  recently_moved: {
-    title: "Recently moved",
-    description: "Recent updates across your brews, without letting calmer batches disappear.",
-  },
-};
-
-function formatTodayDate(now: Date) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  }).format(now);
+function formatLiters(totalMl: number) {
+  return `${(totalMl / 1000).toFixed(1)} L`;
 }
 
 function formatRelativeTime(value: string, now: Date) {
@@ -197,36 +165,30 @@ function formatRelativeTime(value: string, now: Date) {
 
 function sortActionItems(left: TodayActionItem, right: TodayActionItem) {
   const sectionDiff = SECTION_PRIORITY[left.section] - SECTION_PRIORITY[right.section];
-  if (sectionDiff !== 0) {
-    return sectionDiff;
-  }
+  if (sectionDiff !== 0) return sectionDiff;
 
-  const reminderUrgencyLeft = left.topReminderUrgency === "overdue" ? 0 : left.topReminderUrgency === "high" ? 1 : 2;
-  const reminderUrgencyRight = right.topReminderUrgency === "overdue" ? 0 : right.topReminderUrgency === "high" ? 1 : 2;
+  const reminderUrgencyLeft =
+    left.topReminderUrgency === "overdue" ? 0 : left.topReminderUrgency === "high" ? 1 : 2;
+  const reminderUrgencyRight =
+    right.topReminderUrgency === "overdue" ? 0 : right.topReminderUrgency === "high" ? 1 : 2;
   if (reminderUrgencyLeft !== reminderUrgencyRight) {
     return reminderUrgencyLeft - reminderUrgencyRight;
   }
 
   const cautionDiff = CAUTION_PRIORITY[left.cautionLevel] - CAUTION_PRIORITY[right.cautionLevel];
-  if (cautionDiff !== 0) {
-    return cautionDiff;
-  }
+  if (cautionDiff !== 0) return cautionDiff;
 
   if (left.topReminderDueAt && right.topReminderDueAt) {
     const reminderDiff =
       new Date(left.topReminderDueAt).getTime() - new Date(right.topReminderDueAt).getTime();
-    if (reminderDiff !== 0) {
-      return reminderDiff;
-    }
+    if (reminderDiff !== 0) return reminderDiff;
   } else if (left.topReminderDueAt || right.topReminderDueAt) {
     return left.topReminderDueAt ? -1 : 1;
   }
 
   if (left.timingStatus && right.timingStatus) {
     const timingDiff = TIMING_PRIORITY[left.timingStatus] - TIMING_PRIORITY[right.timingStatus];
-    if (timingDiff !== 0) {
-      return timingDiff;
-    }
+    if (timingDiff !== 0) return timingDiff;
   } else if (left.timingStatus || right.timingStatus) {
     return left.timingStatus ? -1 : 1;
   }
@@ -242,21 +204,21 @@ function getFocusReason(item: TodayActionItem) {
         explanation:
           item.topReminderUrgency === "overdue"
             ? "A reminder has slipped past its planned time, so this batch should come first."
-            : "This batch is past its expected window, so it deserves a calmer, closer check now.",
+            : "This batch is past its expected window, so it deserves a closer check now.",
         tone: "urgent" as const,
       };
     case "do_now":
       return {
         label: "Action today",
         explanation:
-          "There is a clear next step waiting today, so this batch belongs near the top of the page.",
+          "There is a clear next step waiting today, so this batch belongs at the top of the page.",
         tone: "warm" as const,
       };
     case "ready_now":
       return {
         label: "Worth checking now",
         explanation:
-          "This batch is in a likely tasting or carbonation window, so it is a good candidate for today's hands-on check.",
+          "This batch is in a likely tasting or carbonation window, so it is a strong candidate for today's hands-on check.",
         tone: "warm" as const,
       };
     case "check_soon":
@@ -270,18 +232,18 @@ function getFocusReason(item: TodayActionItem) {
       return {
         label: "Recently moved",
         explanation:
-          "This batch changed recently, so it is the best anchor for a calm day without forcing urgency.",
+          "This batch changed recently, so it is a calm anchor when nothing else needs urgent attention.",
         tone: "calm" as const,
       };
   }
 }
 
 function getQuickLogModeForItem(item: TodayActionItem): HomeQuickLogActionKey {
-  if (["f1_active", "f1_check_window", "f1_extended"].includes(item.batch.currentStage)) {
+  if (F1_STAGES.has(item.batch.currentStage)) {
     return "taste_test";
   }
 
-  if (["f2_active", "refrigerate_now", "chilled_ready"].includes(item.batch.currentStage)) {
+  if (F2_STAGES.has(item.batch.currentStage) && item.batch.currentStage !== "f2_setup") {
     return "carbonation_check";
   }
 
@@ -290,129 +252,108 @@ function getQuickLogModeForItem(item: TodayActionItem): HomeQuickLogActionKey {
 
 function getStateSentence(args: {
   activeBatchCount: number;
-  nowCount: number;
-  readyWindowCount: number;
-  recentMovementCount: number;
+  attentionCount: number;
+  f2Count: number;
 }) {
-  const { activeBatchCount, nowCount, readyWindowCount, recentMovementCount } = args;
+  const { activeBatchCount, attentionCount, f2Count } = args;
 
   if (activeBatchCount === 0) {
-    return "Ready to start your next brew?";
+    return "Nothing is brewing right now.";
   }
 
-  if (nowCount > 0) {
-    return `${nowCount} brew${nowCount === 1 ? "" : "s"} need${nowCount === 1 ? "s" : ""} attention today`;
+  if (attentionCount > 0) {
+    return `${attentionCount} brew${attentionCount === 1 ? "" : "s"} ${attentionCount === 1 ? "is" : "are"} worth checking today.`;
   }
 
-  if (readyWindowCount > 0) {
-    return `${readyWindowCount} batch${readyWindowCount === 1 ? "" : "es"} ${readyWindowCount === 1 ? "is" : "are"} in tasting or carbonation range`;
+  if (f2Count > 0) {
+    return `${f2Count} batch${f2Count === 1 ? "" : "es"} ${f2Count === 1 ? "is" : "are"} already in the bottling chapter.`;
   }
 
-  if (recentMovementCount > 0) {
-    return "Your brews look calm today";
+  if (activeBatchCount === 1) {
+    return "Your batch looks steady right now.";
   }
 
-  return "Everything looks steady right now";
+  return "Your brewing world looks steady right now.";
 }
 
-function buildActionLanes(items: TodayActionItem[]) {
-  const grouped: Record<HomeLaneKey, TodayActionItem[]> = {
-    now: [],
-    next_up: [],
-    recently_moved: [],
-  };
-
-  items.forEach((item) => {
-    if (["overdue", "do_now", "ready_now"].includes(item.section)) {
-      grouped.now.push(item);
-      return;
-    }
-
-    if (item.section === "check_soon") {
-      grouped.next_up.push(item);
-      return;
-    }
-
-    grouped.recently_moved.push(item);
-  });
-
-  return (Object.keys(grouped) as HomeLaneKey[])
-    .map((key) => ({
-      key,
-      title: LANE_META[key].title,
-      description: LANE_META[key].description,
-      items: grouped[key].sort(sortActionItems),
-    }))
-    .filter((lane) => lane.items.length > 0);
-}
-
-function buildTodayQueue(args: {
-  items: TodayActionItem[];
-  primaryFocus: HomePrimaryFocus;
+function buildCurrentStats(args: {
+  activeBatches: KombuchaBatch[];
+  attentionCount: number;
 }) {
-  const primaryBatchId =
-    args.primaryFocus.kind === "batch" || args.primaryFocus.kind === "quiet"
-      ? args.primaryFocus.item.batch.id
-      : null;
+  const f1Count = args.activeBatches.filter((batch) => F1_STAGES.has(batch.currentStage)).length;
+  const f2Count = args.activeBatches.filter((batch) => F2_STAGES.has(batch.currentStage)).length;
 
-  return args.items
-    .filter((item) => item.batch.id !== primaryBatchId)
-    .slice(0, 4)
-    .map((item) => {
-      const focusReason = getFocusReason(item);
-
-      return {
-        batch: item.batch,
-        statusSummary: item.statusSummary,
-        secondarySummary: item.secondarySummary,
-        reasonLabel: focusReason.label,
-        linkTo: item.linkTo,
-        tone: focusReason.tone,
-      } satisfies HomeTodayQueueItem;
-    });
+  return [
+    {
+      key: "active",
+      label: "Active",
+      value: args.activeBatches.length,
+      helper: "Batches still in progress",
+    },
+    {
+      key: "f1",
+      label: "In F1",
+      value: f1Count,
+      helper: "Still in first fermentation",
+    },
+    {
+      key: "f2",
+      label: "In F2",
+      value: f2Count,
+      helper: "Already in bottling or bottle conditioning",
+    },
+    {
+      key: "attention",
+      label: "Needs attention today",
+      value: args.attentionCount,
+      helper: "Batches worth checking today",
+    },
+  ] satisfies HomeCurrentStat[];
 }
 
-function buildRoster(items: TodayActionItem[], activeBatches: KombuchaBatch[]) {
-  const itemByBatchId = new Map(items.map((item) => [item.batch.id, item]));
+function buildLifetimeStats(args: {
+  batches: KombuchaBatch[];
+  totalBottlesBottled: number;
+}) {
+  const brewedBatches = args.batches.filter((batch) => batch.status !== "discarded");
+  const completedBatchCount = brewedBatches.filter((batch) =>
+    batch.status === "completed" || batch.status === "archived"
+  ).length;
+  const totalBrewedMl = brewedBatches.reduce((sum, batch) => sum + batch.totalVolumeMl, 0);
 
-  return [...activeBatches]
-    .sort((left, right) => {
-      const leftItem = itemByBatchId.get(left.id);
-      const rightItem = itemByBatchId.get(right.id);
-
-      if (leftItem && rightItem) {
-        return sortActionItems(leftItem, rightItem);
-      }
-
-      if (leftItem || rightItem) {
-        return leftItem ? -1 : 1;
-      }
-
-      return new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime();
-    })
-    .map((batch) => {
-      const item = itemByBatchId.get(batch.id);
-      const tone = item
-        ? getFocusReason(item).tone
-        : "calm";
-
-      return {
-        batch,
-        dayNumber: getDayNumber(batch.brewStartedAt),
-        statusLine: item?.secondarySummary || item?.nextAction || batch.nextAction || "No next action yet",
-        linkTo: `/batch/${batch.id}`,
-        tone,
-      } satisfies HomeRosterItem;
-    });
+  return [
+    {
+      key: "brewed",
+      label: "Total kombucha brewed",
+      value: formatLiters(totalBrewedMl),
+      helper: "Sum of saved batch volume, shown in liters",
+    },
+    {
+      key: "bottles",
+      label: "Total bottles bottled",
+      value: `${args.totalBottlesBottled}`,
+      helper: "Count of saved bottles across F2 runs",
+    },
+    {
+      key: "completed",
+      label: "Completed batches",
+      value: `${completedBatchCount}`,
+      helper: "Completed or archived batches",
+    },
+    {
+      key: "total",
+      label: "Total batches brewed",
+      value: `${brewedBatches.length}`,
+      helper: "All saved batches except discarded ones",
+    },
+  ] satisfies HomeLifetimeStat[];
 }
 
-function buildMovementItems(args: {
+function buildRecentActivityMini(args: {
   rows: HomeTimelineRow[];
   batchNameById: Map<string, string>;
   now: Date;
 }) {
-  const { rows, batchNameById, now } = args;
-
   const getTitle = (row: HomeTimelineRow, batchName: string) => {
     switch (row.event_type) {
       case "stage_event":
@@ -434,131 +375,29 @@ function buildMovementItems(args: {
     }
   };
 
-  const getSummary = (row: HomeTimelineRow) => {
-    const relative = row.event_at ? formatRelativeTime(row.event_at, now) : "recently";
-    if (row.subtitle) {
-      return `${row.subtitle} • ${relative}`;
-    }
-
-    return `Updated ${relative}`;
-  };
-
-  return rows
+  return args.rows
     .filter((row): row is HomeTimelineRow & { id: string; batch_id: string; event_at: string } => {
       return !!row.id && !!row.batch_id && !!row.event_at;
     })
+    .slice(0, 3)
     .map((row) => {
-      const batchName = batchNameById.get(row.batch_id) || "This batch";
+      const batchName = args.batchNameById.get(row.batch_id) || "This batch";
+      const relative = formatRelativeTime(row.event_at, args.now);
 
       return {
         id: row.id,
-        batchId: row.batch_id,
         batchName,
-        eventAt: row.event_at,
         title: getTitle(row, batchName),
-        summary: getSummary(row),
+        summary: row.subtitle ? `${row.subtitle} \u2022 ${relative}` : `Updated ${relative}`,
         linkTo: `/batch/${row.batch_id}`,
-      } satisfies HomeRecentMovementItem;
+      } satisfies HomeRecentActivityMiniItem;
     });
 }
 
-function buildSupportContext(args: {
-  primaryFocus: HomePrimaryFocus;
-  primaryItem?: TodayActionItem;
-  isBeginner: boolean;
-}) {
-  const { primaryFocus, primaryItem, isBeginner } = args;
-
-  if (primaryFocus.kind === "empty") {
-    return {
-      eyebrow: "Getting started",
-      title: "Start with a calmer first brew",
-      summary:
-        "Use the beginner-friendly guides to refresh the basics, then start a new batch when you are ready.",
-      primaryAction: { label: "Browse guides", to: "/guides" },
-      secondaryAction: { label: "Open assistant", to: "/assistant" },
-    } satisfies HomeSupportContext;
-  }
-
-  if (primaryItem?.batch.currentStage === "refrigerate_now") {
-    return {
-      eyebrow: "Pressure guidance",
-      title: "Need a cautious check on bottle pressure?",
-      summary:
-        "Use the assistant if the bottles feel harder than expected or if you want safer, step-by-step refrigeration guidance.",
-      primaryAction: {
-        label: "Open assistant",
-        to: `/assistant?issue=too_much_carbonation&batchId=${primaryItem.batch.id}`,
-      },
-      secondaryAction: { label: "Read pressure safety", to: "/guides/carbonation-pressure" },
-    } satisfies HomeSupportContext;
-  }
-
-  if (
-    primaryItem &&
-    ["f1_active", "f1_check_window", "f1_extended"].includes(primaryItem.batch.currentStage) &&
-    ["ready_now", "overdue", "do_now"].includes(primaryItem.section)
-  ) {
-    return {
-      eyebrow: "Tasting help",
-      title: "Want help judging whether F1 is ready?",
-      summary:
-        "Use the tasting guide or assistant flow to decide whether to keep fermenting or move toward F2 without guessing.",
-      primaryAction: {
-        label: "Read tasting guide",
-        to: "/guides/f1-tasting",
-      },
-      secondaryAction: {
-        label: "Open assistant",
-        to: `/assistant?issue=not_sure_if_ready&batchId=${primaryItem.batch.id}`,
-      },
-    } satisfies HomeSupportContext;
-  }
-
-  if (primaryItem && ["f2_active", "chilled_ready"].includes(primaryItem.batch.currentStage)) {
-    return {
-      eyebrow: "Carbonation help",
-      title: "Use calmer checks during F2",
-      summary:
-        "If you are not sure whether carbonation is right yet, compare your batch against the F2 guidance before opening more bottles.",
-      primaryAction: {
-        label: "Read carbonation guide",
-        to: "/guides/carbonation-pressure",
-      },
-      secondaryAction: {
-        label: "Open assistant",
-        to: `/assistant?issue=not_sure_if_ready&batchId=${primaryItem.batch.id}`,
-      },
-    } satisfies HomeSupportContext;
-  }
-
-  if (isBeginner) {
-    return {
-      eyebrow: "Beginner support",
-      title: "Keep your next check simple",
-      summary:
-        "If the day feels calm, use this time to review the basics and keep your brewing notes up to date.",
-      primaryAction: { label: "Browse guides", to: "/guides" },
-      secondaryAction: { label: "Open assistant", to: "/assistant" },
-    } satisfies HomeSupportContext;
-  }
-
-  return {
-    eyebrow: "Support",
-    title: "Need a second opinion?",
-    summary:
-      "Open the assistant for a cautious next-step check, or review the guide library if you want a slower read before acting.",
-    primaryAction: { label: "Open assistant", to: "/assistant" },
-    secondaryAction: { label: "Browse guides", to: "/guides" },
-  } satisfies HomeSupportContext;
-}
-
-function buildQuickLogActions(args: {
+function buildQuickActions(args: {
   activeBatches: KombuchaBatch[];
   primaryBatchId?: string;
 }) {
-  const { activeBatches, primaryBatchId } = args;
-
   const actionDefinitions: Array<{
     key: HomeQuickLogActionKey;
     label: string;
@@ -568,31 +407,31 @@ function buildQuickLogActions(args: {
     {
       key: "taste_test",
       label: "Taste test",
-      description: "Save a quick taste note without changing this batch's stage.",
-      eligible: (batch) => ["f1_active", "f1_check_window", "f1_extended"].includes(batch.currentStage),
+      description: "Save a quick taste note.",
+      eligible: (batch) => F1_STAGES.has(batch.currentStage),
     },
     {
       key: "temp_check",
       label: "Temperature check",
-      description: "Save the room temperature for any active brew.",
+      description: "Save the room temperature.",
       eligible: () => true,
     },
     {
       key: "carbonation_check",
       label: "Carbonation check",
-      description: "Save a quick fizz check for bottles already in or close to F2.",
-      eligible: (batch) => ["f2_active", "refrigerate_now", "chilled_ready"].includes(batch.currentStage),
+      description: "Save a quick fizz or pressure note.",
+      eligible: (batch) => F2_STAGES.has(batch.currentStage) && batch.currentStage !== "f2_setup",
     },
     {
       key: "note_only",
       label: "Add note",
-      description: "Save a short note while the batch is top of mind.",
+      description: "Save a short brewing note.",
       eligible: () => true,
     },
   ];
 
   return actionDefinitions.map((definition) => {
-    const eligibleBatchIds = activeBatches
+    const eligibleBatchIds = args.activeBatches
       .filter(definition.eligible)
       .map((batch) => batch.id);
 
@@ -602,17 +441,77 @@ function buildQuickLogActions(args: {
       description: definition.description,
       eligibleBatchIds,
       preferredBatchId:
-        primaryBatchId && eligibleBatchIds.includes(primaryBatchId)
-          ? primaryBatchId
+        args.primaryBatchId && eligibleBatchIds.includes(args.primaryBatchId)
+          ? args.primaryBatchId
           : eligibleBatchIds[0],
     } satisfies HomeQuickLogAction;
   });
+}
+
+function buildSupportContext(args: {
+  primaryItem?: TodayActionItem;
+  hasActiveBatches: boolean;
+  isBeginner: boolean;
+}) {
+  const { primaryItem, hasActiveBatches, isBeginner } = args;
+
+  if (!hasActiveBatches) {
+    return {
+      title: "Want a calmer refresher before your next batch?",
+      summary: "Open the guides or assistant if you want to reset the basics before brewing again.",
+      primaryAction: { label: "Browse guides", to: "/guides" },
+      secondaryAction: { label: "Open assistant", to: "/assistant" },
+    } satisfies HomeSupportContext;
+  }
+
+  if (primaryItem?.batch.currentStage === "refrigerate_now") {
+    return {
+      title: "Need a cautious bottle-pressure check?",
+      summary:
+        "Use the assistant if the bottles feel harder than expected or if you want a steadier refrigeration decision.",
+      primaryAction: {
+        label: "Open assistant",
+        to: `/assistant?issue=too_much_carbonation&batchId=${primaryItem.batch.id}`,
+      },
+      secondaryAction: { label: "Browse guides", to: "/guides" },
+    } satisfies HomeSupportContext;
+  }
+
+  if (primaryItem && F1_STAGES.has(primaryItem.batch.currentStage)) {
+    return {
+      title: "Want help judging whether F1 is ready?",
+      summary:
+        "Use the guides or assistant if you want steadier support before you move a batch into bottling.",
+      primaryAction: { label: "Browse guides", to: "/guides" },
+      secondaryAction: {
+        label: "Open assistant",
+        to: `/assistant?issue=not_sure_if_ready&batchId=${primaryItem.batch.id}`,
+      },
+    } satisfies HomeSupportContext;
+  }
+
+  if (isBeginner) {
+    return {
+      title: "Want a little extra support today?",
+      summary: "Keep the basics close when the day feels calm or you are not sure what to check next.",
+      primaryAction: { label: "Browse guides", to: "/guides" },
+      secondaryAction: { label: "Open assistant", to: "/assistant" },
+    } satisfies HomeSupportContext;
+  }
+
+  return {
+    title: "Need a second opinion?",
+    summary: "Open the assistant for a cautious next-step check, or dip into the guides for a slower read.",
+    primaryAction: { label: "Open assistant", to: "/assistant" },
+    secondaryAction: { label: "Browse guides", to: "/guides" },
+  } satisfies HomeSupportContext;
 }
 
 export function buildHomeCommandCenter(args: {
   batches: KombuchaBatch[];
   reminders: TodayActionReminder[];
   recentTimelineRows: HomeTimelineRow[];
+  totalBottlesBottled: number;
   now?: Date;
   displayName?: string;
   isBeginner?: boolean;
@@ -624,78 +523,46 @@ export function buildHomeCommandCenter(args: {
     reminders: args.reminders,
     now,
   }).sort(sortActionItems);
-  const actionLanes = buildActionLanes(actionItems);
-  const batchNameById = new Map(args.batches.map((batch) => [batch.id, batch.name]));
-  const recentMovement = buildMovementItems({
-    rows: args.recentTimelineRows,
-    batchNameById,
-    now,
-  }).slice(0, 6);
-  const readyWindowCount = actionItems.filter((item) =>
-    ["ready_now", "do_now"].includes(item.section)
-  ).length;
-  const nowCount = actionItems.filter((item) =>
+  const attentionCount = actionItems.filter((item) =>
     ["overdue", "do_now", "ready_now"].includes(item.section)
   ).length;
-  const primaryItem = actionItems[0];
+  const primaryItem =
+    actionItems[0] ||
+    activeBatches
+      .slice()
+      .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())
+      .map((batch) => actionItems.find((item) => item.batch.id === batch.id))
+      .find(Boolean);
+  const batchNameById = new Map(args.batches.map((batch) => [batch.id, batch.name]));
 
   let primaryFocus: HomePrimaryFocus;
 
-  if (activeBatches.length === 0) {
+  if (!primaryItem) {
     primaryFocus = {
       kind: "empty",
-      eyebrow: "Welcome back",
-      title: "Ready for your next brew?",
+      eyebrow: "Brewing overview",
+      title: "Nothing is brewing right now",
       summary:
-        "Start a batch, revisit the basics, or open the assistant if you want a calm refresher before brewing again.",
+        "Start a fresh batch, revisit the basics, or open the guides if you want a calmer reset before brewing again.",
       tone: "calm",
-      primaryAction: { label: "Start a batch", to: "/new-batch" },
+      primaryAction: { label: "Start batch", to: "/new-batch" },
       secondaryAction: { label: "Browse guides", to: "/guides" },
-    };
-  } else if (!primaryItem || nowCount === 0) {
-    const quietAnchorBatch =
-      primaryItem?.batch ||
-      activeBatches
-        .slice()
-        .sort((left, right) => new Date(right.updatedAt).getTime() - new Date(left.updatedAt).getTime())[0];
-
-    const quietItem = quietAnchorBatch
-      ? actionItems.find((item) => item.batch.id === quietAnchorBatch.id)
-      : undefined;
-    const quietViewItem = quietItem || primaryItem;
-
-    primaryFocus = {
-      kind: "quiet",
-      eyebrow: "Quiet day",
-      title: "Your brews look calm today",
-      summary:
-        quietViewItem?.timing?.guidance ||
-        "Nothing looks urgent right now, so Home is keeping the next likely check and the wider roster close at hand.",
-      tone: "calm",
-      item: quietViewItem!,
-      reasonLabel: quietViewItem ? getFocusReason(quietViewItem).label : "Calm brewing day",
-      explanation:
-        quietViewItem?.secondarySummary ||
-        "Use your brews list below to keep everything visible even when nothing needs urgent attention.",
-      primaryAction: {
-        label: quietAnchorBatch ? "Open batch" : "View batches",
-        to: quietAnchorBatch ? `/batch/${quietAnchorBatch.id}` : "/batches",
-      },
-      secondaryAction: { label: "Add note", quickLogMode: "note_only" },
     };
   } else {
     const focusReason = getFocusReason(primaryItem);
     const quickLogMode = getQuickLogModeForItem(primaryItem);
+    const isAttentionNow = ["overdue", "do_now", "ready_now"].includes(primaryItem.section);
 
     primaryFocus = {
       kind: "batch",
-      eyebrow: `Today - ${formatTodayDate(now)}`,
+      eyebrow: isAttentionNow ? "Primary focus" : "Calm next check",
       title: primaryItem.batch.name,
       summary: primaryItem.statusSummary,
       tone: focusReason.tone,
-      item: primaryItem,
+      batch: primaryItem.batch,
       reasonLabel: focusReason.label,
       explanation: focusReason.explanation,
+      statusLine: primaryItem.secondarySummary,
       primaryAction: { label: "Open batch", to: primaryItem.linkTo },
       secondaryAction:
         primaryItem.batch.currentStage === "refrigerate_now" && primaryItem.cautionLevel === "high"
@@ -715,41 +582,29 @@ export function buildHomeCommandCenter(args: {
     };
   }
 
-  const snapshotStats: HomeSnapshotStat[] = [
-    {
-      key: "active",
-      label: "Active brews",
-      value: activeBatches.length,
-      description: "See the full active roster",
-      targetId: "home-roster",
-    },
-    {
-      key: "attention",
-      label: "Needs attention today",
-      value: nowCount,
-      description: "Jump to the Now lane",
-      targetId: "home-lanes",
-    },
-    {
-      key: "window",
-      label: "In tasting or carbonation window",
-      value: readyWindowCount,
-      description: "See what is ready to check",
-      targetId: "home-lanes",
-    },
-    {
-      key: "movement",
-      label: "Recent activity",
-      value: recentMovement.length,
-      description: "Read what changed recently",
-      targetId: "home-movement",
-    },
-  ];
+  const attentionList = actionItems
+    .filter((item) => item.batch.id !== (primaryFocus.kind === "batch" ? primaryFocus.batch.id : null))
+    .slice(0, 3)
+    .map((item) => {
+      const focusReason = getFocusReason(item);
+      return {
+        batch: item.batch,
+        reasonLabel: focusReason.label,
+        statusSummary: item.statusSummary,
+        secondarySummary: item.secondarySummary,
+        linkTo: item.linkTo,
+        tone: focusReason.tone,
+      } satisfies HomeAttentionItem;
+    });
 
-  const supportContext = buildSupportContext({
-    primaryFocus,
-    primaryItem,
-    isBeginner: !!args.isBeginner,
+  const currentStats = buildCurrentStats({
+    activeBatches,
+    attentionCount,
+  });
+
+  const lifetimeStats = buildLifetimeStats({
+    batches: args.batches,
+    totalBottlesBottled: args.totalBottlesBottled,
   });
 
   return {
@@ -757,26 +612,30 @@ export function buildHomeCommandCenter(args: {
     greetingName: args.displayName?.trim() || undefined,
     stateSentence: getStateSentence({
       activeBatchCount: activeBatches.length,
-      nowCount,
-      readyWindowCount,
-      recentMovementCount: recentMovement.length,
+      attentionCount,
+      f2Count: currentStats.find((stat) => stat.key === "f2")?.value || 0,
     }),
+    currentStats,
+    lifetimeStats,
     primaryFocus,
-    todayQueue: buildTodayQueue({
-      items: actionItems,
-      primaryFocus,
-    }),
-    snapshotStats,
-    actionLanes,
-    activeRoster: buildRoster(actionItems, activeBatches),
-    quickLogActions: buildQuickLogActions({
+    attentionList,
+    quickActions: buildQuickActions({
       activeBatches,
-      primaryBatchId:
-        primaryFocus.kind === "batch" || primaryFocus.kind === "quiet"
-          ? primaryFocus.item.batch.id
-          : undefined,
+      primaryBatchId: primaryFocus.kind === "batch" ? primaryFocus.batch.id : undefined,
     }),
-    recentMovement,
-    supportContext,
+    recentActivityMini: buildRecentActivityMini({
+      rows: args.recentTimelineRows,
+      batchNameById,
+      now,
+    }),
+    supportContext: buildSupportContext({
+      primaryItem,
+      hasActiveBatches: activeBatches.length > 0,
+      isBeginner: !!args.isBeginner,
+    }),
   } satisfies HomeCommandCenter;
+}
+
+export function getHomeBatchDayNumber(batch: KombuchaBatch) {
+  return getDayNumber(batch.brewStartedAt);
 }

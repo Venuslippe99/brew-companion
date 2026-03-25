@@ -2,8 +2,9 @@ import type { HomeQuickLogAction } from "@/lib/home-command-center";
 
 export const homeCopy = {
   page: {
-    loadingStateSentence: "Loading today's brews...",
-    loadingPanel: "Loading your brews for today...",
+    loadingStateSentence: "Loading your brewing world...",
+    loadingPanel: "Loading your brewing world...",
+    loadingStats: "Pulling together your brewing snapshot...",
     quickLogSuccess(actionKey: HomeQuickLogAction["key"]) {
       switch (actionKey) {
         case "taste_test":
@@ -21,29 +22,55 @@ export const homeCopy = {
     headerSettingsAria: "Open settings",
   },
   header: {
-    activeBrews(count: number) {
-      return `${count} active ${count === 1 ? "brew" : "brews"}`;
-    },
+    primaryAction: "Start batch",
+    secondaryAction: "View batches",
+  },
+  stats: {
+    currentTitle: "Current snapshot",
+    currentDescription: "What is active in your brewing world right now.",
+    lifetimeTitle: "Lifetime brewing",
+    lifetimeDescription: "A bigger picture of what you have brewed so far.",
+    active: "Active",
+    inF1: "In F1",
+    inF2: "In F2",
+    attention: "Needs attention today",
+    brewed: "Total kombucha brewed",
+    bottles: "Total bottles bottled",
+    completed: "Completed batches",
+    total: "Total batches brewed",
+    activeHelper: "Batches still in progress",
+    inF1Helper: "Still in first fermentation",
+    inF2Helper: "Already in bottling or bottle conditioning",
+    attentionHelper: "Batches worth checking today",
+    brewedHelper: "Sum of saved batch volume, shown in liters",
+    bottlesHelper: "Count of saved bottles across F2 runs",
+    completedHelper: "Completed or archived batches",
+    totalHelper: "All saved batches except discarded ones",
   },
   primaryFocus: {
-    whyThisMattersToday: "Why this matters today",
+    eyebrow: "Primary focus",
+    quietEyebrow: "Calm next check",
+    emptyEyebrow: "Brewing overview",
+    emptyTitle: "Nothing is brewing right now",
+    emptySummary:
+      "Start a fresh batch, revisit the basics, or open the guides if you want a calmer reset before brewing again.",
+    whyThisNext: "Why this is next",
+    statusLine: "Status",
+    viewBatch: "Open batch",
+    openGuides: "Browse guides",
+    addNote: "Add note",
+    getHelp: "Get help",
   },
-  queue: {
-    eyebrow: "Today",
-    title: "Keep an eye on these too",
-    description: "A few more brews to keep in sight after the main focus.",
-  },
-  support: {
-    eyebrow: "Help",
-    assistantFallback: "Open assistant",
-    assistantDescription: "Get a steady second opinion before you move on.",
-    readingDescription: "Open the best place to read more before you act.",
+  attention: {
+    eyebrow: "Also worth checking",
+    title: "A few more things to keep in sight",
+    description: "These are the other brews most worth a quick look after the main focus.",
+    openBatch: "Open batch",
   },
   quickLog: {
     eyebrow: "Quick actions",
     title: "Log a quick check",
-    description:
-      "Save a taste note, temperature check, carbonation check, or short observation without changing the batch stage.",
+    description: "Keep short updates easy without turning Home into a workbench.",
     photoComing: "Photo logging is still coming later",
     whichBatch: "Which batch?",
     howDidItTaste: "How did it taste?",
@@ -90,16 +117,16 @@ export const homeCopy = {
       }
     },
   },
-  recentMovement: {
-    eyebrow: "Recent changes",
+  recentActivity: {
+    eyebrow: "Recent activity",
     title: "What changed lately",
-    description: "A quieter look at what changed across your brews.",
+    description: "A compact read on the latest movement across your brews.",
+    empty: "No recent activity to show yet.",
   },
-  roster: {
-    eyebrow: "Your brews",
-    title: "Keep your active batches close",
-    description:
-      "Browse your active brews here, then open the full list when you want deeper detail.",
-    openMyBatches: "Open My Batches",
+  support: {
+    eyebrow: "Need a little help?",
+    assistantFallback: "Open assistant",
+    assistantDescription: "Get a steady second opinion before you move on.",
+    readingDescription: "Open the best place to read more before you act.",
   },
 };

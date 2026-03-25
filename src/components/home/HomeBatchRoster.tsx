@@ -1,8 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
 import { homeCopy } from "@/copy/home";
-import type { HomeRosterItem } from "@/lib/home-command-center";
+import type { HomeAttentionItem } from "@/lib/home-command-center";
 import { cn } from "@/lib/utils";
 
 const toneClasses = {
@@ -15,32 +14,29 @@ export function HomeBatchRoster({
   items,
   id,
 }: {
-  items: HomeRosterItem[];
+  items: HomeAttentionItem[];
   id?: string;
 }) {
   const navigate = useNavigate();
+
+  if (items.length === 0) {
+    return null;
+  }
 
   return (
     <section id={id} className="home-panel-surface px-5 py-5">
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-            {homeCopy.roster.eyebrow}
+            {homeCopy.attention.eyebrow}
           </p>
           <h2 className="mt-2 text-xl font-semibold text-foreground">
-            {homeCopy.roster.title}
+            {homeCopy.attention.title}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            {homeCopy.roster.description}
+            {homeCopy.attention.description}
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => navigate("/batches")}
-          className="text-sm font-medium text-copper transition-colors hover:text-foreground"
-        >
-          {homeCopy.roster.openMyBatches}
-        </button>
       </div>
 
       <div className="mt-4 space-y-3">
@@ -57,20 +53,11 @@ export function HomeBatchRoster({
             <div className="flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="truncate text-sm font-semibold text-foreground">{item.batch.name}</h3>
-                <div className="mt-2 flex flex-wrap items-center gap-2">
-                  <StageIndicator stage={item.batch.currentStage} />
-                  <CautionBadge level={item.batch.cautionLevel} />
-                </div>
+                <p className="mt-2 text-sm font-medium text-foreground">{item.statusSummary}</p>
+                <p className="mt-1 text-sm text-muted-foreground">{item.secondarySummary}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="rounded-full bg-background px-3 py-1 text-xs font-medium text-muted-foreground">
-                  Day {item.dayNumber}
-                </div>
-                <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
-              </div>
+              <ArrowUpRight className="h-4 w-4 shrink-0 text-muted-foreground" />
             </div>
-
-            <p className="mt-3 text-sm text-muted-foreground">{item.statusLine}</p>
           </button>
         ))}
       </div>

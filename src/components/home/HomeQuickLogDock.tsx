@@ -1,11 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import {
-  CameraOff,
-  Droplets,
-  NotebookPen,
-  Thermometer,
-  Waves,
-} from "lucide-react";
+import { CameraOff, Droplets, NotebookPen, Thermometer, Waves } from "lucide-react";
 import {
   Drawer,
   DrawerContent,
@@ -20,10 +14,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { homeCopy } from "@/copy/home";
 import type { KombuchaBatch } from "@/lib/batches";
 import type { HomeQuickLogAction } from "@/lib/home-command-center";
-import {
-  TASTE_TEST_IMPRESSIONS,
-  type TasteTestImpression,
-} from "@/lib/batch-quick-logs";
+import { TASTE_TEST_IMPRESSIONS, type TasteTestImpression } from "@/lib/batch-quick-logs";
 
 const iconMap = {
   taste_test: Droplets,
@@ -70,25 +61,18 @@ export function HomeQuickLogDock({
     [actions, openActionKey]
   );
   const eligibleBatches = useMemo(
-    () =>
-      batches.filter((batch) => activeAction?.eligibleBatchIds.includes(batch.id)),
+    () => batches.filter((batch) => activeAction?.eligibleBatchIds.includes(batch.id)),
     [activeAction, batches]
   );
 
   useEffect(() => {
-    if (!requestedActionKey) {
-      return;
-    }
-
+    if (!requestedActionKey) return;
     setOpenActionKey(requestedActionKey);
     onRequestedActionHandled?.();
   }, [onRequestedActionHandled, requestedActionKey]);
 
   useEffect(() => {
-    if (!activeAction) {
-      return;
-    }
-
+    if (!activeAction) return;
     setSelectedBatchId(activeAction.preferredBatchId || activeAction.eligibleBatchIds[0] || "");
     setNote("");
     setValueNumber("");
@@ -107,50 +91,37 @@ export function HomeQuickLogDock({
 
   return (
     <section id={id} className="home-panel-surface px-5 py-5">
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
             {homeCopy.quickLog.eyebrow}
           </p>
-          <h2 className="mt-2 text-xl font-semibold text-foreground">
-            {homeCopy.quickLog.title}
-          </h2>
-          <p className="mt-2 text-sm text-muted-foreground">
-            {homeCopy.quickLog.description}
-          </p>
+          <h2 className="mt-2 text-xl font-semibold text-foreground">{homeCopy.quickLog.title}</h2>
+          <p className="mt-2 text-sm text-muted-foreground">{homeCopy.quickLog.description}</p>
         </div>
-        <div className="hidden rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground lg:block">
-          <div className="flex items-center gap-2">
-            <CameraOff className="h-3.5 w-3.5 text-copper" />
-            {homeCopy.quickLog.photoComing}
-          </div>
+        <div className="inline-flex items-center gap-2 rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+          <CameraOff className="h-3.5 w-3.5 text-copper" />
+          {homeCopy.quickLog.photoComing}
         </div>
       </div>
 
-      <div className="mt-4 grid grid-cols-2 gap-3">
+      <div className="mt-4 flex flex-wrap gap-2">
         {actions.map((action) => {
           const Icon = iconMap[action.key];
           const disabled = action.eligibleBatchIds.length === 0;
 
           return (
-            <button
+            <Button
               key={action.key}
               type="button"
+              variant="outline"
               disabled={disabled}
               onClick={() => setOpenActionKey(action.key)}
-              className="rounded-[20px] border border-border/75 bg-background/85 px-4 py-4 text-left transition-all duration-200 hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-55"
+              className="h-auto justify-start gap-2 rounded-full px-4 py-2 text-left"
             >
-              <div className="flex items-start justify-between gap-3">
-                <span className="rounded-full bg-honey-light/70 p-2 text-primary">
-                  <Icon className="h-4 w-4" />
-                </span>
-                <span className="rounded-full bg-background/80 px-2.5 py-1 text-[11px] font-medium text-muted-foreground">
-                  {action.eligibleBatchIds.length}
-                </span>
-              </div>
-              <p className="mt-4 text-sm font-semibold text-foreground">{action.label}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{action.description}</p>
-            </button>
+              <Icon className="h-4 w-4" />
+              <span>{action.label}</span>
+            </Button>
           );
         })}
       </div>

@@ -1,37 +1,21 @@
-import { ArrowRight, Clock3, Sparkles } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
 import { Button } from "@/components/ui/button";
 import { homeCopy } from "@/copy/home";
+import { getHomeBatchDayNumber, type HomePrimaryFocus, type HomeQuickLogAction } from "@/lib/home-command-center";
 import { cn } from "@/lib/utils";
-import type {
-  HomePrimaryFocus,
-  HomeQuickLogAction,
-} from "@/lib/home-command-center";
-import { getDayNumber } from "@/lib/batches";
 
-type FocusSecondaryAction = Exclude<HomePrimaryFocus, { kind: "empty" }>["secondaryAction"];
+type FocusSecondaryAction = Extract<HomePrimaryFocus, { kind: "batch" }>["secondaryAction"];
 
 const toneClasses = {
-  urgent: "border-destructive/15 bg-[radial-gradient(circle_at_top,_hsl(var(--destructive)/0.12),_transparent_55%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
-  warm: "border-primary/15 bg-[radial-gradient(circle_at_top,_hsl(var(--honey-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
-  calm: "border-sage/20 bg-[radial-gradient(circle_at_top,_hsl(var(--sage-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
+  urgent:
+    "border-destructive/20 bg-[radial-gradient(circle_at_top,_hsl(var(--destructive)/0.12),_transparent_55%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
+  warm:
+    "border-primary/20 bg-[radial-gradient(circle_at_top,_hsl(var(--honey-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
+  calm:
+    "border-sage/25 bg-[radial-gradient(circle_at_top,_hsl(var(--sage-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
 };
-
-function QuickLogButton({
-  label,
-  onClick,
-}: {
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <Button variant="warm" onClick={onClick}>
-      <Sparkles className="h-4 w-4" />
-      {label}
-    </Button>
-  );
-}
 
 function hasQuickLogAction(
   action: FocusSecondaryAction
@@ -39,26 +23,24 @@ function hasQuickLogAction(
   return "quickLogMode" in action;
 }
 
-function hasLinkAction(
-  action: FocusSecondaryAction
-): action is { label: string; to: string } {
+function hasLinkAction(action: FocusSecondaryAction): action is { label: string; to: string } {
   return "to" in action;
 }
 
 export function HomePrimaryFocusCard({
   primaryFocus,
-  quickLogActions,
   onOpenQuickLog,
 }: {
   primaryFocus: HomePrimaryFocus;
-  quickLogActions: HomeQuickLogAction[];
   onOpenQuickLog: (actionKey: HomeQuickLogAction["key"]) => void;
 }) {
   const navigate = useNavigate();
 
   if (primaryFocus.kind === "empty") {
     return (
-      <section className={cn("home-hero-surface px-5 py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}>
+      <section
+        className={cn("home-hero-surface px-5 py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
+      >
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
           {primaryFocus.eyebrow}
         </p>
@@ -73,7 +55,11 @@ export function HomePrimaryFocusCard({
             {primaryFocus.primaryAction.label}
             <ArrowRight className="h-4 w-4" />
           </Button>
-          <Button variant="outline" size="lg" onClick={() => navigate(primaryFocus.secondaryAction.to)}>
+          <Button
+            variant="outline"
+            size="lg"
+            onClick={() => navigate(primaryFocus.secondaryAction.to)}
+          >
             {primaryFocus.secondaryAction.label}
           </Button>
         </div>
@@ -81,18 +67,17 @@ export function HomePrimaryFocusCard({
     );
   }
 
-  const dayNumber = getDayNumber(primaryFocus.item.batch.brewStartedAt);
+  const dayNumber = getHomeBatchDayNumber(primaryFocus.batch);
   const secondaryAction = primaryFocus.secondaryAction;
   const quickLogMode = hasQuickLogAction(secondaryAction)
     ? secondaryAction.quickLogMode
     : undefined;
   const secondaryLinkAction = hasLinkAction(secondaryAction) ? secondaryAction : undefined;
-  const preferredQuickLog = quickLogMode
-    ? quickLogActions.find((action) => action.key === quickLogMode)
-    : undefined;
 
   return (
-    <section className={cn("home-hero-surface px-5 py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}>
+    <section
+      className={cn("home-hero-surface px-5 py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
+    >
       <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
         {primaryFocus.eyebrow}
       </p>
@@ -101,13 +86,10 @@ export function HomePrimaryFocusCard({
       </h2>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
-        <StageIndicator stage={primaryFocus.item.batch.currentStage} size="md" />
-        <CautionBadge level={primaryFocus.item.cautionLevel} />
+        <StageIndicator stage={primaryFocus.batch.currentStage} size="md" />
+        <CautionBadge level={primaryFocus.batch.cautionLevel} />
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
           Day {dayNumber}
-        </span>
-        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-copper">
-          {primaryFocus.reasonLabel}
         </span>
       </div>
 
@@ -115,15 +97,20 @@ export function HomePrimaryFocusCard({
         {primaryFocus.summary}
       </p>
 
-      <div className="mt-5 rounded-[22px] border border-border/70 bg-background/80 px-4 py-4">
-        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          {homeCopy.primaryFocus.whyThisMattersToday}
-        </p>
-        <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
-        <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Clock3 className="h-3.5 w-3.5" />
-          {primaryFocus.item.secondarySummary}
-        </p>
+      <div className="mt-5 grid gap-3 md:grid-cols-2">
+        <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {homeCopy.primaryFocus.whyThisNext}
+          </p>
+          <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
+        </div>
+        <div className="rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+            {homeCopy.primaryFocus.statusLine}
+          </p>
+          <p className="mt-2 text-sm text-foreground">{primaryFocus.statusLine}</p>
+          <p className="mt-2 text-xs text-muted-foreground">{primaryFocus.reasonLabel}</p>
+        </div>
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
@@ -132,10 +119,9 @@ export function HomePrimaryFocusCard({
           <ArrowRight className="h-4 w-4" />
         </Button>
         {quickLogMode ? (
-          <QuickLogButton
-            label={secondaryAction.label}
-            onClick={() => onOpenQuickLog(quickLogMode)}
-          />
+          <Button variant="outline" size="lg" onClick={() => onOpenQuickLog(quickLogMode)}>
+            {secondaryAction.label}
+          </Button>
         ) : (
           <Button
             variant="outline"
@@ -146,12 +132,6 @@ export function HomePrimaryFocusCard({
           </Button>
         )}
       </div>
-
-      {preferredQuickLog ? (
-        <div className="mt-4 text-sm text-muted-foreground">
-          {preferredQuickLog.description}
-        </div>
-      ) : null}
     </section>
   );
 }

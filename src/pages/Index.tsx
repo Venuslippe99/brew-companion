@@ -3,11 +3,11 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
-import { HomeBatchRoster } from "@/components/home/HomeBatchRoster";
 import { HomeHeader } from "@/components/home/HomeHeader";
 import { HomePrimaryFocusCard } from "@/components/home/HomePrimaryFocusCard";
 import { HomeQuickLogDock } from "@/components/home/HomeQuickLogDock";
 import { HomeRecentMovement } from "@/components/home/HomeRecentMovement";
+import { HomeStatsGrid } from "@/components/home/HomeStatsGrid";
 import { HomeSupportPanel } from "@/components/home/HomeSupportPanel";
 import { HomeTodayQueue } from "@/components/home/HomeTodayQueue";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,14 +16,8 @@ import { homeCopy } from "@/copy/home";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { type KombuchaBatch } from "@/lib/batches";
-import {
-  buildHomeCommandCenter,
-  type HomeQuickLogAction,
-} from "@/lib/home-command-center";
-import {
-  saveBatchQuickLog,
-  type TasteTestImpression,
-} from "@/lib/batch-quick-logs";
+import { buildHomeCommandCenter, type HomeQuickLogAction } from "@/lib/home-command-center";
+import { saveBatchQuickLog, type TasteTestImpression } from "@/lib/batch-quick-logs";
 import { type TodayActionReminder } from "@/lib/today-actions";
 
 type DashboardBatchRow = Pick<
@@ -104,6 +98,7 @@ export default function Dashboard() {
   const [batches, setBatches] = useState<KombuchaBatch[]>([]);
   const [reminders, setReminders] = useState<TodayActionReminder[]>([]);
   const [recentTimelineRows, setRecentTimelineRows] = useState<DashboardTimelineRow[]>([]);
+  const [totalBottlesBottled, setTotalBottlesBottled] = useState(0);
   const [loading, setLoading] = useState(true);
   const [quickLogSaving, setQuickLogSaving] = useState(false);
   const [requestedQuickLogAction, setRequestedQuickLogAction] =
@@ -112,50 +107,56 @@ export default function Dashboard() {
   const loadHome = useCallback(async () => {
     setLoading(true);
 
-    const [{ data: batchRows, error: batchError }, { data: reminderRows, error: reminderError }] =
-      await Promise.all([
-        supabase
-          .from("kombucha_batches")
-          .select(`
-            id,
-            name,
-            status,
-            current_stage,
-            brew_started_at,
-            f2_started_at,
-            total_volume_ml,
-            tea_type,
-            sugar_g,
-            starter_liquid_ml,
-            scoby_present,
-            avg_room_temp_c,
-            vessel_type,
-            target_preference,
-            initial_ph,
-            initial_notes,
-            caution_level,
-            readiness_window_start,
-            readiness_window_end,
-            next_action,
-            completed_at,
-            updated_at
-          `)
-          .order("updated_at", { ascending: false }),
-        supabase
-          .from("batch_reminders")
-          .select(`
-            id,
-            batch_id,
-            title,
-            description,
-            due_at,
-            is_completed,
-            urgency_level,
-            reminder_type
-          `)
-          .eq("is_completed", false)
-          .order("due_at", { ascending: true }),
-      ]);
+    const [
+      { data: batchRows, error: batchError },
+      { data: reminderRows, error: reminderError },
+      { count: bottleCount, error: bottleCountError },
+    ] = await Promise.all([
+      supabase
+        .from("kombucha_batches")
+        .select(`
+          id,
+          name,
+          status,
+          current_stage,
+          brew_started_at,
+          f2_started_at,
+          total_volume_ml,
+          tea_type,
+          sugar_g,
+          starter_liquid_ml,
+          scoby_present,
+          avg_room_temp_c,
+          vessel_type,
+          target_preference,
+          initial_ph,
+          initial_notes,
+          caution_level,
+          readiness_window_start,
+          readiness_window_end,
+          next_action,
+          completed_at,
+          updated_at
+        `)
+        .order("updated_at", { ascending: false }),
+      supabase
+        .from("batch_reminders")
+        .select(`
+          id,
+          batch_id,
+          title,
+          description,
+          due_at,
+          is_completed,
+          urgency_level,
+          reminder_type
+        `)
+        .eq("is_completed", false)
+        .order("due_at", { ascending: true }),
+      supabase
+        .from("batch_bottles")
+        .select("id", { count: "exact", head: true }),
+    ]);
 
     if (batchError) {
       console.error("Load Home batches error:", batchError);
@@ -167,6 +168,11 @@ export default function Dashboard() {
     if (reminderError) {
       console.error("Load Home reminders error:", reminderError);
       toast.error(reminderError.message);
+    }
+
+    if (bottleCountError) {
+      console.error("Load Home bottle count error:", bottleCountError);
+      toast.error(bottleCountError.message);
     }
 
     const mappedBatches = ((batchRows || []) as DashboardBatchRow[]).map(mapBatchRow);
@@ -188,12 +194,13 @@ export default function Dashboard() {
 
     setBatches(mappedBatches);
     setReminders(mappedReminders);
+    setTotalBottlesBottled(bottleCount || 0);
 
-    const activeBatchIds = mappedBatches
-      .filter((batch) => batch.status === "active")
+    const timelineBatchIds = mappedBatches
+      .filter((batch) => batch.status !== "discarded")
       .map((batch) => batch.id);
 
-    if (activeBatchIds.length === 0) {
+    if (timelineBatchIds.length === 0) {
       setRecentTimelineRows([]);
       setLoading(false);
       return;
@@ -202,9 +209,9 @@ export default function Dashboard() {
     const { data: timelineRows, error: timelineError } = await supabase
       .from("batch_timeline_view")
       .select("id, batch_id, event_type, event_at, title, subtitle, payload")
-      .in("batch_id", activeBatchIds)
+      .in("batch_id", timelineBatchIds)
       .order("event_at", { ascending: false })
-      .limit(12);
+      .limit(8);
 
     if (timelineError) {
       console.error("Load Home recent movement error:", timelineError);
@@ -226,15 +233,25 @@ export default function Dashboard() {
         batches,
         reminders,
         recentTimelineRows,
+        totalBottlesBottled,
         displayName: preferences.displayName,
         isBeginner: preferences.experienceLevel === "beginner",
       }),
-    [batches, preferences.displayName, preferences.experienceLevel, recentTimelineRows, reminders]
+    [
+      batches,
+      preferences.displayName,
+      preferences.experienceLevel,
+      recentTimelineRows,
+      reminders,
+      totalBottlesBottled,
+    ]
   );
 
   const handlePrimaryQuickLog = (actionKey: HomeQuickLogAction["key"]) => {
     setRequestedQuickLogAction(actionKey);
-    document.getElementById("home-quick-log")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    document
+      .getElementById("home-quick-log")
+      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleQuickLogSubmit = async ({
@@ -280,10 +297,7 @@ export default function Dashboard() {
               : undefined,
       });
 
-      toast.success(
-        homeCopy.page.quickLogSuccess(actionKey)
-      );
-
+      toast.success(homeCopy.page.quickLogSuccess(actionKey));
       await loadHome();
     } catch (error) {
       console.error("Save Home quick log error:", error);
@@ -297,75 +311,69 @@ export default function Dashboard() {
     <AppLayout>
       <div className="home-canvas min-h-screen">
         <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-          <div className="grid gap-6 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.9fr)] xl:items-start">
-            <div className="space-y-6">
-              <ScrollReveal>
-                <HomeHeader
-                  activeBatchCount={commandCenter.activeBatchCount}
-                  stateSentence={
-                    loading ? homeCopy.page.loadingStateSentence : commandCenter.stateSentence
-                  }
-                  displayName={commandCenter.greetingName}
-                  onOpenSettings={() => navigate("/settings")}
-                />
-              </ScrollReveal>
+          <div className="space-y-6">
+            <ScrollReveal>
+              <HomeHeader
+                stateSentence={
+                  loading ? homeCopy.page.loadingStateSentence : commandCenter.stateSentence
+                }
+                displayName={commandCenter.greetingName}
+                onOpenSettings={() => navigate("/settings")}
+                onStartBatch={() => navigate("/new-batch")}
+                onViewBatches={() => navigate("/batches")}
+              />
+            </ScrollReveal>
 
-              <ScrollReveal delay={0.04}>
-                <HomePrimaryFocusCard
-                  primaryFocus={commandCenter.primaryFocus}
-                  quickLogActions={commandCenter.quickLogActions}
-                  onOpenQuickLog={handlePrimaryQuickLog}
-                />
-              </ScrollReveal>
+            <ScrollReveal delay={0.04}>
+              <HomeStatsGrid
+                currentStats={commandCenter.currentStats}
+                lifetimeStats={commandCenter.lifetimeStats}
+              />
+            </ScrollReveal>
 
-              {loading ? (
-                <section className="home-panel-surface px-5 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    {homeCopy.page.loadingPanel}
-                  </p>
-                </section>
-              ) : commandCenter.activeBatchCount > 0 ? (
-                <>
-                  <ScrollReveal delay={0.08}>
-                    <HomeTodayQueue id="home-today-queue" items={commandCenter.todayQueue} />
-                  </ScrollReveal>
+            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.82fr)] xl:items-start">
+              <div className="space-y-6">
+                <ScrollReveal delay={0.08}>
+                  <HomePrimaryFocusCard
+                    primaryFocus={commandCenter.primaryFocus}
+                    onOpenQuickLog={handlePrimaryQuickLog}
+                  />
+                </ScrollReveal>
 
-                  {commandCenter.recentMovement.length > 0 ? (
-                    <ScrollReveal delay={0.16}>
-                      <HomeRecentMovement
-                        id="home-movement"
-                        items={commandCenter.recentMovement}
+                <ScrollReveal delay={0.12}>
+                  <HomeTodayQueue id="home-attention-list" items={commandCenter.attentionList} />
+                </ScrollReveal>
+              </div>
+
+              <div className="space-y-6">
+                {loading ? (
+                  <section className="home-panel-surface px-5 py-8 text-center">
+                    <p className="text-sm text-muted-foreground">{homeCopy.page.loadingPanel}</p>
+                  </section>
+                ) : (
+                  <>
+                    <ScrollReveal delay={0.14}>
+                      <HomeQuickLogDock
+                        id="home-quick-log"
+                        actions={commandCenter.quickActions}
+                        batches={batches.filter((batch) => batch.status === "active")}
+                        saving={quickLogSaving}
+                        requestedActionKey={requestedQuickLogAction}
+                        onRequestedActionHandled={() => setRequestedQuickLogAction(null)}
+                        onSubmit={handleQuickLogSubmit}
                       />
                     </ScrollReveal>
-                  ) : null}
-                </>
-              ) : null}
-            </div>
 
-            <div className="space-y-6">
-              {!loading && commandCenter.activeBatchCount > 0 ? (
-                <>
-                  <ScrollReveal delay={0.1}>
-                    <HomeQuickLogDock
-                      id="home-quick-log"
-                      actions={commandCenter.quickLogActions}
-                      batches={batches.filter((batch) => batch.status === "active")}
-                      saving={quickLogSaving}
-                      requestedActionKey={requestedQuickLogAction}
-                      onRequestedActionHandled={() => setRequestedQuickLogAction(null)}
-                      onSubmit={handleQuickLogSubmit}
-                    />
-                  </ScrollReveal>
+                    <ScrollReveal delay={0.18}>
+                      <HomeRecentMovement items={commandCenter.recentActivityMini} />
+                    </ScrollReveal>
 
-                  <ScrollReveal delay={0.14}>
-                    <HomeBatchRoster id="home-roster" items={commandCenter.activeRoster} />
-                  </ScrollReveal>
-                </>
-              ) : null}
-
-              <ScrollReveal delay={0.2}>
-                <HomeSupportPanel context={commandCenter.supportContext} />
-              </ScrollReveal>
+                    <ScrollReveal delay={0.22}>
+                      <HomeSupportPanel context={commandCenter.supportContext} />
+                    </ScrollReveal>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>
