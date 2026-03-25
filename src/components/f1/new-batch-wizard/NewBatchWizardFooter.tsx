@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 
 type NewBatchWizardFooterProps = {
   primaryLabel: string;
@@ -33,7 +34,7 @@ export function NewBatchWizardFooter({
               disabled={backDisabled || primaryLoading}
               onClick={onBack}
             >
-              Back
+              {f1NewBatchCopy.footer.back}
             </Button>
           ) : null}
           <Button
@@ -42,7 +43,7 @@ export function NewBatchWizardFooter({
             disabled={primaryDisabled || primaryLoading}
             onClick={onPrimary}
           >
-            {primaryLoading ? "Working..." : primaryLabel}
+            {primaryLoading ? f1NewBatchCopy.footer.working : primaryLabel}
           </Button>
         </div>
       </div>

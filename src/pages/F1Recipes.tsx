@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { f1LibraryCopy } from "@/copy/f1-library";
 import { supabase } from "@/integrations/supabase/client";
 import {
   deleteF1Recipe,
@@ -58,7 +59,9 @@ export default function F1Recipes() {
       setRecipes(loaded);
     } catch (error) {
       console.error("Load F1 recipes error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not load recipes.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.recipes.messages.loadErrorFallback
+      );
     } finally {
       setLoading(false);
     }
@@ -70,7 +73,11 @@ export default function F1Recipes() {
       setAvailableVessels(loaded);
     } catch (error) {
       console.error("Load fermentation vessels for recipes error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not load vessels.");
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : f1LibraryCopy.recipes.messages.loadVesselsErrorFallback
+      );
     }
   };
 
@@ -111,7 +118,7 @@ export default function F1Recipes() {
 
   const handleSave = async () => {
     if (!user?.id) {
-      toast.error("You need to be signed in to save recipes.");
+      toast.error(f1LibraryCopy.recipes.messages.signInToSave);
       return;
     }
 
@@ -124,12 +131,18 @@ export default function F1Recipes() {
         recipeId: editingRecipeId || undefined,
       });
 
-      toast.success(editingRecipeId ? "Recipe updated." : "Recipe saved.");
+      toast.success(
+        editingRecipeId
+          ? f1LibraryCopy.recipes.messages.updated
+          : f1LibraryCopy.recipes.messages.saved
+      );
       setEditorOpen(false);
       await loadRecipes();
     } catch (error) {
       console.error("Save F1 recipe error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not save recipe.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.recipes.messages.saveErrorFallback
+      );
     } finally {
       setSavingRecipe(false);
     }
@@ -147,17 +160,19 @@ export default function F1Recipes() {
     }
 
     if ((count || 0) > 0) {
-      toast.error("Archive this recipe instead. It is already linked to saved batches.");
+      toast.error(f1LibraryCopy.recipes.messages.archiveInstead);
       return;
     }
 
     try {
       await deleteF1Recipe(recipe.id);
-      toast.success("Recipe deleted.");
+      toast.success(f1LibraryCopy.recipes.messages.deleted);
       await loadRecipes();
     } catch (error) {
       console.error("Delete F1 recipe error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not delete recipe.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.recipes.messages.deleteErrorFallback
+      );
     }
   };
 
@@ -168,21 +183,21 @@ export default function F1Recipes() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="font-display text-2xl font-semibold text-foreground lg:text-3xl">
-                F1 Recipes
+                {f1LibraryCopy.recipes.page.title}
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Save reusable F1 defaults here, then load them into New Batch when you are ready to brew. Recipes keep your defaults separate from what you actually brewed that day.
+                {f1LibraryCopy.recipes.page.description}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => navigate("/new-batch")}>
-                Back to New Batch
+                {f1LibraryCopy.recipes.page.backToNewBatch}
               </Button>
               <Button variant="outline" onClick={() => navigate("/f1-vessels")}>
-                Manage vessels
+                {f1LibraryCopy.recipes.page.manageVessels}
               </Button>
               <Button onClick={openCreate}>
-                <Plus className="h-4 w-4" /> New recipe
+                <Plus className="h-4 w-4" /> {f1LibraryCopy.recipes.page.newRecipe}
               </Button>
             </div>
           </div>
@@ -195,7 +210,9 @@ export default function F1Recipes() {
               variant={showArchived ? "default" : "outline"}
               onClick={() => setShowArchived((current) => !current)}
             >
-              {showArchived ? "Hide archived" : "Show archived"}
+              {showArchived
+                ? f1LibraryCopy.recipes.page.hideArchived
+                : f1LibraryCopy.recipes.page.showArchived}
             </Button>
           </div>
         </ScrollReveal>
@@ -203,12 +220,12 @@ export default function F1Recipes() {
         <div className="space-y-4">
           {loading ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <p className="text-sm text-muted-foreground">Loading recipes...</p>
+              <p className="text-sm text-muted-foreground">{f1LibraryCopy.recipes.page.loading}</p>
             </div>
           ) : visibleRecipes.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <p className="text-sm text-muted-foreground">
-                No recipes to show yet. Save a setup from New Batch or create one here.
+                {f1LibraryCopy.recipes.page.empty}
               </p>
             </div>
           ) : (
@@ -217,15 +234,16 @@ export default function F1Recipes() {
                 <F1RecipeCard
                   recipe={recipe}
                   preferredVesselLabel={
-                    recipe.preferredVesselId
-                      ? availableVessels.find((vessel) => vessel.id === recipe.preferredVesselId)
-                          ?.name || "Saved vessel"
-                      : null
+                    f1LibraryCopy.recipes.preferredVesselLabel(
+                      recipe,
+                      availableVessels.find((vessel) => vessel.id === recipe.preferredVesselId)
+                        ?.name
+                    )
                   }
                   onEdit={openEdit}
                   onDuplicate={async (selected) => {
                     if (!user?.id) {
-                      toast.error("You need to be signed in to duplicate recipes.");
+                      toast.error(f1LibraryCopy.recipes.messages.signInToDuplicate);
                       return;
                     }
 
@@ -234,12 +252,14 @@ export default function F1Recipes() {
                         userId: user.id,
                         recipe: selected,
                       });
-                      toast.success("Recipe duplicated.");
+                      toast.success(f1LibraryCopy.recipes.messages.duplicated);
                       await loadRecipes();
                     } catch (error) {
                       console.error("Duplicate F1 recipe error:", error);
                       toast.error(
-                        error instanceof Error ? error.message : "Could not duplicate recipe."
+                        error instanceof Error
+                          ? error.message
+                          : f1LibraryCopy.recipes.messages.duplicateErrorFallback
                       );
                     }
                   }}
@@ -249,14 +269,18 @@ export default function F1Recipes() {
                         recipeId: selected.id,
                         archived: !selected.archivedAt,
                       });
-                      toast.success(selected.archivedAt ? "Recipe restored." : "Recipe archived.");
+                      toast.success(
+                        selected.archivedAt
+                          ? f1LibraryCopy.recipes.messages.restored
+                          : f1LibraryCopy.recipes.messages.archived
+                      );
                       await loadRecipes();
                     } catch (error) {
                       console.error("Archive F1 recipe error:", error);
                       toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Could not update the recipe archive state."
+                          : f1LibraryCopy.recipes.messages.archiveErrorFallback
                       );
                     }
                   }}
@@ -267,7 +291,9 @@ export default function F1Recipes() {
                         isFavorite: !selected.isFavorite,
                       });
                       toast.success(
-                        selected.isFavorite ? "Recipe removed from favorites." : "Recipe favorited."
+                        selected.isFavorite
+                          ? f1LibraryCopy.recipes.messages.removedFavorite
+                          : f1LibraryCopy.recipes.messages.favorited
                       );
                       await loadRecipes();
                     } catch (error) {
@@ -275,7 +301,7 @@ export default function F1Recipes() {
                       toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Could not update the favorite state."
+                          : f1LibraryCopy.recipes.messages.favoriteErrorFallback
                       );
                     }
                   }}
@@ -290,16 +316,16 @@ export default function F1Recipes() {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingRecipeId ? "Edit F1 recipe" : "Create F1 recipe"}</DialogTitle>
+            <DialogTitle>{f1LibraryCopy.recipes.dialogTitle(editingRecipeId)}</DialogTitle>
             <DialogDescription>
-              Save reusable defaults here. You will still be able to change actual brew-day values in New Batch before creating a batch.
+              {f1LibraryCopy.recipes.dialog.description}
             </DialogDescription>
           </DialogHeader>
 
           <F1RecipeEditor
             draft={editorDraft}
             saving={savingRecipe}
-            submitLabel={editingRecipeId ? "Save recipe changes" : "Save recipe"}
+            submitLabel={f1LibraryCopy.recipes.submitLabel(editingRecipeId)}
             availableVessels={availableVessels}
             onManageVessels={() => navigate("/f1-vessels")}
             onChange={setEditorDraft}

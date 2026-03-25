@@ -1,12 +1,10 @@
 import { useEffect, useMemo, useReducer, useState } from "react";
 import { toast } from "sonner";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 import { supabase } from "@/integrations/supabase/client";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
 import { getBatchStageTiming } from "@/lib/batch-timing";
-import {
-  buildF1Recommendations,
-  loadF1RecommendationHistoryContext,
-} from "@/lib/f1-recommendations";
+import { buildF1Recommendations, loadF1RecommendationHistoryContext } from "@/lib/f1-recommendations";
 import {
   applyRecipeToBatchSetup,
   buildRecipeDraftFromBatchSetup,
@@ -40,7 +38,7 @@ import { loadFermentationVessels, saveFermentationVessel } from "@/lib/f1-vessel
 import { loadF1Recipes, saveF1Recipe } from "@/lib/f1-recipes";
 import { loadStarterSourceCandidates, type LineageBatchSummary } from "@/lib/lineage";
 import {
-  NEW_BATCH_WIZARD_STEPS,
+  NEW_BATCH_WIZARD_STEP_IDS,
   type NewBatchCoachPopup,
   type NewBatchWizardMode,
   type NewBatchWizardStepId,
@@ -60,20 +58,11 @@ type WizardState = {
     starterSourceBatchId: string | null;
     brewAgainSourceBatchId: string | null;
   };
-  metadata: {
-    name: string;
-    brewDate: string;
-    initialNotes: string;
-    initialPh: string;
-  };
+  metadata: { name: string; brewDate: string; initialNotes: string; initialPh: string };
   selectedRecipe: F1RecipeSummary | null;
   selectedVessel: SelectedF1Vessel;
   manualVesselDraft: FermentationVesselDraft;
-  overrides: {
-    teaG: number | null;
-    sugarG: number | null;
-    starterMl: number | null;
-  };
+  overrides: { teaG: number | null; sugarG: number | null; starterMl: number | null };
   coachPopup: NewBatchCoachPopup | null;
 };
 
@@ -113,20 +102,12 @@ function todayString() {
 }
 
 function scrollWizardToTop() {
-  if (typeof window === "undefined") {
-    return;
-  }
-
-  window.scrollTo({
-    top: 0,
-    left: 0,
-    behavior: "auto",
-  });
+  if (typeof window === "undefined") return;
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
 }
 
 function createManualDraftForVessel(vesselType: string): FermentationVesselDraft {
   const selection = createManualVesselSelection(vesselType);
-
   return {
     ...createEmptyFermentationVesselDraft(),
     name: selection.name,
@@ -135,12 +116,9 @@ function createManualDraftForVessel(vesselType: string): FermentationVesselDraft
   };
 }
 
-function buildInitialWizardState(
-  brewAgainState: BrewAgainNavigationState | null
-): WizardState {
+function buildInitialWizardState(brewAgainState: BrewAgainNavigationState | null): WizardState {
   const vesselType = brewAgainState?.prefill.vesselType || "Glass jar";
   const manualVesselDraft = createManualDraftForVessel(vesselType);
-
   return {
     mode: brewAgainState ? "brew_again" : "scratch",
     step: "volume",
@@ -164,11 +142,7 @@ function buildInitialWizardState(
     selectedRecipe: null,
     selectedVessel: createManualVesselSelection(vesselType),
     manualVesselDraft,
-    overrides: {
-      teaG: null,
-      sugarG: null,
-      starterMl: null,
-    },
+    overrides: { teaG: null, sugarG: null, starterMl: null },
     coachPopup: null,
   };
 }
@@ -199,13 +173,13 @@ function reducer(state: WizardState, action: WizardAction): WizardState {
 }
 
 function getNextStep(step: NewBatchWizardStepId) {
-  const index = NEW_BATCH_WIZARD_STEPS.findIndex((item) => item.id === step);
-  return NEW_BATCH_WIZARD_STEPS[index + 1]?.id || null;
+  const index = NEW_BATCH_WIZARD_STEP_IDS.findIndex((item) => item === step);
+  return NEW_BATCH_WIZARD_STEP_IDS[index + 1] || null;
 }
 
 function getPreviousStep(step: NewBatchWizardStepId) {
-  const index = NEW_BATCH_WIZARD_STEPS.findIndex((item) => item.id === step);
-  return index > 0 ? NEW_BATCH_WIZARD_STEPS[index - 1].id : null;
+  const index = NEW_BATCH_WIZARD_STEP_IDS.findIndex((item) => item === step);
+  return index > 0 ? NEW_BATCH_WIZARD_STEP_IDS[index - 1] : null;
 }
 
 function buildSetupFieldsFromValues(args: {
@@ -243,11 +217,7 @@ const secondaryRecommendationCategories = new Set([
   "combined_transition_warning",
 ]);
 
-export function useNewBatchWizard({
-  userId,
-  brewAgainState,
-  navigate,
-}: UseNewBatchWizardArgs) {
+export function useNewBatchWizard({ userId, brewAgainState, navigate }: UseNewBatchWizardArgs) {
   const [state, dispatch] = useReducer(reducer, buildInitialWizardState(brewAgainState));
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
   const [vesselPickerOpen, setVesselPickerOpen] = useState(false);
@@ -275,20 +245,17 @@ export function useNewBatchWizard({
       setAvailableVessels([]);
       return;
     }
-
     setRecipeLoading(true);
     setVesselLoading(true);
-
     void loadF1Recipes()
-      .then((recipes) => setAvailableRecipes(recipes))
+      .then(setAvailableRecipes)
       .catch((error) => {
         console.error("Load F1 recipes error:", error);
         toast.error(error instanceof Error ? error.message : "Could not load recipes.");
       })
       .finally(() => setRecipeLoading(false));
-
     void loadFermentationVessels()
-      .then((vessels) => setAvailableVessels(vessels))
+      .then(setAvailableVessels)
       .catch((error) => {
         console.error("Load fermentation vessels error:", error);
         toast.error(error instanceof Error ? error.message : "Could not load vessels.");
@@ -301,108 +268,79 @@ export function useNewBatchWizard({
       setStarterSourceOptions([]);
       return;
     }
-
     let isActive = true;
     setStarterSourceLoading(true);
-
     void loadStarterSourceCandidates(userId)
       .then((options) => {
-        if (isActive) {
-          setStarterSourceOptions(options);
-        }
+        if (isActive) setStarterSourceOptions(options);
       })
       .catch((error) => {
         console.error("Load starter source candidates error:", error);
-        if (isActive) {
-          setStarterSourceOptions([]);
-        }
+        if (isActive) setStarterSourceOptions([]);
       })
       .finally(() => {
-        if (isActive) {
-          setStarterSourceLoading(false);
-        }
+        if (isActive) setStarterSourceLoading(false);
       });
-
     return () => {
       isActive = false;
     };
   }, [userId]);
 
   useEffect(() => {
-    if (!state.selectedRecipe?.preferredVesselId) {
-      return;
-    }
-
+    if (!state.selectedRecipe?.preferredVesselId) return;
     const preferredVessel = availableVessels.find(
       (vessel) => vessel.id === state.selectedRecipe?.preferredVesselId
     );
-
     if (preferredVessel) {
-      dispatch({
-        type: "set_selected_vessel",
-        vessel: buildSelectedVesselFromSaved(preferredVessel),
-      });
+      dispatch({ type: "set_selected_vessel", vessel: buildSelectedVesselFromSaved(preferredVessel) });
       setCustomVesselExpanded(false);
     }
   }, [availableVessels, state.selectedRecipe?.preferredVesselId]);
 
-  const historyDraft = useMemo(() => {
-    const placeholderSetup: F1BatchSetupFields = {
-      totalVolumeMl: state.answers.totalVolumeMl,
-      teaType: state.answers.teaType,
-      teaSourceForm: state.answers.teaSourceForm,
-      teaAmountValue: 0,
-      teaAmountUnit: "g",
-      sugarG: 0,
-      sugarType: state.answers.sugarType,
-      starterLiquidMl: 0,
-      scobyPresent: state.answers.scobyPresent,
-      avgRoomTempC: state.answers.avgRoomTempC,
-      vesselType: getLegacyVesselTypeLabel(state.selectedVessel),
-      targetPreference: state.answers.targetPreference,
-      initialNotes: state.metadata.initialNotes,
-    };
-
-    return {
+  const historyDraft = useMemo(
+    () => ({
       brewDate: state.metadata.brewDate,
-      setup: placeholderSetup,
+      setup: {
+        totalVolumeMl: state.answers.totalVolumeMl,
+        teaType: state.answers.teaType,
+        teaSourceForm: state.answers.teaSourceForm,
+        teaAmountValue: 0,
+        teaAmountUnit: "g",
+        sugarG: 0,
+        sugarType: state.answers.sugarType,
+        starterLiquidMl: 0,
+        scobyPresent: state.answers.scobyPresent,
+        avgRoomTempC: state.answers.avgRoomTempC,
+        vesselType: getLegacyVesselTypeLabel(state.selectedVessel),
+        targetPreference: state.answers.targetPreference,
+        initialNotes: state.metadata.initialNotes,
+      } satisfies F1BatchSetupFields,
       selectedRecipeId: state.selectedRecipe?.id || null,
       selectedVessel: state.selectedVessel,
       starterSourceBatchId: state.answers.starterSourceBatchId,
       brewAgainSourceBatchId: state.answers.brewAgainSourceBatchId,
-    };
-  }, [state]);
+    }),
+    [state]
+  );
 
   useEffect(() => {
     if (!userId) {
       setRecommendationHistory([]);
       return;
     }
-
     let isActive = true;
     setHistoryLoading(true);
-
-    void loadF1RecommendationHistoryContext({
-      userId,
-      draft: historyDraft,
-    })
+    void loadF1RecommendationHistoryContext({ userId, draft: historyDraft })
       .then((history) => {
-        if (isActive) {
-          setRecommendationHistory(history);
-        }
+        if (isActive) setRecommendationHistory(history);
       })
       .catch((error) => {
         console.error("Load recommendation history error:", error);
-        if (isActive) {
-          setRecommendationHistory([]);
-        }
+        if (isActive) setRecommendationHistory([]);
       })
       .finally(() => {
-        if (isActive) {
-          setHistoryLoading(false);
-        }
+        if (isActive) setHistoryLoading(false);
       });
-
     return () => {
       isActive = false;
     };
@@ -415,10 +353,7 @@ export function useNewBatchWizard({
     !!state.answers.targetPreference;
 
   const baseGeneratedRecipe = useMemo(() => {
-    if (!canGenerate) {
-      return null;
-    }
-
+    if (!canGenerate) return null;
     return generateF1RecipeRecommendation({
       totalVolumeMl: state.answers.totalVolumeMl,
       teaType: state.answers.teaType,
@@ -432,21 +367,15 @@ export function useNewBatchWizard({
   }, [canGenerate, recommendationHistory, state.answers]);
 
   const baseDraftForSimilarity = useMemo(() => {
-    if (!baseGeneratedRecipe) {
-      return null;
-    }
-
-    const setup = buildSetupFieldsFromValues({
-      state,
-      teaG: baseGeneratedRecipe.recommendedTeaG,
-      sugarG:
-        baseGeneratedRecipe.recommendedSugarG ?? baseGeneratedRecipe.effectiveSugarTargetG,
-      starterMl: baseGeneratedRecipe.recommendedStarterMl,
-    });
-
+    if (!baseGeneratedRecipe) return null;
     return {
       brewDate: state.metadata.brewDate,
-      setup,
+      setup: buildSetupFieldsFromValues({
+        state,
+        teaG: baseGeneratedRecipe.recommendedTeaG,
+        sugarG: baseGeneratedRecipe.recommendedSugarG ?? baseGeneratedRecipe.effectiveSugarTargetG,
+        starterMl: baseGeneratedRecipe.recommendedStarterMl,
+      }),
       selectedRecipeId: state.selectedRecipe?.id || null,
       selectedVessel: state.selectedVessel,
       starterSourceBatchId: state.answers.starterSourceBatchId,
@@ -455,21 +384,12 @@ export function useNewBatchWizard({
   }, [baseGeneratedRecipe, state]);
 
   const similarityMatches = useMemo(() => {
-    if (!baseDraftForSimilarity) {
-      return [];
-    }
-
-    return findSimilarF1Setups({
-      draft: baseDraftForSimilarity,
-      history: recommendationHistory,
-    });
+    if (!baseDraftForSimilarity) return [];
+    return findSimilarF1Setups({ draft: baseDraftForSimilarity, history: recommendationHistory });
   }, [baseDraftForSimilarity, recommendationHistory]);
 
   const generatedRecipe = useMemo(() => {
-    if (!canGenerate) {
-      return null;
-    }
-
+    if (!canGenerate) return null;
     return generateF1RecipeRecommendation({
       totalVolumeMl: state.answers.totalVolumeMl,
       teaType: state.answers.teaType,
@@ -487,9 +407,7 @@ export function useNewBatchWizard({
     generatedRecipe.recommendedSugarG === null &&
     state.overrides.sugarG === null;
 
-  const finalTeaG = generatedRecipe
-    ? state.overrides.teaG ?? generatedRecipe.recommendedTeaG
-    : null;
+  const finalTeaG = generatedRecipe ? state.overrides.teaG ?? generatedRecipe.recommendedTeaG : null;
   const finalSugarG = generatedRecipe
     ? state.overrides.sugarG ?? generatedRecipe.recommendedSugarG
     : null;
@@ -498,10 +416,7 @@ export function useNewBatchWizard({
     : null;
 
   const displaySetup = useMemo(() => {
-    if (!generatedRecipe || finalTeaG === null || finalStarterMl === null) {
-      return null;
-    }
-
+    if (!generatedRecipe || finalTeaG === null || finalStarterMl === null) return null;
     return buildSetupFieldsFromValues({
       state,
       teaG: finalTeaG,
@@ -511,61 +426,31 @@ export function useNewBatchWizard({
   }, [finalStarterMl, finalSugarG, finalTeaG, generatedRecipe, state]);
 
   const persistedSetup = useMemo(() => {
-    if (
-      !generatedRecipe ||
-      finalTeaG === null ||
-      finalSugarG === null ||
-      finalStarterMl === null
-    ) {
+    if (!generatedRecipe || finalTeaG === null || finalSugarG === null || finalStarterMl === null) {
       return null;
     }
-
-    return buildSetupFieldsFromValues({
-      state,
-      teaG: finalTeaG,
-      sugarG: finalSugarG,
-      starterMl: finalStarterMl,
-    });
+    return buildSetupFieldsFromValues({ state, teaG: finalTeaG, sugarG: finalSugarG, starterMl: finalStarterMl });
   }, [finalStarterMl, finalSugarG, finalTeaG, generatedRecipe, state]);
 
   const estimatedF1Timing = useMemo(() => {
-    if (!generatedRecipe || finalStarterMl === null) {
-      return null;
-    }
-
+    if (!generatedRecipe || finalStarterMl === null) return null;
     return getBatchStageTiming({
-      brew_started_at: new Date(
-        `${state.metadata.brewDate || todayString()}T12:00:00`
-      ).toISOString(),
+      brew_started_at: new Date(`${state.metadata.brewDate || todayString()}T12:00:00`).toISOString(),
       current_stage: "f1_active",
       avg_room_temp_c: state.answers.avgRoomTempC,
       target_preference: state.answers.targetPreference,
       starter_liquid_ml: finalStarterMl,
       total_volume_ml: state.answers.totalVolumeMl,
     });
-  }, [
-    finalStarterMl,
-    generatedRecipe,
-    state.answers.avgRoomTempC,
-    state.answers.targetPreference,
-    state.answers.totalVolumeMl,
-    state.metadata.brewDate,
-  ]);
+  }, [finalStarterMl, generatedRecipe, state.answers.avgRoomTempC, state.answers.targetPreference, state.answers.totalVolumeMl, state.metadata.brewDate]);
 
   const vesselFit = useMemo(
-    () =>
-      buildF1VesselFitResult({
-        totalVolumeMl: state.answers.totalVolumeMl,
-        vessel: state.selectedVessel,
-      }),
+    () => buildF1VesselFitResult({ totalVolumeMl: state.answers.totalVolumeMl, vessel: state.selectedVessel }),
     [state.answers.totalVolumeMl, state.selectedVessel]
   );
 
   const recommendationDraft = useMemo(() => {
-    if (!displaySetup) {
-      return null;
-    }
-
+    if (!displaySetup) return null;
     return {
       brewDate: state.metadata.brewDate,
       setup: displaySetup,
@@ -577,74 +462,20 @@ export function useNewBatchWizard({
   }, [displaySetup, state]);
 
   const secondaryRecommendations = useMemo(() => {
-    if (!recommendationDraft) {
-      return null;
-    }
-
-    return buildF1Recommendations({
-      draft: recommendationDraft,
-      history: recommendationHistory,
-      appliedAdjustments: [],
-    });
+    if (!recommendationDraft) return null;
+    return buildF1Recommendations({ draft: recommendationDraft, history: recommendationHistory, appliedAdjustments: [] });
   }, [recommendationDraft, recommendationHistory]);
 
   const secondaryCards = useMemo(
-    () =>
-      secondaryRecommendations?.cards.filter((card) =>
-        secondaryRecommendationCategories.has(card.category)
-      ) || [],
+    () => secondaryRecommendations?.cards.filter((card) => secondaryRecommendationCategories.has(card.category)) || [],
     [secondaryRecommendations?.cards]
   );
 
-  const stepHelperText = useMemo(() => {
-    switch (state.step) {
-      case "volume":
-        return "Choose the final batch size first. Starter is included inside that total.";
-      case "tea":
-        return "Choose the tea base before the app decides how much tea to recommend.";
-      case "sugar":
-        return "Choose the sweetener now. The grams come later.";
-      case "vessel":
-        return vesselFit.fitState === "overfilled"
-          ? "This vessel looks too full for the planned batch size."
-          : "This step checks what today’s batch is actually going into.";
-      case "sweetness":
-        return "This sets the starting sugar target, not the final tasting outcome.";
-      case "temperature":
-        return "A rough average is enough. The app uses it as an estimate, not a promise.";
-      case "recipe":
-        return requiresManualSugar
-          ? "Add the sugar grams you want to use before you continue."
-          : "Review the recipe first. Open the extra reasoning only if you want it.";
-      case "finalize":
-        return "Add the final details you want saved with today’s brew.";
-      default:
-        return "";
-    }
-  }, [requiresManualSugar, state.step, vesselFit.fitState]);
-
-  const primaryLabel = useMemo(() => {
-    switch (state.step) {
-      case "volume":
-        return "Continue to tea";
-      case "tea":
-        return "Continue to sugar";
-      case "sugar":
-        return "Continue to vessel";
-      case "vessel":
-        return "Continue to taste target";
-      case "sweetness":
-        return "Continue to temperature";
-      case "temperature":
-        return "Show my recipe";
-      case "recipe":
-        return "Continue to final details";
-      case "finalize":
-        return "Start batch";
-      default:
-        return "Continue";
-    }
-  }, [state.step]);
+  const stepHelperText = useMemo(
+    () => f1NewBatchCopy.hook.stepHelperText(state.step, { fitState: vesselFit.fitState, requiresManualSugar }),
+    [requiresManualSugar, state.step, vesselFit.fitState]
+  );
+  const primaryLabel = useMemo(() => f1NewBatchCopy.hook.primaryLabel(state.step), [state.step]);
 
   const canContinue = useMemo(() => {
     switch (state.step) {
@@ -667,21 +498,7 @@ export function useNewBatchWizard({
       default:
         return false;
     }
-  }, [
-    generatedRecipe,
-    persistedSetup,
-    requiresManualSugar,
-    state.answers.avgRoomTempC,
-    state.answers.sugarType,
-    state.answers.targetPreference,
-    state.answers.teaType,
-    state.answers.totalVolumeMl,
-    state.metadata.brewDate,
-    state.metadata.name,
-    state.selectedVessel.name,
-    state.step,
-    vesselFit.fitState,
-  ]);
+  }, [generatedRecipe, persistedSetup, requiresManualSugar, state.answers.avgRoomTempC, state.answers.sugarType, state.answers.targetPreference, state.answers.teaType, state.answers.totalVolumeMl, state.metadata.brewDate, state.metadata.name, state.selectedVessel.name, state.step, vesselFit.fitState]);
 
   const recommendedStarterSourceBatchId = state.answers.brewAgainSourceBatchId;
 
@@ -689,42 +506,35 @@ export function useNewBatchWizard({
     if (state.step === "vessel" && vesselFit.fitState === "overfilled") {
       return {
         key: `vessel-overfilled-${state.answers.totalVolumeMl}-${state.selectedVessel.name}`,
-        title: "This vessel looks too full",
-        body: "The planned volume is above the vessel's recommended fill. A slightly smaller batch or a roomier vessel will feel calmer to manage.",
+        title: f1NewBatchCopy.coachPopup.vesselOverfilled.title,
+        body: f1NewBatchCopy.coachPopup.vesselOverfilled.body,
         tone: "caution" as const,
       };
     }
-
     if (state.step === "vessel" && vesselFit.fitState === "tight_fit") {
       return {
         key: `vessel-tight-${state.answers.totalVolumeMl}-${state.selectedVessel.name}`,
-        title: "This vessel is getting close to full",
-        body: "This setup is still workable, but it is close to the vessel's recommended fill. A slightly smaller batch may feel calmer to manage.",
+        title: f1NewBatchCopy.coachPopup.vesselTight.title,
+        body: f1NewBatchCopy.coachPopup.vesselTight.body,
         tone: "caution" as const,
       };
     }
-
-    if (
-      state.step === "sugar" &&
-      state.answers.sugarType === "Other"
-    ) {
+    if (state.step === "sugar" && state.answers.sugarType === "Other") {
       return {
         key: "sugar-other",
-        title: "This sugar needs a manual amount later",
-        body: "The app can keep the sweetness target, but you'll choose the exact sugar grams yourself in the recipe step.",
+        title: f1NewBatchCopy.coachPopup.sugarOther.title,
+        body: f1NewBatchCopy.coachPopup.sugarOther.body,
         tone: "caution" as const,
       };
     }
-
     if (state.step === "sugar" && state.answers.sugarType === "Honey") {
       return {
         key: "sugar-honey",
-        title: "Honey is treated as a starting point",
-        body: "Honey changes the sugar conversion a bit, so treat the grams you see later as a starting point rather than a hard rule.",
+        title: f1NewBatchCopy.coachPopup.sugarHoney.title,
+        body: f1NewBatchCopy.coachPopup.sugarHoney.body,
         tone: "info" as const,
       };
     }
-
     if (
       state.step === "vessel" &&
       (state.selectedVessel.f1Suitability === "caution" ||
@@ -732,30 +542,27 @@ export function useNewBatchWizard({
     ) {
       return {
         key: `vessel-material-${state.selectedVessel.materialType}`,
-        title: "This vessel material deserves a closer look",
-        body: "It may still work, but it is worth double-checking that the material is food-safe and comfortable for acidic kombucha.",
+        title: f1NewBatchCopy.coachPopup.vesselMaterial.title,
+        body: f1NewBatchCopy.coachPopup.vesselMaterial.body,
         tone: "caution" as const,
       };
     }
-
     if (state.step === "temperature" && state.answers.avgRoomTempC < 20) {
       return {
         key: "temp-cool",
-        title: "This room looks a little cool",
-        body: "Cooler batches often hold onto sweetness longer, so expect a gentler pace rather than a fixed schedule.",
+        title: f1NewBatchCopy.coachPopup.tempCool.title,
+        body: f1NewBatchCopy.coachPopup.tempCool.body,
         tone: "info" as const,
       };
     }
-
     if (state.step === "temperature" && state.answers.avgRoomTempC > 25) {
       return {
         key: "temp-warm",
-        title: "This room looks a little warm",
-        body: "Warmer batches often move faster, so it may help to start tasting a bit earlier rather than assuming a longer window.",
+        title: f1NewBatchCopy.coachPopup.tempWarm.title,
+        body: f1NewBatchCopy.coachPopup.tempWarm.body,
         tone: "info" as const,
       };
     }
-
     if (
       state.step === "tea" &&
       (state.answers.teaType === "White tea" ||
@@ -764,86 +571,54 @@ export function useNewBatchWizard({
     ) {
       return {
         key: `tea-${state.answers.teaType}`,
-        title: "This tea is workable, just less standard",
-        body: "The app can still build a recipe around it, but black or green are a little easier to compare against the most familiar kombucha patterns.",
+        title: f1NewBatchCopy.coachPopup.teaLessStandard.title,
+        body: f1NewBatchCopy.coachPopup.teaLessStandard.body,
         tone: "info" as const,
       };
     }
-
     if (state.step === "recipe" && generatedRecipe?.lineageStatus === "unknown") {
       return {
         key: "recipe-unknown-lineage",
-        title: "The starter line is being treated conservatively",
-        body: "Because this culture line is unknown, the starter recommendation is being kept a little higher as a calmer starting point.",
+        title: f1NewBatchCopy.coachPopup.recipeUnknownLineage.title,
+        body: f1NewBatchCopy.coachPopup.recipeUnknownLineage.body,
         tone: "info" as const,
       };
     }
-
     if (
       state.step === "recipe" &&
       generatedRecipe &&
-      ((
-        state.overrides.teaG !== null &&
-        Math.abs(state.overrides.teaG - generatedRecipe.recommendedTeaG) >= 4
-      ) ||
-        (
-          state.overrides.sugarG !== null &&
+      ((state.overrides.teaG !== null &&
+        Math.abs(state.overrides.teaG - generatedRecipe.recommendedTeaG) >= 4) ||
+        (state.overrides.sugarG !== null &&
           generatedRecipe.recommendedSugarG !== null &&
-          Math.abs(state.overrides.sugarG - generatedRecipe.recommendedSugarG) >= 20
-        ) ||
-        (
-          state.overrides.starterMl !== null &&
-          Math.abs(state.overrides.starterMl - generatedRecipe.recommendedStarterMl) >= 80
-        ))
+          Math.abs(state.overrides.sugarG - generatedRecipe.recommendedSugarG) >= 20) ||
+        (state.overrides.starterMl !== null &&
+          Math.abs(state.overrides.starterMl - generatedRecipe.recommendedStarterMl) >= 80))
     ) {
       return {
         key: `override-drift-${state.overrides.teaG}-${state.overrides.sugarG}-${state.overrides.starterMl}`,
-        title: "Your recipe has moved away from the starting point",
-        body: "That can still work, but the batch will be less like the app's recommended baseline from your answers and history.",
+        title: f1NewBatchCopy.coachPopup.overrideDrift.title,
+        body: f1NewBatchCopy.coachPopup.overrideDrift.body,
         tone: "info" as const,
       };
     }
-
     return null;
-  }, [
-    generatedRecipe,
-    state.answers.avgRoomTempC,
-    state.answers.sugarType,
-    state.answers.teaType,
-    state.answers.totalVolumeMl,
-    state.overrides.sugarG,
-    state.overrides.teaG,
-    state.overrides.starterMl,
-    state.selectedVessel.f1Suitability,
-    state.selectedVessel.materialType,
-    state.selectedVessel.name,
-    state.step,
-    vesselFit.fitState,
-  ]);
+  }, [generatedRecipe, state.answers.avgRoomTempC, state.answers.sugarType, state.answers.teaType, state.answers.totalVolumeMl, state.overrides.sugarG, state.overrides.teaG, state.overrides.starterMl, state.selectedVessel.f1Suitability, state.selectedVessel.materialType, state.selectedVessel.name, state.step, vesselFit.fitState]);
 
   useEffect(() => {
     if (!coachPopupCandidate) {
-      if (dismissedPopupKey) {
-        setDismissedPopupKey(null);
-      }
-      if (state.coachPopup) {
-        dispatch({ type: "set_coach_popup", popup: null });
-      }
+      if (dismissedPopupKey) setDismissedPopupKey(null);
+      if (state.coachPopup) dispatch({ type: "set_coach_popup", popup: null });
       return;
     }
-
     if (dismissedPopupKey && dismissedPopupKey !== coachPopupCandidate.key) {
       setDismissedPopupKey(null);
       return;
     }
-
     if (dismissedPopupKey === coachPopupCandidate.key) {
-      if (state.coachPopup) {
-        dispatch({ type: "set_coach_popup", popup: null });
-      }
+      if (state.coachPopup) dispatch({ type: "set_coach_popup", popup: null });
       return;
     }
-
     if (state.coachPopup?.key !== coachPopupCandidate.key) {
       dispatch({ type: "set_coach_popup", popup: coachPopupCandidate });
     }
@@ -851,10 +626,9 @@ export function useNewBatchWizard({
 
   const openSaveRecipe = () => {
     if (!persistedSetup) {
-      toast.error("Finish the recipe first so there is something to save.");
+      toast.error(f1NewBatchCopy.hook.toasts.finishRecipeFirst);
       return;
     }
-
     setRecipeDraft(
       buildRecipeDraftFromBatchSetup(persistedSetup, {
         name: state.selectedRecipe?.name || state.metadata.name.trim() || "",
@@ -868,23 +642,20 @@ export function useNewBatchWizard({
 
   const handleSaveRecipe = async () => {
     if (!userId) {
-      toast.error("Sign in first so the recipe can be saved.");
+      toast.error(f1NewBatchCopy.hook.toasts.signInToSaveRecipe);
       return;
     }
-
     setRecipeSaving(true);
-
     try {
       const savedRecipe = await saveF1Recipe({
         userId,
         draft: recipeDraft,
         recipeId: state.selectedRecipe?.id,
       });
-      const updatedRecipes = await loadF1Recipes();
-      setAvailableRecipes(updatedRecipes);
+      setAvailableRecipes(await loadF1Recipes());
       dispatch({ type: "set_selected_recipe", recipe: savedRecipe });
       setSaveRecipeOpen(false);
-      toast.success("Recipe saved. You can reuse this starting point next time.");
+      toast.success(f1NewBatchCopy.hook.toasts.recipeSaved);
     } catch (error) {
       console.error("Save recipe error:", error);
       toast.error(error instanceof Error ? error.message : "Could not save recipe.");
@@ -895,25 +666,16 @@ export function useNewBatchWizard({
 
   const handleSaveManualVessel = async () => {
     if (!userId) {
-      toast.error("Sign in first so the vessel can be saved.");
+      toast.error(f1NewBatchCopy.hook.toasts.signInToSaveVessel);
       return;
     }
-
     setManualVesselSaving(true);
-
     try {
-      const savedVessel = await saveFermentationVessel({
-        userId,
-        draft: state.manualVesselDraft,
-      });
-      const updatedVessels = await loadFermentationVessels();
-      setAvailableVessels(updatedVessels);
-      dispatch({
-        type: "set_selected_vessel",
-        vessel: buildSelectedVesselFromSaved(savedVessel),
-      });
+      const savedVessel = await saveFermentationVessel({ userId, draft: state.manualVesselDraft });
+      setAvailableVessels(await loadFermentationVessels());
+      dispatch({ type: "set_selected_vessel", vessel: buildSelectedVesselFromSaved(savedVessel) });
       setCustomVesselExpanded(false);
-      toast.success("Vessel saved. You can reuse it next time.");
+      toast.success(f1NewBatchCopy.hook.toasts.vesselSaved);
     } catch (error) {
       console.error("Save vessel error:", error);
       toast.error(error instanceof Error ? error.message : "Could not save vessel.");
@@ -923,35 +685,12 @@ export function useNewBatchWizard({
   };
 
   const handleCreate = async () => {
-    if (!userId) {
-      toast.error("Sign in first so the batch can be started.");
-      return;
-    }
-
-    if (!persistedSetup) {
-      toast.error("Finish the recipe before you start the batch.");
-      return;
-    }
-
-    if (!state.metadata.name.trim()) {
-      toast.error("Add a batch name before you start the batch.");
-      return;
-    }
-
-    if (!state.metadata.brewDate) {
-      toast.error("Choose the brew date before you start the batch.");
-      return;
-    }
-
-    if (vesselFit.fitState === "overfilled") {
-      toast.error(
-        "This vessel looks too full for the planned volume. Adjust the batch size or switch vessels first."
-      );
-      return;
-    }
-
+    if (!userId) return void toast.error(f1NewBatchCopy.hook.toasts.signInToStartBatch);
+    if (!persistedSetup) return void toast.error(f1NewBatchCopy.hook.toasts.finishRecipeBeforeStart);
+    if (!state.metadata.name.trim()) return void toast.error(f1NewBatchCopy.hook.toasts.addBatchName);
+    if (!state.metadata.brewDate) return void toast.error(f1NewBatchCopy.hook.toasts.chooseBrewDate);
+    if (vesselFit.fitState === "overfilled") return void toast.error(f1NewBatchCopy.hook.toasts.vesselTooFull);
     setIsSaving(true);
-
     const { data: createdBatch, error } = await supabase
       .from("kombucha_batches")
       .insert({
@@ -981,15 +720,12 @@ export function useNewBatchWizard({
       })
       .select("id")
       .single();
-
     setIsSaving(false);
-
     if (error || !createdBatch) {
       console.error("Create batch error:", error);
       toast.error(error?.message || "Could not start the batch.");
       return;
     }
-
     try {
       await saveBatchF1Setup({
         batchId: createdBatch.id,
@@ -1006,30 +742,22 @@ export function useNewBatchWizard({
         recommendationSnapshot: secondaryRecommendations?.snapshot || null,
         acceptedRecommendationIds: [],
       });
-
-      toast.success("Batch started.");
+      toast.success(f1NewBatchCopy.hook.toasts.batchStarted);
       navigate("/batches");
     } catch (snapshotError) {
       console.error("Save batch F1 setup snapshot error:", snapshotError);
       toast.message(
-        snapshotError instanceof Error
-          ? `Batch started, but the detailed F1 setup snapshot could not be saved: ${snapshotError.message}`
-          : "Batch started, but the detailed F1 setup snapshot could not be saved."
+        f1NewBatchCopy.hook.toasts.saveSnapshotFailure(
+          snapshotError instanceof Error ? snapshotError.message : undefined
+        )
       );
       navigate(`/batch/${createdBatch.id}`);
     }
   };
 
   const goNext = () => {
-    if (!canContinue) {
-      return;
-    }
-
-    if (state.step === "finalize") {
-      void handleCreate();
-      return;
-    }
-
+    if (!canContinue) return;
+    if (state.step === "finalize") return void handleCreate();
     const nextStep = getNextStep(state.step);
     if (nextStep) {
       dispatch({ type: "set_coach_popup", popup: null });
@@ -1055,10 +783,7 @@ export function useNewBatchWizard({
   };
 
   const applyBrewAgainPrefill = () => {
-    if (!brewAgainState) {
-      return;
-    }
-
+    if (!brewAgainState) return;
     dispatch({ type: "hydrate", state: buildInitialWizardState(brewAgainState) });
     setCustomVesselExpanded(false);
     setDismissedPopupKey(null);
@@ -1084,15 +809,10 @@ export function useNewBatchWizard({
     nextState.metadata.initialPh = state.metadata.initialPh;
     nextState.selectedVessel = state.selectedVessel;
     nextState.manualVesselDraft = state.manualVesselDraft;
-
     const preferredVessel = recipe.preferredVesselId
       ? availableVessels.find((vessel) => vessel.id === recipe.preferredVesselId)
       : null;
-
-    if (preferredVessel) {
-      nextState.selectedVessel = buildSelectedVesselFromSaved(preferredVessel);
-    }
-
+    if (preferredVessel) nextState.selectedVessel = buildSelectedVesselFromSaved(preferredVessel);
     dispatch({ type: "hydrate", state: nextState });
     setRecipePickerOpen(false);
     setDismissedPopupKey(null);
@@ -1105,10 +825,7 @@ export function useNewBatchWizard({
   ) => {
     const nextDraft = { ...state.manualVesselDraft, [key]: value };
     dispatch({ type: "set_manual_vessel_draft", draft: nextDraft });
-    dispatch({
-      type: "set_selected_vessel",
-      vessel: buildSelectedVesselFromDraft(nextDraft),
-    });
+    dispatch({ type: "set_selected_vessel", vessel: buildSelectedVesselFromDraft(nextDraft) });
   };
 
   return {
@@ -1142,9 +859,7 @@ export function useNewBatchWizard({
     recommendedStarterSourceBatchId,
     coachPopup: state.coachPopup,
     dismissCoachPopup: () => {
-      if (state.coachPopup) {
-        setDismissedPopupKey(state.coachPopup.key);
-      }
+      if (state.coachPopup) setDismissedPopupKey(state.coachPopup.key);
       dispatch({ type: "set_coach_popup", popup: null });
     },
     requiresManualSugar,
@@ -1171,17 +886,11 @@ export function useNewBatchWizard({
     updateOverride: (field: "teaG" | "sugarG" | "starterMl", value: number | null) =>
       dispatch({ type: "patch_overrides", patch: { [field]: value } }),
     setSelectedVesselFromSaved: (vessel: FermentationVesselSummary) => {
-      dispatch({
-        type: "set_selected_vessel",
-        vessel: buildSelectedVesselFromSaved(vessel),
-      });
+      dispatch({ type: "set_selected_vessel", vessel: buildSelectedVesselFromSaved(vessel) });
       setCustomVesselExpanded(false);
       setVesselPickerOpen(false);
     },
     useCustomVesselToday: () =>
-      dispatch({
-        type: "set_selected_vessel",
-        vessel: buildSelectedVesselFromDraft(state.manualVesselDraft),
-      }),
+      dispatch({ type: "set_selected_vessel", vessel: buildSelectedVesselFromDraft(state.manualVesselDraft) }),
   };
 }

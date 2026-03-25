@@ -1,4 +1,5 @@
 import { Button } from "@/components/ui/button";
+import { batchDetailCopy } from "@/copy/batch-detail";
 import {
   formatReminderDueText,
   getReminderTone,
@@ -20,10 +21,10 @@ export function BatchReminderPanel({
     <section className="space-y-3">
       <div>
         <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground">
-          What needs attention
+          {batchDetailCopy.reminders.title}
         </h2>
         <p className="mt-1 text-sm text-muted-foreground">
-          These reminders stay near the top because they matter more than the background details right now.
+          {batchDetailCopy.reminders.description}
         </p>
       </div>
 
@@ -43,7 +44,7 @@ export function BatchReminderPanel({
                       {tone.label}
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      Due {formatReminderDueText(reminder.dueAt)}
+                      {batchDetailCopy.reminders.duePrefix} {formatReminderDueText(reminder.dueAt)}
                     </span>
                   </div>
 
@@ -62,7 +63,7 @@ export function BatchReminderPanel({
                   variant="outline"
                   onClick={() => onCompleteReminder(reminder.id)}
                 >
-                  Mark done
+                  {batchDetailCopy.reminders.markDone}
                 </Button>
               </div>
             </div>

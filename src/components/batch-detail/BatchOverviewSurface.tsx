@@ -7,6 +7,7 @@ import { BatchCurrentPhaseCard } from "@/components/batch-detail/BatchCurrentPha
 import { BatchPhaseCollapse } from "@/components/batch-detail/BatchPhaseCollapse";
 import { BatchCompletedSummary } from "@/components/batch-detail/BatchCompletedSummary";
 import { Button } from "@/components/ui/button";
+import { batchDetailCopy } from "@/copy/batch-detail";
 import type { BrewAgainPlan, BrewAgainMode } from "@/lib/brew-again-types";
 import {
   getCurrentPhaseLabel,
@@ -14,7 +15,7 @@ import {
   type BatchReminder,
 } from "@/lib/batch-detail-view";
 import type { BatchTimingResult } from "@/lib/batch-timing";
-import type { BatchStage, BatchStatus, KombuchaBatch } from "@/lib/batches";
+import type { BatchStage, KombuchaBatch } from "@/lib/batches";
 import type { LoadedF1Setup } from "@/lib/f1-setups";
 import type { LoadedF2Setup } from "@/lib/f2-current-setup";
 import type { BatchLineage } from "@/lib/lineage";
@@ -30,12 +31,15 @@ const F1_STAGES: BatchStage[] = ["f1_active", "f1_check_window", "f1_extended"];
 
 function RecipeSnapshot({ batch }: { batch: KombuchaBatch }) {
   const items = [
-    ["Tea", batch.teaType],
-    ["Sugar", `${batch.sugarG}g`],
-    ["Starter", `${batch.starterLiquidMl}ml`],
-    ["Volume", `${(batch.totalVolumeMl / 1000).toFixed(1)}L`],
-    ["Vessel", batch.vesselType],
-    ["Target", batch.targetPreference.replace(/_/g, " ")],
+    [batchDetailCopy.overview.recipeSnapshot.tea, batch.teaType],
+    [batchDetailCopy.overview.recipeSnapshot.sugar, `${batch.sugarG}g`],
+    [batchDetailCopy.overview.recipeSnapshot.starter, `${batch.starterLiquidMl}ml`],
+    [
+      batchDetailCopy.overview.recipeSnapshot.volume,
+      `${(batch.totalVolumeMl / 1000).toFixed(1)}L`,
+    ],
+    [batchDetailCopy.overview.recipeSnapshot.vessel, batch.vesselType],
+    [batchDetailCopy.overview.recipeSnapshot.target, batch.targetPreference.replace(/_/g, " ")],
   ];
 
   return (
@@ -83,39 +87,54 @@ function F1SetupSnapshot({ setup }: { setup: LoadedF1Setup }) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
         <div>
-          <p className="text-xs text-muted-foreground">Setup origin</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.setupOrigin}
+          </p>
           <p className="mt-1 font-medium capitalize text-foreground">
-            {getJsonString(recipeContext, "origin") || "scratch"}
+            {getJsonString(recipeContext, "origin") || batchDetailCopy.overview.f1Setup.scratch}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Recipe snapshot</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.recipeSnapshot}
+          </p>
           <p className="mt-1 font-medium text-foreground">
-            {getJsonString(recipeContext, "recipeNameSnapshot") || "No linked recipe"}
+            {getJsonString(recipeContext, "recipeNameSnapshot") ||
+              batchDetailCopy.overview.f1Setup.noLinkedRecipe}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Vessel snapshot</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.vesselSnapshot}
+          </p>
           <p className="mt-1 font-medium text-foreground">
-            {getJsonString(vesselContext, "vesselNameSnapshot") || "Manual vessel"}
+            {getJsonString(vesselContext, "vesselNameSnapshot") ||
+              batchDetailCopy.overview.f1Setup.manualVessel}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Fit state</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.fitState}
+          </p>
           <p className="mt-1 font-medium capitalize text-foreground">
-            {(getJsonString(fitContext, "fitState") || "unknown").replace(/_/g, " ")}
+            {(getJsonString(fitContext, "fitState") ||
+              batchDetailCopy.overview.f1Setup.unknown).replace(/_/g, " ")}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Fill ratio</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.fillRatio}
+          </p>
           <p className="mt-1 font-medium text-foreground">
             {getJsonNumber(fitContext, "fillRatioPercent") !== null
               ? `${getJsonNumber(fitContext, "fillRatioPercent")}%`
-              : "Not calculated"}
+              : batchDetailCopy.overview.f1Setup.notCalculated}
           </p>
         </div>
         <div>
-          <p className="text-xs text-muted-foreground">Setup saved</p>
+          <p className="text-xs text-muted-foreground">
+            {batchDetailCopy.overview.f1Setup.setupSaved}
+          </p>
           <p className="mt-1 font-medium text-foreground">
             {new Date(setup.createdAt).toLocaleDateString()}
           </p>
@@ -123,19 +142,20 @@ function F1SetupSnapshot({ setup }: { setup: LoadedF1Setup }) {
       </div>
 
       {recommendationCards.length > 0 ? (
-        <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 space-y-3">
+        <div className="space-y-3 rounded-2xl border border-primary/10 bg-primary/5 p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Setup-time guidance memory
+                {batchDetailCopy.overview.f1Setup.guidanceMemoryEyebrow}
               </p>
               <p className="mt-1 text-sm text-foreground">
-                Kombloom saved {recommendationCards.length} recommendation
-                {recommendationCards.length === 1 ? "" : "s"} when this batch was created.
+                {batchDetailCopy.overview.f1Setup.guidanceMemorySummary(
+                  recommendationCards.length
+                )}
               </p>
             </div>
             <div className="text-xs text-muted-foreground">
-              {acceptedRecommendationIds.length} applied
+              {batchDetailCopy.overview.f1Setup.appliedCount(acceptedRecommendationIds.length)}
             </div>
           </div>
 
@@ -144,16 +164,28 @@ function F1SetupSnapshot({ setup }: { setup: LoadedF1Setup }) {
               const card = getJsonRecord(cardValue);
 
               return (
-                <div key={`${getJsonString(card, "id") || index}`} className="rounded-xl border border-primary/10 bg-background p-3">
+                <div
+                  key={`${getJsonString(card, "id") || index}`}
+                  className="rounded-xl border border-primary/10 bg-background p-3"
+                >
                   <div className="flex flex-wrap gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
-                    <span>{getJsonString(card, "sourceType") || "saved"}</span>
-                    <span>{getJsonString(card, "confidence") || "saved"}</span>
+                    <span>
+                      {getJsonString(card, "sourceType") ||
+                        batchDetailCopy.overview.f1Setup.savedSource}
+                    </span>
+                    <span>
+                      {getJsonString(card, "confidence") ||
+                        batchDetailCopy.overview.f1Setup.savedSource}
+                    </span>
                   </div>
                   <p className="mt-1 text-sm font-medium text-foreground">
-                    {getJsonString(card, "title") || "Saved recommendation"}
+                    {getJsonString(card, "title") ||
+                      batchDetailCopy.overview.f1Setup.savedRecommendation}
                   </p>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    {getJsonString(card, "summary") || getJsonString(card, "explanation") || "Saved with the F1 setup snapshot."}
+                    {getJsonString(card, "summary") ||
+                      getJsonString(card, "explanation") ||
+                      batchDetailCopy.overview.f1Setup.savedSetupSnapshot}
                   </p>
                 </div>
               );
@@ -169,33 +201,45 @@ function F2Snapshot({ setup }: { setup: LoadedF2Setup }) {
   return (
     <div className="grid grid-cols-2 gap-3 text-sm md:grid-cols-3">
       <div>
-        <p className="text-xs text-muted-foreground">Bottles</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.bottles}
+        </p>
         <p className="mt-1 font-medium text-foreground">{setup.bottleCount}</p>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground">Carbonation</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.carbonation}
+        </p>
         <p className="mt-1 font-medium capitalize text-foreground">
           {setup.desiredCarbonationLevel}
         </p>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground">Pressure risk</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.pressureRisk}
+        </p>
         <p className="mt-1 font-medium capitalize text-foreground">
-          {setup.estimatedPressureRisk || "Unknown"}
+          {setup.estimatedPressureRisk || batchDetailCopy.overview.f2Snapshot.unknown}
         </p>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground">Ambient room</p>
-        <p className="mt-1 font-medium text-foreground">{setup.ambientTempC}°C</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.ambientRoom}
+        </p>
+        <p className="mt-1 font-medium text-foreground">{setup.ambientTempC}\u00B0C</p>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground">Recipe snapshot</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.recipeSnapshot}
+        </p>
         <p className="mt-1 font-medium text-foreground">
-          {setup.recipeNameSnapshot || "Saved recipe"}
+          {setup.recipeNameSnapshot || batchDetailCopy.overview.f2Snapshot.savedRecipe}
         </p>
       </div>
       <div>
-        <p className="text-xs text-muted-foreground">Setup saved</p>
+        <p className="text-xs text-muted-foreground">
+          {batchDetailCopy.overview.f2Snapshot.setupSaved}
+        </p>
         <p className="mt-1 font-medium text-foreground">
           {new Date(setup.setupCreatedAt).toLocaleDateString()}
         </p>
@@ -225,7 +269,11 @@ function OverviewSupportingPanel({
   const f2Outcome = getOutcomeForPhase(outcomes, "f2");
   const showF1Card = F1_STAGES.includes(batch.currentStage);
   const f2ContextSummary = currentF2Setup
-    ? `${currentF2Setup.bottleCount} bottles planned with ${currentF2Setup.desiredCarbonationLevel} carbonation at ${currentF2Setup.ambientTempC}°C.`
+    ? batchDetailCopy.overview.support.f2ContextSummary({
+        bottleCount: currentF2Setup.bottleCount,
+        desiredCarbonationLevel: currentF2Setup.desiredCarbonationLevel,
+        ambientTempC: currentF2Setup.ambientTempC,
+      })
     : undefined;
 
   return (
@@ -346,41 +394,43 @@ export function BatchOverviewSurface({
 
           {showF2Inline && (
             <BatchPhaseCollapse
-              title={`Inside ${chapterLabel}`}
-              description="Second Fermentation now opens as a dedicated bottling chapter, while this overview keeps the summary close to the rest of the batch story."
+              title={batchDetailCopy.overview.secondFermentation.title(chapterLabel)}
+              description={batchDetailCopy.overview.secondFermentation.description}
               defaultOpen={!shouldCollapseChapterByDefault(batch, "second_fermentation")}
             >
               <div className="space-y-4">
                 <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-                    Second Fermentation chapter
+                    {batchDetailCopy.overview.secondFermentation.chapterEyebrow}
                   </p>
                   <p className="mt-2 text-sm text-foreground">
-                    Open the dedicated bottling setup to build bottle groups, assign flavour plans, and follow the saved F2 chapter.
+                    {batchDetailCopy.overview.secondFermentation.chapterDescription}
                   </p>
                 </div>
 
-                <div className="rounded-2xl border border-border bg-background p-4 space-y-4">
+                <div className="space-y-4 rounded-2xl border border-border bg-background p-4">
                   {currentF2Setup ? (
                     <>
                       <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                        Saved F2 summary
+                        {batchDetailCopy.overview.secondFermentation.savedSummary}
                       </p>
                       <F2Snapshot setup={currentF2Setup} />
                     </>
                   ) : (
                     <div className="space-y-2">
                       <p className="text-sm font-medium text-foreground">
-                        Bottling setup is ready to open.
+                        {batchDetailCopy.overview.secondFermentation.readyTitle}
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Build bottle groups, assign different flavour plans per group, and review the full bottling run in a dedicated setup view.
+                        {batchDetailCopy.overview.secondFermentation.readyDescription}
                       </p>
                     </div>
                   )}
 
                   <Button type="button" onClick={onOpenF2Chapter}>
-                    {currentF2Setup ? "Open F2 chapter" : "Open bottling setup"}
+                    {currentF2Setup
+                      ? batchDetailCopy.overview.secondFermentation.openSaved
+                      : batchDetailCopy.overview.secondFermentation.openNew}
                   </Button>
                 </div>
               </div>
@@ -389,15 +439,15 @@ export function BatchOverviewSurface({
 
           {!isF1Stage && (
             <BatchPhaseCollapse
-              title="First Fermentation memory"
-              description="Keep the base recipe, timing window, and F1 reflection close by without letting old details crowd the current chapter."
+              title={batchDetailCopy.overview.firstFermentation.title}
+              description={batchDetailCopy.overview.firstFermentation.description}
               defaultOpen={!shouldCollapseChapterByDefault(batch, "first_fermentation")}
             >
               <div className="space-y-4">
                 {currentF1Setup && (
                   <div className="rounded-2xl border border-border bg-background p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Saved First Fermentation setup
+                      {batchDetailCopy.overview.firstFermentation.savedSetup}
                     </p>
                     <div className="mt-3">
                       <F1SetupSnapshot setup={currentF1Setup} />
@@ -407,7 +457,7 @@ export function BatchOverviewSurface({
 
                 <div className="rounded-2xl border border-border bg-background p-4">
                   <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                    Base recipe
+                    {batchDetailCopy.overview.firstFermentation.baseRecipe}
                   </p>
                   <div className="mt-3">
                     <RecipeSnapshot batch={batch} />
@@ -417,10 +467,13 @@ export function BatchOverviewSurface({
                 {timing && (
                   <div className="rounded-2xl border border-border bg-background p-4">
                     <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      First Fermentation timing memory
+                      {batchDetailCopy.overview.firstFermentation.timingMemory}
                     </p>
                     <p className="mt-2 text-sm font-medium text-foreground">
-                      Tasting window: Day {timing.windowStartDay}-{timing.windowEndDay}
+                      {batchDetailCopy.overview.firstFermentation.tastingWindow({
+                        startDay: timing.windowStartDay,
+                        endDay: timing.windowEndDay,
+                      })}
                     </p>
                     <p className="mt-1 text-sm text-muted-foreground">{timing.explanation}</p>
                   </div>
@@ -441,7 +494,7 @@ export function BatchOverviewSurface({
           {isF1Stage && currentF1Setup && (
             <div className="rounded-2xl border border-border bg-background p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Saved First Fermentation setup
+                {batchDetailCopy.overview.firstFermentation.savedSetup}
               </p>
               <div className="mt-3">
                 <F1SetupSnapshot setup={currentF1Setup} />

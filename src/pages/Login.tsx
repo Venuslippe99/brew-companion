@@ -1,9 +1,10 @@
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { FlaskConical, Eye, EyeOff, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { authCopy } from "@/copy/auth";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -15,7 +16,6 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already logged in
   if (user) {
     navigate("/", { replace: true });
     return null;
@@ -24,11 +24,11 @@ export default function Login() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      toast.error("Please fill in all fields");
+      toast.error(authCopy.login.messages.missingFields);
       return;
     }
     if (isSignUp && password.length < 6) {
-      toast.error("Password must be at least 6 characters");
+      toast.error(authCopy.login.messages.shortPassword);
       return;
     }
 
@@ -39,7 +39,7 @@ export default function Login() {
         if (error) {
           toast.error(error);
         } else {
-          toast.success("Check your email to verify your account");
+          toast.success(authCopy.login.messages.verifyEmail);
         }
       } else {
         const { error } = await signIn(email, password);
@@ -62,45 +62,55 @@ export default function Login() {
             <FlaskConical className="h-7 w-7 text-primary" />
           </div>
           <h1 className="font-display text-2xl font-semibold text-foreground">
-            {isSignUp ? "Create Account" : "Welcome Back"}
+            {isSignUp
+              ? authCopy.login.headings.createAccount
+              : authCopy.login.headings.welcomeBack}
           </h1>
           <p className="text-sm text-muted-foreground">
-            {isSignUp ? "Start tracking your kombucha brews" : "Sign in to your Kombloom account"}
+            {isSignUp
+              ? authCopy.login.headings.createAccountDescription
+              : authCopy.login.headings.welcomeBackDescription}
           </p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
           {isSignUp && (
             <div>
-              <label className="block text-sm font-medium text-foreground mb-1.5">Display Name</label>
+              <label className="block text-sm font-medium text-foreground mb-1.5">
+                {authCopy.login.fields.displayName}
+              </label>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                placeholder="Your name"
+                placeholder={authCopy.login.fields.displayNamePlaceholder}
                 className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               />
             </div>
           )}
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Email</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              {authCopy.login.fields.email}
+            </label>
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@example.com"
+              placeholder={authCopy.login.fields.emailPlaceholder}
               required
               className="w-full h-11 px-3 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-foreground mb-1.5">Password</label>
+            <label className="block text-sm font-medium text-foreground mb-1.5">
+              {authCopy.login.fields.password}
+            </label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder={authCopy.login.fields.passwordPlaceholder}
                 required
                 minLength={6}
                 className="w-full h-11 px-3 pr-10 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -117,7 +127,7 @@ export default function Login() {
 
           <Button type="submit" size="lg" className="w-full" disabled={loading}>
             {loading && <Loader2 className="h-4 w-4 animate-spin" />}
-            {isSignUp ? "Create Account" : "Sign In"}
+            {isSignUp ? authCopy.login.actions.createAccount : authCopy.login.actions.signIn}
           </Button>
         </form>
 
@@ -126,7 +136,9 @@ export default function Login() {
             onClick={() => setIsSignUp(!isSignUp)}
             className="text-sm text-primary hover:underline"
           >
-            {isSignUp ? "Already have an account? Sign in" : "Don't have an account? Sign up"}
+            {isSignUp
+              ? authCopy.login.actions.toggleToSignIn
+              : authCopy.login.actions.toggleToSignUp}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import AppLayout from "@/components/layout/AppLayout";
 import { guides } from "@/content/guides";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
+import { guidesCopy } from "@/copy/guides";
 import { useNavigate } from "react-router-dom";
 import { Search, BookOpen, ChevronRight, Clock, ShieldAlert } from "lucide-react";
 
@@ -14,9 +15,10 @@ export default function Guides() {
 
   let filtered = guides;
   if (search) {
-    filtered = filtered.filter((g) =>
-      g.title.toLowerCase().includes(search.toLowerCase()) ||
-      g.summary.toLowerCase().includes(search.toLowerCase())
+    filtered = filtered.filter(
+      (g) =>
+        g.title.toLowerCase().includes(search.toLowerCase()) ||
+        g.summary.toLowerCase().includes(search.toLowerCase())
     );
   }
   if (selectedCat) {
@@ -27,10 +29,10 @@ export default function Guides() {
     <AppLayout>
       <div className="max-w-2xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-5">
         <ScrollReveal>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-foreground">Guides</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Learn everything about kombucha brewing
-          </p>
+          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-foreground">
+            {guidesCopy.page.title}
+          </h1>
+          <p className="mt-1 text-sm text-muted-foreground">{guidesCopy.page.description}</p>
         </ScrollReveal>
 
         <ScrollReveal delay={0.03}>
@@ -39,11 +41,10 @@ export default function Guides() {
               <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
               <div className="flex-1">
                 <h2 className="text-base font-semibold text-foreground">
-                  Need help with what you are seeing right now?
+                  {guidesCopy.assistant.title}
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Open the troubleshooting assistant for calmer next-step guidance when a batch
-                  looks strange, seems too sweet, or feels too pressurized.
+                  {guidesCopy.assistant.description}
                 </p>
               </div>
               <button
@@ -51,19 +52,18 @@ export default function Guides() {
                 onClick={() => navigate("/assistant")}
                 className="rounded-lg bg-primary px-3 py-2 text-xs font-medium text-primary-foreground transition-opacity hover:opacity-90"
               >
-                Open assistant
+                {guidesCopy.assistant.action}
               </button>
             </div>
           </section>
         </ScrollReveal>
 
-        {/* Search */}
         <ScrollReveal delay={0.05}>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
             <input
               type="text"
-              placeholder="Search guides..."
+              placeholder={guidesCopy.search.placeholder}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full h-10 pl-9 pr-3 bg-card border border-border rounded-lg text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
@@ -71,23 +71,26 @@ export default function Guides() {
           </div>
         </ScrollReveal>
 
-        {/* Categories */}
         <ScrollReveal delay={0.08}>
           <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
             <button
               onClick={() => setSelectedCat(null)}
               className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                !selectedCat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                !selectedCat
+                  ? "bg-primary text-primary-foreground"
+                  : "bg-muted text-muted-foreground hover:text-foreground"
               }`}
             >
-              All
+              {guidesCopy.categories.all}
             </button>
             {categories.map((cat) => (
               <button
                 key={cat}
                 onClick={() => setSelectedCat(cat)}
                 className={`px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedCat === cat ? "bg-primary text-primary-foreground" : "bg-muted text-muted-foreground hover:text-foreground"
+                  selectedCat === cat
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-muted text-muted-foreground hover:text-foreground"
                 }`}
               >
                 {cat}
@@ -96,7 +99,6 @@ export default function Guides() {
           </div>
         </ScrollReveal>
 
-        {/* Guide Cards */}
         <div className="space-y-3">
           {filtered.map((guide, i) => (
             <ScrollReveal key={guide.id} delay={i * 0.04}>
@@ -112,12 +114,14 @@ export default function Guides() {
                     <h3 className="text-sm font-semibold text-foreground group-hover:text-primary transition-colors">
                       {guide.title}
                     </h3>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{guide.summary}</p>
-                    <div className="flex items-center gap-2 mt-2 text-xs text-muted-foreground">
+                    <p className="mt-0.5 line-clamp-2 text-xs text-muted-foreground">
+                      {guide.summary}
+                    </p>
+                    <div className="mt-2 flex items-center gap-2 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1">
                         <Clock className="h-3 w-3" /> {guide.readTime}
                       </span>
-                      <span>·</span>
+                      <span>{guidesCopy.card.separator}</span>
                       <span>{guide.category}</span>
                     </div>
                   </div>

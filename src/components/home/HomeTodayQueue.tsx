@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
+import { homeCopy } from "@/copy/home";
 import type { HomeTodayQueueItem } from "@/lib/home-command-center";
 import { cn } from "@/lib/utils";
 
@@ -27,13 +28,13 @@ export function HomeTodayQueue({
     <section id={id} className="home-panel-surface px-5 py-5">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          Today
+          {homeCopy.queue.eyebrow}
         </p>
         <h2 className="mt-2 text-xl font-semibold text-foreground">
-          Keep an eye on these too
+          {homeCopy.queue.title}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A few more brews to keep in sight after the main focus.
+          {homeCopy.queue.description}
         </p>
       </div>
 

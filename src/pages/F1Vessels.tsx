@@ -15,6 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { useAuth } from "@/contexts/AuthContext";
+import { f1LibraryCopy } from "@/copy/f1-library";
 import { supabase } from "@/integrations/supabase/client";
 import {
   deleteFermentationVessel,
@@ -57,7 +58,9 @@ export default function F1Vessels() {
       setVessels(loaded);
     } catch (error) {
       console.error("Load fermentation vessels error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not load vessels.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.vessels.messages.loadErrorFallback
+      );
     } finally {
       setLoading(false);
     }
@@ -89,7 +92,7 @@ export default function F1Vessels() {
 
   const handleSave = async () => {
     if (!user?.id) {
-      toast.error("You need to be signed in to save vessels.");
+      toast.error(f1LibraryCopy.vessels.messages.signInToSave);
       return;
     }
 
@@ -102,12 +105,18 @@ export default function F1Vessels() {
         vesselId: editingVesselId || undefined,
       });
 
-      toast.success(editingVesselId ? "Vessel updated." : "Vessel saved.");
+      toast.success(
+        editingVesselId
+          ? f1LibraryCopy.vessels.messages.updated
+          : f1LibraryCopy.vessels.messages.saved
+      );
       setEditorOpen(false);
       await loadVessels();
     } catch (error) {
       console.error("Save vessel error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not save vessel.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.vessels.messages.saveErrorFallback
+      );
     } finally {
       setSavingVessel(false);
     }
@@ -127,22 +136,28 @@ export default function F1Vessels() {
       ]);
 
     if (recipeError || setupError) {
-      toast.error(recipeError?.message || setupError?.message || "Could not check vessel usage.");
+      toast.error(
+        recipeError?.message ||
+          setupError?.message ||
+          f1LibraryCopy.vessels.messages.usageCheckError
+      );
       return;
     }
 
     if ((recipeCount || 0) > 0 || (setupCount || 0) > 0) {
-      toast.error("Archive this vessel instead. It is already linked to recipes or saved batches.");
+      toast.error(f1LibraryCopy.vessels.messages.archiveInstead);
       return;
     }
 
     try {
       await deleteFermentationVessel(vessel.id);
-      toast.success("Vessel deleted.");
+      toast.success(f1LibraryCopy.vessels.messages.deleted);
       await loadVessels();
     } catch (error) {
       console.error("Delete vessel error:", error);
-      toast.error(error instanceof Error ? error.message : "Could not delete vessel.");
+      toast.error(
+        error instanceof Error ? error.message : f1LibraryCopy.vessels.messages.deleteErrorFallback
+      );
     }
   };
 
@@ -153,18 +168,18 @@ export default function F1Vessels() {
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <h1 className="font-display text-2xl font-semibold text-foreground lg:text-3xl">
-                F1 Vessels
+                {f1LibraryCopy.vessels.page.title}
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-                Save the fermentation vessels you actually use for F1 so recipes and new batches can start from a real container, not just a generic label.
+                {f1LibraryCopy.vessels.page.description}
               </p>
             </div>
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => navigate("/new-batch")}>
-                Back to New Batch
+                {f1LibraryCopy.vessels.page.backToNewBatch}
               </Button>
               <Button onClick={openCreate}>
-                <Plus className="h-4 w-4" /> New vessel
+                <Plus className="h-4 w-4" /> {f1LibraryCopy.vessels.page.newVessel}
               </Button>
             </div>
           </div>
@@ -177,7 +192,9 @@ export default function F1Vessels() {
               variant={showArchived ? "default" : "outline"}
               onClick={() => setShowArchived((current) => !current)}
             >
-              {showArchived ? "Hide archived" : "Show archived"}
+              {showArchived
+                ? f1LibraryCopy.vessels.page.hideArchived
+                : f1LibraryCopy.vessels.page.showArchived}
             </Button>
           </div>
         </ScrollReveal>
@@ -185,12 +202,12 @@ export default function F1Vessels() {
         <div className="space-y-4">
           {loading ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
-              <p className="text-sm text-muted-foreground">Loading vessels...</p>
+              <p className="text-sm text-muted-foreground">{f1LibraryCopy.vessels.page.loading}</p>
             </div>
           ) : visibleVessels.length === 0 ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <p className="text-sm text-muted-foreground">
-                No vessels to show yet. Add one here or keep using a manual vessel in New Batch.
+                {f1LibraryCopy.vessels.page.empty}
               </p>
             </div>
           ) : (
@@ -201,7 +218,7 @@ export default function F1Vessels() {
                   onEdit={openEdit}
                   onDuplicate={async (selected) => {
                     if (!user?.id) {
-                      toast.error("You need to be signed in to duplicate vessels.");
+                      toast.error(f1LibraryCopy.vessels.messages.signInToDuplicate);
                       return;
                     }
 
@@ -210,12 +227,14 @@ export default function F1Vessels() {
                         userId: user.id,
                         vessel: selected,
                       });
-                      toast.success("Vessel duplicated.");
+                      toast.success(f1LibraryCopy.vessels.messages.duplicated);
                       await loadVessels();
                     } catch (error) {
                       console.error("Duplicate vessel error:", error);
                       toast.error(
-                        error instanceof Error ? error.message : "Could not duplicate vessel."
+                        error instanceof Error
+                          ? error.message
+                          : f1LibraryCopy.vessels.messages.duplicateErrorFallback
                       );
                     }
                   }}
@@ -225,14 +244,18 @@ export default function F1Vessels() {
                         vesselId: selected.id,
                         archived: !selected.archivedAt,
                       });
-                      toast.success(selected.archivedAt ? "Vessel restored." : "Vessel archived.");
+                      toast.success(
+                        selected.archivedAt
+                          ? f1LibraryCopy.vessels.messages.restored
+                          : f1LibraryCopy.vessels.messages.archived
+                      );
                       await loadVessels();
                     } catch (error) {
                       console.error("Archive vessel error:", error);
                       toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Could not update the vessel archive state."
+                          : f1LibraryCopy.vessels.messages.archiveErrorFallback
                       );
                     }
                   }}
@@ -243,7 +266,9 @@ export default function F1Vessels() {
                         isFavorite: !selected.isFavorite,
                       });
                       toast.success(
-                        selected.isFavorite ? "Vessel removed from favorites." : "Vessel favorited."
+                        selected.isFavorite
+                          ? f1LibraryCopy.vessels.messages.removedFavorite
+                          : f1LibraryCopy.vessels.messages.favorited
                       );
                       await loadVessels();
                     } catch (error) {
@@ -251,7 +276,7 @@ export default function F1Vessels() {
                       toast.error(
                         error instanceof Error
                           ? error.message
-                          : "Could not update the favorite state."
+                          : f1LibraryCopy.vessels.messages.favoriteErrorFallback
                       );
                     }
                   }}
@@ -266,16 +291,16 @@ export default function F1Vessels() {
       <Dialog open={editorOpen} onOpenChange={setEditorOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>{editingVesselId ? "Edit F1 vessel" : "Create F1 vessel"}</DialogTitle>
+            <DialogTitle>{f1LibraryCopy.vessels.dialogTitle(editingVesselId)}</DialogTitle>
             <DialogDescription>
-              Save reusable fermentation vessel details here. New Batch can still fall back to manual vessel details when needed.
+              {f1LibraryCopy.vessels.dialog.description}
             </DialogDescription>
           </DialogHeader>
 
           <F1VesselEditor
             draft={editorDraft}
             saving={savingVessel}
-            submitLabel={editingVesselId ? "Save vessel changes" : "Save vessel"}
+            submitLabel={f1LibraryCopy.vessels.submitLabel(editingVesselId)}
             onChange={setEditorDraft}
             onSubmit={handleSave}
           />

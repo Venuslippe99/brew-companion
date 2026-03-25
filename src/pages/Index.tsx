@@ -12,6 +12,7 @@ import { HomeSupportPanel } from "@/components/home/HomeSupportPanel";
 import { HomeTodayQueue } from "@/components/home/HomeTodayQueue";
 import { useAuth } from "@/contexts/AuthContext";
 import { useUser } from "@/contexts/UserContext";
+import { homeCopy } from "@/copy/home";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { type KombuchaBatch } from "@/lib/batches";
@@ -252,7 +253,7 @@ export default function Dashboard() {
     const batch = batches.find((candidate) => candidate.id === batchId);
 
     if (!batch || !user?.id) {
-      toast.error("You need to be signed in and choose a batch before logging.");
+      toast.error(homeCopy.page.missingQuickLogContext);
       return;
     }
 
@@ -280,21 +281,13 @@ export default function Dashboard() {
       });
 
       toast.success(
-        actionKey === "taste_test"
-          ? "Taste test saved."
-          : actionKey === "temp_check"
-            ? "Temperature check saved."
-            : actionKey === "carbonation_check"
-              ? "Carbonation check saved."
-              : "Brewing note saved."
+        homeCopy.page.quickLogSuccess(actionKey)
       );
 
       await loadHome();
     } catch (error) {
       console.error("Save Home quick log error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not save this quick log."
-      );
+      toast.error(error instanceof Error ? error.message : homeCopy.page.quickLogError);
     } finally {
       setQuickLogSaving(false);
     }
@@ -309,7 +302,9 @@ export default function Dashboard() {
               <ScrollReveal>
                 <HomeHeader
                   activeBatchCount={commandCenter.activeBatchCount}
-                  stateSentence={loading ? "Loading today's brews..." : commandCenter.stateSentence}
+                  stateSentence={
+                    loading ? homeCopy.page.loadingStateSentence : commandCenter.stateSentence
+                  }
                   displayName={commandCenter.greetingName}
                   onOpenSettings={() => navigate("/settings")}
                 />
@@ -325,7 +320,9 @@ export default function Dashboard() {
 
               {loading ? (
                 <section className="home-panel-surface px-5 py-8 text-center">
-                  <p className="text-sm text-muted-foreground">Loading your brews for today...</p>
+                  <p className="text-sm text-muted-foreground">
+                    {homeCopy.page.loadingPanel}
+                  </p>
                 </section>
               ) : commandCenter.activeBatchCount > 0 ? (
                 <>

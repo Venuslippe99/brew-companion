@@ -17,6 +17,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { homeCopy } from "@/copy/home";
 import type { KombuchaBatch } from "@/lib/batches";
 import type { HomeQuickLogAction } from "@/lib/home-command-center";
 import {
@@ -32,43 +33,7 @@ const iconMap = {
 };
 
 function getActionCopy(action: HomeQuickLogAction["key"]) {
-  switch (action) {
-    case "taste_test":
-      return {
-        title: "Log a taste test",
-        description:
-          "Save a quick taste note without changing the batch stage from Home.",
-        noteLabel: "What stood out?",
-        notePlaceholder: "Short, practical tasting note",
-        saveLabel: "Save taste test",
-      };
-    case "temp_check":
-      return {
-        title: "Log a temperature check",
-        description:
-          "Save the room temperature for this batch and add a note only if it helps.",
-        noteLabel: "Optional note",
-        notePlaceholder: "Anything unusual about the room or setup?",
-        saveLabel: "Save temperature check",
-      };
-    case "carbonation_check":
-      return {
-        title: "Log a carbonation check",
-        description:
-          "Save a quick note on fizz or bottle pressure without moving the batch to a new stage.",
-        noteLabel: "What did you notice?",
-        notePlaceholder: "Short carbonation or pressure note",
-        saveLabel: "Save carbonation check",
-      };
-    case "note_only":
-      return {
-        title: "Add a brewing note",
-        description: "Save a short observation while the batch is already top of mind.",
-        noteLabel: "Your note",
-        notePlaceholder: "What do you want to remember?",
-        saveLabel: "Save note",
-      };
-  }
+  return homeCopy.quickLog.actionCopy(action);
 }
 
 export function HomeQuickLogDock({
@@ -145,20 +110,19 @@ export function HomeQuickLogDock({
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-            Quick actions
+            {homeCopy.quickLog.eyebrow}
           </p>
           <h2 className="mt-2 text-xl font-semibold text-foreground">
-            Log a quick check
+            {homeCopy.quickLog.title}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Save a taste note, temperature check, carbonation check, or short observation without
-            changing the batch stage.
+            {homeCopy.quickLog.description}
           </p>
         </div>
         <div className="hidden rounded-full bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground lg:block">
           <div className="flex items-center gap-2">
             <CameraOff className="h-3.5 w-3.5 text-copper" />
-            Photo logging is still coming later
+            {homeCopy.quickLog.photoComing}
           </div>
         </div>
       </div>
@@ -202,7 +166,9 @@ export function HomeQuickLogDock({
 
               <div className="space-y-5 overflow-y-auto px-4 pb-3">
                 <label className="block space-y-1">
-                  <span className="text-sm text-muted-foreground">Which batch?</span>
+                  <span className="text-sm text-muted-foreground">
+                    {homeCopy.quickLog.whichBatch}
+                  </span>
                   <select
                     value={selectedBatchId}
                     onChange={(event) => setSelectedBatchId(event.target.value)}
@@ -218,13 +184,15 @@ export function HomeQuickLogDock({
 
                 {activeAction.key === "taste_test" ? (
                   <label className="block space-y-1">
-                    <span className="text-sm text-muted-foreground">How did it taste?</span>
+                    <span className="text-sm text-muted-foreground">
+                      {homeCopy.quickLog.howDidItTaste}
+                    </span>
                     <select
                       value={tasteImpression}
                       onChange={(event) => setTasteImpression(event.target.value as TasteTestImpression)}
                       className="h-10 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground"
                     >
-                      <option value="">Choose one</option>
+                      <option value="">{homeCopy.quickLog.chooseOne}</option>
                       {TASTE_TEST_IMPRESSIONS.map((option) => (
                         <option key={option.value} value={option.value}>
                           {option.label}
@@ -236,7 +204,9 @@ export function HomeQuickLogDock({
 
                 {activeAction.key === "temp_check" ? (
                   <label className="block space-y-1">
-                    <span className="text-sm text-muted-foreground">Room temperature</span>
+                    <span className="text-sm text-muted-foreground">
+                      {homeCopy.quickLog.roomTemperature}
+                    </span>
                     <div className="flex items-center gap-2">
                       <Input
                         type="number"
@@ -248,7 +218,9 @@ export function HomeQuickLogDock({
                         onChange={(event) => setValueNumber(event.target.value)}
                         placeholder="22"
                       />
-                      <span className="text-sm text-muted-foreground">deg C</span>
+                      <span className="text-sm text-muted-foreground">
+                        {homeCopy.quickLog.temperatureUnit}
+                      </span>
                     </div>
                   </label>
                 ) : null}
@@ -265,7 +237,7 @@ export function HomeQuickLogDock({
 
               <DrawerFooter>
                 <Button variant="outline" disabled={saving} onClick={() => setOpenActionKey(null)}>
-                  Close
+                  {homeCopy.quickLog.close}
                 </Button>
                 <Button
                   disabled={!canSubmit || saving}
@@ -282,7 +254,7 @@ export function HomeQuickLogDock({
                     }).then(() => setOpenActionKey(null))
                   }
                 >
-                  {saving ? "Saving..." : activeCopy.saveLabel}
+                  {saving ? homeCopy.quickLog.saving : activeCopy.saveLabel}
                 </Button>
               </DrawerFooter>
             </>

@@ -1,17 +1,12 @@
 import { BrewAgainLauncher } from "@/components/brew-again/BrewAgainLauncher";
+import { batchDetailCopy } from "@/copy/batch-detail";
 import type { BrewAgainPlan, BrewAgainMode } from "@/lib/brew-again-types";
 import { getPhaseOutcomeLabel } from "@/lib/phase-outcome-options";
 import type { KombuchaBatch } from "@/lib/batches";
 import type { LoadedF2Setup } from "@/lib/f2-current-setup";
 import type { PhaseOutcomeRow } from "@/lib/phase-outcomes";
 
-function SummaryBlock({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function SummaryBlock({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl bg-muted/50 p-4">
       <p className="text-xs uppercase tracking-wider text-muted-foreground">{label}</p>
@@ -46,13 +41,13 @@ export function BatchCompletedSummary({
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-wider text-primary">
-            Results summary
+            {batchDetailCopy.completed.eyebrow}
           </p>
           <h2 className="mt-2 font-display text-xl font-semibold text-foreground">
-            This batch has reached the reflection chapter
+            {batchDetailCopy.completed.title}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            Look back on how the base brew felt, how the finished drink turned out, and what you would carry into the next run.
+            {batchDetailCopy.completed.description}
           </p>
         </div>
 
@@ -69,19 +64,19 @@ export function BatchCompletedSummary({
 
       <div className="mt-5 grid gap-3 md:grid-cols-2">
         <SummaryBlock
-          label="First Fermentation"
+          label={batchDetailCopy.completed.firstFermentation}
           value={
             f1Outcome
-              ? `${getPhaseOutcomeLabel(f1Outcome.f1_taste_state)} • ${getPhaseOutcomeLabel(f1Outcome.f1_readiness)}`
-              : "No F1 reflection saved yet"
+              ? `${getPhaseOutcomeLabel(f1Outcome.f1_taste_state)} \u2022 ${getPhaseOutcomeLabel(f1Outcome.f1_readiness)}`
+              : batchDetailCopy.completed.noF1Reflection
           }
         />
         <SummaryBlock
-          label="Finished batch"
+          label={batchDetailCopy.completed.finishedBatch}
           value={
             f2Outcome
-              ? `${getPhaseOutcomeLabel(f2Outcome.f2_overall_result)} • ${getPhaseOutcomeLabel(f2Outcome.f2_brew_again)}`
-              : "No finished-batch reflection saved yet"
+              ? `${getPhaseOutcomeLabel(f2Outcome.f2_overall_result)} \u2022 ${getPhaseOutcomeLabel(f2Outcome.f2_brew_again)}`
+              : batchDetailCopy.completed.noFinishedReflection
           }
         />
       </div>
@@ -89,7 +84,7 @@ export function BatchCompletedSummary({
       {nextTimeIdeas.length > 0 && (
         <div className="mt-5 rounded-2xl border border-border p-4">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-            What to change next time
+            {batchDetailCopy.completed.nextTime}
           </p>
           <ul className="mt-3 space-y-2 text-sm text-foreground">
             {nextTimeIdeas.map((idea) => (

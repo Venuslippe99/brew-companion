@@ -1,15 +1,15 @@
-export const NEW_BATCH_WIZARD_STEPS = [
-  { id: "volume", label: "Volume" },
-  { id: "tea", label: "Tea" },
-  { id: "sugar", label: "Sugar" },
-  { id: "vessel", label: "Vessel" },
-  { id: "sweetness", label: "Sweetness" },
-  { id: "temperature", label: "Temperature" },
-  { id: "recipe", label: "Recipe" },
-  { id: "finalize", label: "Finish" },
+export const NEW_BATCH_WIZARD_STEP_IDS = [
+  "volume",
+  "tea",
+  "sugar",
+  "vessel",
+  "sweetness",
+  "temperature",
+  "recipe",
+  "finalize",
 ] as const;
 
-export type NewBatchWizardStepId = (typeof NEW_BATCH_WIZARD_STEPS)[number]["id"];
+export type NewBatchWizardStepId = (typeof NEW_BATCH_WIZARD_STEP_IDS)[number];
 
 export type NewBatchWizardMode = "scratch" | "recipe" | "brew_again";
 

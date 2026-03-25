@@ -1,6 +1,7 @@
 import { ArrowUpRight } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
+import { homeCopy } from "@/copy/home";
 import type { HomeRosterItem } from "@/lib/home-command-center";
 import { cn } from "@/lib/utils";
 
@@ -24,13 +25,13 @@ export function HomeBatchRoster({
       <div className="flex items-end justify-between gap-3">
         <div>
           <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-            Your brews
+            {homeCopy.roster.eyebrow}
           </p>
           <h2 className="mt-2 text-xl font-semibold text-foreground">
-            Keep your active batches close
+            {homeCopy.roster.title}
           </h2>
           <p className="mt-2 text-sm text-muted-foreground">
-            Browse your active brews here, then open the full list when you want deeper detail.
+            {homeCopy.roster.description}
           </p>
         </div>
         <button
@@ -38,7 +39,7 @@ export function HomeBatchRoster({
           onClick={() => navigate("/batches")}
           className="text-sm font-medium text-copper transition-colors hover:text-foreground"
         >
-          Open My Batches
+          {homeCopy.roster.openMyBatches}
         </button>
       </div>
 

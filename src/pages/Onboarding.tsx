@@ -5,22 +5,14 @@ import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlaskConical, ChevronRight, ChevronLeft } from "lucide-react";
 import kombuchaHero from "@/assets/kombucha-hero.jpg";
+import { onboardingCopy } from "@/copy/onboarding";
 
-const steps = ["welcome", "experience", "goals", "start"];
+const steps = onboardingCopy.steps;
 
-const experienceOptions: { value: ExperienceLevel; label: string; emoji: string; desc: string }[] = [
-  { value: "beginner", label: "Beginner", emoji: "🌱", desc: "I'm new to kombucha brewing" },
-  { value: "intermediate", label: "Intermediate", emoji: "🍵", desc: "I've brewed a few batches" },
-  { value: "advanced", label: "Advanced", emoji: "⚗️", desc: "I brew regularly and want precision" },
-];
+const experienceOptions: { value: ExperienceLevel; label: string; emoji: string; desc: string }[] =
+  onboardingCopy.experienceOptions;
 
-const goalOptions: { value: BrewingGoal; label: string }[] = [
-  { value: "sweeter", label: "Sweeter kombucha" },
-  { value: "balanced", label: "Balanced flavour" },
-  { value: "tart", label: "More tart & vinegary" },
-  { value: "carbonation", label: "Stronger carbonation" },
-  { value: "guided", label: "Safer, more guided process" },
-];
+const goalOptions: { value: BrewingGoal; label: string }[] = onboardingCopy.goalOptions;
 
 export default function Onboarding() {
   const navigate = useNavigate();
@@ -52,18 +44,24 @@ export default function Onboarding() {
               transition={{ duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
               className="text-center space-y-6"
             >
-              <img src={kombuchaHero} alt="Kombucha brewing" className="w-full max-w-[200px] mx-auto rounded-2xl shadow-lg shadow-primary/10 mb-2" />
+              <img
+                src={kombuchaHero}
+                alt={onboardingCopy.welcome.heroAlt}
+                className="w-full max-w-[200px] mx-auto rounded-2xl shadow-lg shadow-primary/10 mb-2"
+              />
               <div className="h-14 w-14 rounded-2xl bg-honey-light flex items-center justify-center mx-auto">
                 <FlaskConical className="h-7 w-7 text-primary" />
               </div>
               <div>
-                <h1 className="font-display text-3xl font-semibold text-foreground">Welcome to Kombloom</h1>
-                <p className="text-muted-foreground mt-2 leading-relaxed">
-                  Your precision kombucha companion. Track batches, get stage guidance, and brew with confidence.
+                <h1 className="font-display text-3xl font-semibold text-foreground">
+                  {onboardingCopy.welcome.title}
+                </h1>
+                <p className="mt-2 leading-relaxed text-muted-foreground">
+                  {onboardingCopy.welcome.description}
                 </p>
               </div>
               <Button size="xl" className="w-full" onClick={() => setStep(1)}>
-                Get Started <ChevronRight className="h-4 w-4" />
+                {onboardingCopy.welcome.action} <ChevronRight className="h-4 w-4" />
               </Button>
             </motion.div>
           )}
@@ -78,8 +76,12 @@ export default function Onboarding() {
               className="space-y-6"
             >
               <div>
-                <h2 className="font-display text-2xl font-semibold text-foreground">Your experience level</h2>
-                <p className="text-sm text-muted-foreground mt-1">This adjusts how much guidance you'll see.</p>
+                <h2 className="font-display text-2xl font-semibold text-foreground">
+                  {onboardingCopy.experience.title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {onboardingCopy.experience.description}
+                </p>
               </div>
               <div className="space-y-3">
                 {experienceOptions.map((opt) => (
@@ -104,10 +106,10 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setStep(0)} className="flex-1">
-                  <ChevronLeft className="h-4 w-4" /> Back
+                  <ChevronLeft className="h-4 w-4" /> {onboardingCopy.actions.back}
                 </Button>
                 <Button onClick={() => setStep(2)} className="flex-1">
-                  Continue <ChevronRight className="h-4 w-4" />
+                  {onboardingCopy.actions.continue} <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </motion.div>
@@ -123,8 +125,12 @@ export default function Onboarding() {
               className="space-y-6"
             >
               <div>
-                <h2 className="font-display text-2xl font-semibold text-foreground">Brewing preference</h2>
-                <p className="text-sm text-muted-foreground mt-1">What matters most to you?</p>
+                <h2 className="font-display text-2xl font-semibold text-foreground">
+                  {onboardingCopy.goals.title}
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {onboardingCopy.goals.description}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 {goalOptions.map((g) => (
@@ -143,10 +149,10 @@ export default function Onboarding() {
               </div>
               <div className="flex gap-3">
                 <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
-                  <ChevronLeft className="h-4 w-4" /> Back
+                  <ChevronLeft className="h-4 w-4" /> {onboardingCopy.actions.back}
                 </Button>
                 <Button onClick={() => setStep(3)} className="flex-1">
-                  Continue <ChevronRight className="h-4 w-4" />
+                  {onboardingCopy.actions.continue} <ChevronRight className="h-4 w-4" />
                 </Button>
               </div>
             </motion.div>
@@ -162,30 +168,39 @@ export default function Onboarding() {
               className="text-center space-y-6"
             >
               <div className="h-16 w-16 rounded-2xl bg-sage-light flex items-center justify-center mx-auto">
-                <span className="text-3xl">🫖</span>
+                <span className="text-3xl">{onboardingCopy.finish.emoji}</span>
               </div>
               <div>
-                <h2 className="font-display text-2xl font-semibold text-foreground">You're all set</h2>
-                <p className="text-muted-foreground mt-2">
-                  Start your first batch or explore our brewing guides.
-                </p>
+                <h2 className="font-display text-2xl font-semibold text-foreground">
+                  {onboardingCopy.finish.title}
+                </h2>
+                <p className="mt-2 text-muted-foreground">{onboardingCopy.finish.description}</p>
               </div>
               <div className="space-y-3">
                 <Button size="xl" className="w-full" onClick={() => finish("/new-batch")}>
-                  Start First Batch
+                  {onboardingCopy.finish.startFirstBatch}
                 </Button>
-                <Button variant="outline" size="lg" className="w-full" onClick={() => finish("/guides")}>
-                  Browse Guides First
+                <Button
+                  variant="outline"
+                  size="lg"
+                  className="w-full"
+                  onClick={() => finish("/guides")}
+                >
+                  {onboardingCopy.finish.browseGuidesFirst}
                 </Button>
-                <Button variant="ghost" size="sm" className="w-full" onClick={() => finish("/")}>
-                  Go to Dashboard
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => finish("/")}
+                >
+                  {onboardingCopy.finish.goToDashboard}
                 </Button>
               </div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Progress dots */}
         <div className="flex justify-center gap-2 mt-8">
           {steps.map((_, i) => (
             <div

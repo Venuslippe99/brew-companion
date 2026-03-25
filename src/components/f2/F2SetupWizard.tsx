@@ -6,6 +6,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
+import { f2SetupCopy } from "@/copy/f2-setup";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { startF2FromWizard } from "@/lib/f2-persistence";
@@ -53,114 +54,6 @@ type F2SetupWizardProps = {
 
 type WizardStepId = 1 | 2 | 3 | 4 | 5;
 
-const WIZARD_STEPS: Array<{
-  id: WizardStepId;
-  label: string;
-  title: string;
-  description: string;
-  nextLabel?: string;
-}> = [
-  {
-    id: 1,
-    label: "Bottling volume",
-    title: "How much kombucha is ready to bottle?",
-    description:
-      "Start with the kombucha you actually have today, then choose how much to keep aside as starter for the next batch.",
-    nextLabel: "Continue to carbonation",
-  },
-  {
-    id: 2,
-    label: "Carbonation",
-    title: "How fizzy do you want it to get?",
-    description:
-      "Set the carbonation target and the room temperature the bottles will sit in.",
-    nextLabel: "Continue to bottle groups",
-  },
-  {
-    id: 3,
-    label: "Bottle groups",
-    title: "Build your bottle groups",
-    description:
-      "Add the groups you want to bottle, then use the live fill math to see how much kombucha each one uses.",
-    nextLabel: "Continue to flavour plans",
-  },
-  {
-    id: 4,
-    label: "Flavour plans",
-    title: "Assign a flavour plan to each bottle group",
-    description:
-      "Different groups can use different recipes from the same F1 batch, including no flavour at all.",
-    nextLabel: "Review bottling plan",
-  },
-  {
-    id: 5,
-    label: "Review",
-    title: "This is your bottling plan.",
-    description:
-      "Check the group instructions, total ingredients, and pressure watchouts before you start F2.",
-  },
-];
-
-const CARBONATION_OPTIONS: Array<{
-  value: F2CarbonationLevel;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "light",
-    label: "Light",
-    description: "A calmer, lower-pressure finish with a gentler fizz target.",
-  },
-  {
-    value: "balanced",
-    label: "Balanced",
-    description: "A middle-ground target for everyday kombucha bottling.",
-  },
-  {
-    value: "strong",
-    label: "Strong",
-    description: "A more active target that needs closer watch on pressure.",
-  },
-];
-
-const BOTTLE_TYPE_OPTIONS: Array<{
-  value: F2BottleType;
-  label: string;
-}> = [
-  { value: "swing_top", label: "Swing top" },
-  { value: "crown_cap", label: "Crown cap" },
-  { value: "screw_cap", label: "Screw cap" },
-  { value: "plastic_test_bottle", label: "Plastic test bottle" },
-  { value: "other", label: "Other" },
-];
-
-const RECIPE_MODE_OPTIONS: Array<{
-  value: F2GroupRecipeMode;
-  label: string;
-  description: string;
-}> = [
-  {
-    value: "none",
-    label: "No flavour",
-    description: "Bottle this group plain, with no extra ingredients.",
-  },
-  {
-    value: "saved",
-    label: "Saved recipe",
-    description: "Use one of your saved flavour recipes for this group.",
-  },
-  {
-    value: "preset",
-    label: "Preset recipe",
-    description: "Use one of the built-in flavour recipes for this group.",
-  },
-  {
-    value: "custom",
-    label: "Custom plan",
-    description: "Build a fresh flavour plan just for this group.",
-  },
-];
-
 function formatLitres(value: number | null | undefined) {
   if (value == null) return "-";
   return `${(value / 1000).toFixed(2)}L`;
@@ -171,7 +64,7 @@ function formatBottleType(value: string) {
 }
 
 function getStepDefinition(step: WizardStepId) {
-  return WIZARD_STEPS.find((item) => item.id === step) ?? WIZARD_STEPS[0];
+  return f2SetupCopy.steps.find((item) => item.id === step) ?? f2SetupCopy.steps[0];
 }
 
 function makeRecipeItem(
@@ -244,20 +137,20 @@ function mapRecipeItemRowToDraft(row: {
 
 function StepHeader({ step }: { step: WizardStepId }) {
   const definition = getStepDefinition(step);
-  const progressValue = (step / WIZARD_STEPS.length) * 100;
+  const progressValue = (step / f2SetupCopy.steps.length) * 100;
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-            Step {step} of {WIZARD_STEPS.length}
+            {f2SetupCopy.progress.stepCounter(step, f2SetupCopy.steps.length)}
           </p>
           <p className="mt-1 text-sm font-medium text-foreground">
             {definition.label}
           </p>
         </div>
-        <p className="text-xs text-muted-foreground">Guided bottling flow</p>
+        <p className="text-xs text-muted-foreground">{f2SetupCopy.progress.flowLabel}</p>
       </div>
 
       <Progress value={progressValue} className="h-2" />
@@ -277,17 +170,23 @@ function GroupSummaryLabel({ group }: { group: LoadedBottleGroup }) {
     ((group.recipeSnapshotJson as { items?: unknown[] } | null)?.items || []).length;
 
   if (group.recipeMode === "none") {
-    return <span className="text-sm text-muted-foreground">No added flavourings</span>;
+    return (
+      <span className="text-sm text-muted-foreground">
+        {f2SetupCopy.common.noAddedFlavorings}
+      </span>
+    );
   }
 
   return (
     <div className="space-y-1">
       <p className="text-sm font-medium text-foreground">
-        {group.recipeNameSnapshot || "Group flavour plan"}
+        {group.recipeNameSnapshot || f2SetupCopy.common.groupFlavorPlan}
       </p>
       <p className="text-xs capitalize text-muted-foreground">
-        {group.recipeMode} recipe
-        {itemCount > 0 ? ` - ${itemCount} ingredient${itemCount === 1 ? "" : "s"}` : ""}
+        {f2SetupCopy.saved.groups.recipeModeSummary({
+          recipeMode: group.recipeMode,
+          count: itemCount,
+        })}
       </p>
     </div>
   );
@@ -319,30 +218,31 @@ export function SavedF2SetupView({
       <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
         <div className="rounded-3xl border border-border bg-card p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-primary">
-            Current F2 status
+            {f2SetupCopy.saved.statusEyebrow}
           </p>
           <h2 className="mt-3 text-2xl font-semibold text-foreground">
-            Bottling setup saved
+            {f2SetupCopy.saved.title}
           </h2>
           <p className="mt-2 text-sm leading-6 text-muted-foreground">
-            This batch already has a saved F2 setup, so this chapter now focuses on
-            the current bottling status and what to do next.
+            {f2SetupCopy.saved.description}
           </p>
 
           <div className="mt-5 rounded-2xl bg-muted/60 p-4">
             <p className="text-xs uppercase tracking-wider text-muted-foreground">
-              Current next action
+              {f2SetupCopy.saved.nextAction.eyebrow}
             </p>
             <p className="mt-2 text-sm font-semibold text-foreground">
-              {currentNextAction || "No next action recorded."}
+              {currentNextAction || f2SetupCopy.common.noNextAction}
             </p>
             <p className="mt-1 text-xs capitalize text-muted-foreground">
-              Current stage: {currentStage.replace(/_/g, " ")}
+              {f2SetupCopy.saved.nextAction.stage(currentStage)}
             </p>
           </div>
 
           <div className="mt-5 space-y-3">
-            <p className="text-sm font-medium text-foreground">F2 actions</p>
+            <p className="text-sm font-medium text-foreground">
+              {f2SetupCopy.saved.actions.heading}
+            </p>
 
             {currentStage === "f2_active" ? (
               <div className="grid gap-2 md:grid-cols-3">
@@ -353,8 +253,8 @@ export function SavedF2SetupView({
                   disabled={actionLoading !== null}
                 >
                   {actionLoading === "checked-one-bottle"
-                    ? "Saving..."
-                    : "Checked one bottle"}
+                    ? f2SetupCopy.common.saving
+                    : f2SetupCopy.saved.actions.checkedOneBottle}
                 </Button>
                 <Button
                   type="button"
@@ -363,8 +263,8 @@ export function SavedF2SetupView({
                   disabled={actionLoading !== null}
                 >
                   {actionLoading === "needs-more-carbonation"
-                    ? "Saving..."
-                    : "Needs more carbonation"}
+                    ? f2SetupCopy.common.saving
+                    : f2SetupCopy.saved.actions.needsMoreCarbonation}
                 </Button>
                 <Button
                   type="button"
@@ -372,14 +272,14 @@ export function SavedF2SetupView({
                   disabled={actionLoading !== null}
                 >
                   {actionLoading === "refrigerate-now"
-                    ? "Saving..."
-                    : "Refrigerate now"}
+                    ? f2SetupCopy.common.saving
+                    : f2SetupCopy.saved.actions.refrigerateNow}
                 </Button>
               </div>
             ) : currentStage === "refrigerate_now" ? (
               <div className="space-y-3">
                 <p className="text-sm text-foreground">
-                  The batch is marked as ready to refrigerate.
+                  {f2SetupCopy.saved.actions.readyToRefrigerate}
                 </p>
                 <Button
                   type="button"
@@ -387,15 +287,14 @@ export function SavedF2SetupView({
                   disabled={actionLoading !== null}
                 >
                   {actionLoading === "moved-to-fridge"
-                    ? "Saving..."
-                    : "Moved to fridge"}
+                    ? f2SetupCopy.common.saving
+                    : f2SetupCopy.saved.actions.movedToFridge}
                 </Button>
               </div>
             ) : currentStage === "chilled_ready" ? (
               <div className="space-y-3">
                 <p className="text-sm text-foreground">
-                  The bottles are chilled and ready. Mark the batch complete when
-                  you want to close out the lifecycle.
+                  {f2SetupCopy.saved.actions.chilledReady}
                 </p>
                 <Button
                   type="button"
@@ -403,17 +302,17 @@ export function SavedF2SetupView({
                   disabled={actionLoading !== null}
                 >
                   {actionLoading === "mark-completed"
-                    ? "Saving..."
-                    : "Mark completed"}
+                    ? f2SetupCopy.common.saving
+                    : f2SetupCopy.saved.actions.markCompleted}
                 </Button>
               </div>
             ) : currentStage === "completed" ? (
               <p className="text-sm text-foreground">
-                This batch has already been marked complete.
+                {f2SetupCopy.saved.actions.completed}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground">
-                No F2 actions are available for this stage.
+                {f2SetupCopy.common.noActionsForStage}
               </p>
             )}
           </div>
@@ -421,34 +320,36 @@ export function SavedF2SetupView({
 
         <div className="rounded-3xl border border-border bg-card p-6">
           <p className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-            Bottling summary
+            {f2SetupCopy.saved.summary.eyebrow}
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
             <div>
-              <p className="text-muted-foreground">Total from F1</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.totalFromF1}</p>
               <p className="mt-1 font-semibold text-foreground">
                 {formatLitres(setup.totalF1AvailableMl)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Starter reserve</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.starterReserve}</p>
               <p className="mt-1 font-semibold text-foreground">
                 {formatLitres(setup.reserveForStarterMl)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Available to bottle</p>
+              <p className="text-muted-foreground">
+                {f2SetupCopy.saved.summary.availableToBottle}
+              </p>
               <p className="mt-1 font-semibold text-foreground">
                 {formatLitres(setup.availableForBottlingMl)}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Bottles</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.bottles}</p>
               <p className="mt-1 font-semibold text-foreground">{setup.bottleCount}</p>
             </div>
             <div>
-              <p className="text-muted-foreground">Carbonation</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.carbonation}</p>
               <p className="mt-1 font-semibold capitalize text-foreground">
                 {setup.desiredCarbonationLevel}
               </p>
@@ -456,19 +357,19 @@ export function SavedF2SetupView({
             <div>
               <p className="text-muted-foreground">Pressure watch</p>
               <p className="mt-1 font-semibold capitalize text-foreground">
-                {setup.estimatedPressureRisk || "Unknown"}
+                {setup.estimatedPressureRisk || f2SetupCopy.common.unknown}
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Ambient room</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.ambientRoom}</p>
               <p className="mt-1 font-semibold text-foreground">
                 {setup.ambientTempC}°C
               </p>
             </div>
             <div>
-              <p className="text-muted-foreground">Flavour plan</p>
+              <p className="text-muted-foreground">{f2SetupCopy.saved.summary.flavourPlan}</p>
               <p className="mt-1 font-semibold text-foreground">
-                {setup.recipeNameSnapshot || "Mixed bottle groups"}
+                {setup.recipeNameSnapshot || f2SetupCopy.common.mixedBottleGroups}
               </p>
             </div>
           </div>
@@ -479,15 +380,14 @@ export function SavedF2SetupView({
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-foreground">
-              Bottle groups and flavour plans
+              {f2SetupCopy.saved.groups.title}
             </h3>
             <p className="mt-1 text-sm text-muted-foreground">
-              Each group keeps its own bottle sizing, flavour identity, and created
-              bottles together.
+              {f2SetupCopy.saved.groups.description}
             </p>
           </div>
           <p className="text-sm text-muted-foreground">
-            {setup.groups.length} group{setup.groups.length === 1 ? "" : "s"}
+            {f2SetupCopy.common.groupCount(setup.groups.length)}
           </p>
         </div>
 
@@ -500,12 +400,15 @@ export function SavedF2SetupView({
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <p className="text-sm font-semibold text-foreground">
-                    {group.groupLabel || `Group ${index + 1}`}
+                    {group.groupLabel || f2SetupCopy.common.groupLabel(index)}
                   </p>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {group.bottleCount} x {group.bottleSizeMl}ml {formatBottleType(group.bottleType)}
-                    {" - "}
-                    {group.targetFillMl}ml target fill
+                    {f2SetupCopy.saved.groups.targetFill({
+                      bottleCount: group.bottleCount,
+                      bottleSizeMl: group.bottleSizeMl,
+                      bottleType: group.bottleType,
+                      targetFillMl: group.targetFillMl,
+                    })}
                   </p>
                 </div>
                 <GroupSummaryLabel group={group} />
@@ -514,7 +417,7 @@ export function SavedF2SetupView({
               <div className="mt-4 grid gap-3 md:grid-cols-3">
                 <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Group volume
+                    {f2SetupCopy.saved.groups.groupVolume}
                   </p>
                   <p className="mt-2 font-semibold text-foreground">
                     {formatLitres(group.targetFillMl * group.bottleCount)}
@@ -522,7 +425,7 @@ export function SavedF2SetupView({
                 </div>
                 <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Headspace
+                    {f2SetupCopy.saved.groups.headspace}
                   </p>
                   <p className="mt-2 font-semibold text-foreground">
                     {group.headspaceMl}ml
@@ -530,7 +433,7 @@ export function SavedF2SetupView({
                 </div>
                 <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                   <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                    Bottles created
+                    {f2SetupCopy.saved.groups.bottlesCreated}
                   </p>
                   <p className="mt-2 font-semibold text-foreground">
                     {group.bottles.length}
@@ -542,7 +445,7 @@ export function SavedF2SetupView({
                 <Collapsible className="mt-4">
                   <CollapsibleTrigger asChild>
                     <Button type="button" variant="outline">
-                      Show created bottles
+                      {f2SetupCopy.saved.groups.showCreatedBottles}
                     </Button>
                   </CollapsibleTrigger>
                   <CollapsibleContent className="space-y-3 pt-3">
@@ -552,7 +455,7 @@ export function SavedF2SetupView({
                         className="rounded-2xl border border-border p-3 text-sm"
                       >
                         <p className="font-medium text-foreground">
-                          {bottle.bottleLabel || `Bottle ${bottleIndex + 1}`} -{" "}
+                          {bottle.bottleLabel || f2SetupCopy.common.bottleLabel(bottleIndex)} -{" "}
                           {bottle.bottleSizeMl}ml
                         </p>
                         {bottle.ingredients.length > 0 ? (
@@ -566,7 +469,7 @@ export function SavedF2SetupView({
                           </ul>
                         ) : (
                           <p className="mt-2 text-muted-foreground">
-                            No extra ingredients were saved for this bottle.
+                            {f2SetupCopy.common.noExtraIngredientsForBottle}
                           </p>
                         )}
                       </div>
@@ -1012,7 +915,7 @@ export default function F2SetupWizard({
     const recipeSummary = recipeList.find((recipe) => recipe.id === recipeId);
 
     if (!recipeSummary) {
-      toast.error("Could not find that recipe.");
+      toast.error(f2SetupCopy.feedback.toasts.missingRecipe);
       return;
     }
 
@@ -1030,9 +933,7 @@ export default function F2SetupWizard({
       }));
     } catch (error) {
       console.error("Select F2 recipe error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not load that recipe."
-      );
+      toast.error(error instanceof Error ? error.message : f2SetupCopy.feedback.toasts.loadRecipe);
     }
   };
 
@@ -1050,7 +951,7 @@ export default function F2SetupWizard({
 
   const handleApplyActiveAction = async (action: F2ActiveAction) => {
     if (!userId) {
-      toast.error("You need to be signed in to update this batch.");
+      toast.error(f2SetupCopy.feedback.toasts.signInToUpdate);
       return;
     }
 
@@ -1076,9 +977,7 @@ export default function F2SetupWizard({
       setCurrentSetup(refreshedSetup);
     } catch (error) {
       console.error("Apply F2 active action error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not update this batch."
-      );
+      toast.error(error instanceof Error ? error.message : f2SetupCopy.feedback.toasts.updateBatch);
     } finally {
       setActionLoading(null);
     }
@@ -1086,12 +985,12 @@ export default function F2SetupWizard({
 
   const handleConfirmAndStartF2 = async () => {
     if (!userId) {
-      toast.error("You need to be signed in to start F2.");
+      toast.error(f2SetupCopy.feedback.toasts.signInToStart);
       return;
     }
 
     if (summary.validationErrors.length > 0) {
-      toast.error("Fix the review errors before starting F2.");
+      toast.error(f2SetupCopy.feedback.toasts.fixReviewErrors);
       return;
     }
 
@@ -1110,16 +1009,14 @@ export default function F2SetupWizard({
 
       const refreshedSetup = await loadCurrentF2Setup(batch.id);
       setCurrentSetup(refreshedSetup);
-      toast.success("F2 setup saved and bottles created.");
+      toast.success(f2SetupCopy.feedback.toasts.started);
       onF2Started?.({
         f2StartedAt: result.f2StartedAt,
         nextAction: result.nextAction,
       });
     } catch (error) {
       console.error("Start F2 from wizard error:", error);
-      toast.error(
-        error instanceof Error ? error.message : "Could not start F2."
-      );
+      toast.error(error instanceof Error ? error.message : f2SetupCopy.feedback.toasts.couldNotStart);
     } finally {
       setIsSubmitting(false);
     }
@@ -1128,7 +1025,7 @@ export default function F2SetupWizard({
   if (setupLoading || libraryLoading) {
     return (
       <div className="rounded-3xl border border-border bg-card p-8 text-center">
-        <p className="text-sm text-muted-foreground">Loading F2 setup...</p>
+        <p className="text-sm text-muted-foreground">{f2SetupCopy.common.loading}</p>
       </div>
     );
   }
@@ -1162,7 +1059,7 @@ export default function F2SetupWizard({
               <div className="rounded-2xl border border-border bg-background p-5">
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-foreground">
-                    Total kombucha available right now
+                    {f2SetupCopy.setup.volume.totalAvailable}
                   </span>
                   <input
                     type="number"
@@ -1175,14 +1072,14 @@ export default function F2SetupWizard({
                   />
                 </label>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  Use the amount you actually have ready from F1 today.
+                  {f2SetupCopy.setup.volume.totalAvailableDescription}
                 </p>
               </div>
 
               <div className="rounded-2xl border border-border bg-background p-5">
                 <label className="block space-y-2">
                   <span className="text-sm font-medium text-foreground">
-                    Keep aside for next batch starter
+                    {f2SetupCopy.setup.volume.reserveForStarter}
                   </span>
                   <input
                     type="number"
@@ -1195,7 +1092,7 @@ export default function F2SetupWizard({
                   />
                 </label>
                 <p className="mt-3 text-sm text-muted-foreground">
-                  This amount will not be bottled.
+                  {f2SetupCopy.setup.volume.reserveForStarterDescription}
                 </p>
               </div>
             </div>
@@ -1203,7 +1100,7 @@ export default function F2SetupWizard({
             <div className="grid gap-4 md:grid-cols-3">
               <div className="rounded-2xl bg-muted/60 p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Total from F1
+                  {f2SetupCopy.setup.volume.totalFromF1}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(totalF1AvailableMl)}
@@ -1211,7 +1108,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl bg-muted/60 p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Starter reserve
+                  {f2SetupCopy.setup.volume.starterReserve}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.reserveForStarterMl)}
@@ -1219,7 +1116,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl bg-muted/60 p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Available for bottling
+                  {f2SetupCopy.setup.volume.availableForBottling}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.availableForBottlingMl)}
@@ -1242,7 +1139,7 @@ export default function F2SetupWizard({
         {step === 2 ? (
           <div className="space-y-6">
             <div className="grid gap-3 md:grid-cols-3">
-              {CARBONATION_OPTIONS.map((option) => (
+              {f2SetupCopy.options.carbonation.map((option) => (
                 <button
                   key={option.value}
                   type="button"
@@ -1267,7 +1164,7 @@ export default function F2SetupWizard({
             <div className="rounded-2xl border border-border bg-background p-5">
               <label className="block space-y-2">
                 <span className="text-sm font-medium text-foreground">
-                  Ambient room temperature
+                  {f2SetupCopy.setup.carbonation.ambientRoomTemperature}
                 </span>
                 <input
                   type="number"
@@ -1280,7 +1177,7 @@ export default function F2SetupWizard({
                 />
               </label>
               <p className="mt-3 text-sm text-muted-foreground">
-                Warmer rooms usually carbonate faster and need closer attention.
+                {f2SetupCopy.setup.carbonation.ambientRoomDescription}
               </p>
             </div>
           </div>
@@ -1291,14 +1188,14 @@ export default function F2SetupWizard({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h4 className="text-base font-semibold text-foreground">
-                  Bottle groups
+                  {f2SetupCopy.setup.bottleGroups.title}
                 </h4>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Add one group for each bottle size or bottle style you want to use.
+                  {f2SetupCopy.setup.bottleGroups.description}
                 </p>
               </div>
               <Button type="button" variant="outline" onClick={addBottleGroup}>
-                Add group
+                {f2SetupCopy.setup.bottleGroups.addGroup}
               </Button>
             </div>
 
@@ -1319,11 +1216,10 @@ export default function F2SetupWizard({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-foreground">
-                          {group.groupLabel?.trim() || `Group ${index + 1}`}
+                          {group.groupLabel?.trim() || f2SetupCopy.common.groupLabel(index)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
-                          This group uses {groupUsage} kombucha based on its current fill
-                          plan.
+                          {f2SetupCopy.setup.bottleGroups.cards.usage(groupUsage)}
                         </p>
                       </div>
                       {bottleGroups.length > 1 ? (
@@ -1332,7 +1228,7 @@ export default function F2SetupWizard({
                           variant="outline"
                           onClick={() => removeBottleGroup(group.id)}
                         >
-                          Remove
+                          {f2SetupCopy.setup.bottleGroups.remove}
                         </Button>
                       ) : null}
                     </div>
@@ -1340,7 +1236,7 @@ export default function F2SetupWizard({
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-5">
                       <label className="space-y-1 xl:col-span-2">
                         <span className="text-sm text-muted-foreground">
-                          Group label
+                          {f2SetupCopy.setup.bottleGroups.fields.groupLabel}
                         </span>
                         <input
                           type="text"
@@ -1354,7 +1250,7 @@ export default function F2SetupWizard({
 
                       <label className="space-y-1">
                         <span className="text-sm text-muted-foreground">
-                          Bottle count
+                          {f2SetupCopy.setup.bottleGroups.fields.bottleCount}
                         </span>
                         <input
                           type="number"
@@ -1373,7 +1269,7 @@ export default function F2SetupWizard({
 
                       <label className="space-y-1">
                         <span className="text-sm text-muted-foreground">
-                          Bottle size (ml)
+                          {f2SetupCopy.setup.bottleGroups.fields.bottleSizeMl}
                         </span>
                         <input
                           type="number"
@@ -1392,7 +1288,7 @@ export default function F2SetupWizard({
 
                       <label className="space-y-1">
                         <span className="text-sm text-muted-foreground">
-                          Headspace (ml)
+                          {f2SetupCopy.setup.bottleGroups.fields.headspaceMl}
                         </span>
                         <input
                           type="number"
@@ -1411,7 +1307,9 @@ export default function F2SetupWizard({
                     </div>
 
                     <label className="mt-3 block space-y-1">
-                      <span className="text-sm text-muted-foreground">Bottle type</span>
+                      <span className="text-sm text-muted-foreground">
+                        {f2SetupCopy.setup.bottleGroups.fields.bottleType}
+                      </span>
                       <select
                         value={group.bottleType}
                         onChange={(event) =>
@@ -1423,7 +1321,7 @@ export default function F2SetupWizard({
                         }
                         className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                       >
-                        {BOTTLE_TYPE_OPTIONS.map((option) => (
+                        {f2SetupCopy.options.bottleTypes.map((option) => (
                           <option key={option.value} value={option.value}>
                             {option.label}
                           </option>
@@ -1434,7 +1332,7 @@ export default function F2SetupWizard({
                     <div className="mt-4 grid gap-3 md:grid-cols-3">
                       <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Target fill per bottle
+                            {f2SetupCopy.setup.bottleGroups.cards.targetFillPerBottle}
                         </p>
                         <p className="mt-2 font-semibold text-foreground">
                           {groupPlan ? `${groupPlan.targetFillMlPerBottle.toFixed(0)}ml` : "-"}
@@ -1442,7 +1340,7 @@ export default function F2SetupWizard({
                       </div>
                       <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Total group fill
+                            {f2SetupCopy.setup.bottleGroups.cards.totalGroupFill}
                         </p>
                         <p className="mt-2 font-semibold text-foreground">
                           {groupPlan ? formatLitres(groupPlan.totalTargetFillMl) : "-"}
@@ -1450,7 +1348,7 @@ export default function F2SetupWizard({
                       </div>
                       <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                         <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                          Group kombucha use
+                            {f2SetupCopy.setup.bottleGroups.cards.groupKombuchaUse}
                         </p>
                         <p className="mt-2 font-semibold text-foreground">{groupUsage}</p>
                       </div>
@@ -1471,12 +1369,12 @@ export default function F2SetupWizard({
             ) : (
               <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
                 {summary.remainingBottlingVolumeMl >= 0
-                  ? `You still have ${formatLitres(
-                      summary.remainingBottlingVolumeMl
-                    )} unassigned for bottling.`
-                  : `This bottle plan exceeds the available bottling volume by ${formatLitres(
-                      Math.abs(summary.remainingBottlingVolumeMl)
-                    )}.`}
+                  ? f2SetupCopy.setup.bottleGroups.cards.remaining(
+                      formatLitres(summary.remainingBottlingVolumeMl)
+                    )
+                  : f2SetupCopy.setup.bottleGroups.cards.exceeds(
+                      formatLitres(Math.abs(summary.remainingBottlingVolumeMl))
+                    )}
               </div>
             )}
           </div>
@@ -1485,9 +1383,7 @@ export default function F2SetupWizard({
         {step === 4 ? (
           <div className="space-y-6">
             <div className="rounded-2xl border border-border bg-muted/40 p-4 text-sm text-muted-foreground">
-              Different groups can use different recipes from the same F1 batch.
-              Plain bottles, saved recipes, presets, and custom plans can all live
-              in the same run.
+              {f2SetupCopy.setup.flavour.intro}
             </div>
 
             <div className="space-y-4">
@@ -1506,22 +1402,24 @@ export default function F2SetupWizard({
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
                         <p className="text-sm font-semibold text-foreground">
-                          {group.groupLabel?.trim() || `Group ${index + 1}`}
+                          {group.groupLabel?.trim() || f2SetupCopy.common.groupLabel(index)}
                         </p>
                         <p className="mt-1 text-xs text-muted-foreground">
                           {group.bottleCount} x {group.bottleSizeMl}ml{" "}
                           {formatBottleType(group.bottleType)}
                         </p>
                       </div>
-                      <p className="text-xs text-muted-foreground">
-                        {groupPlan
-                          ? `${formatLitres(groupPlan.totalKombuchaMl)} kombucha in this group`
-                          : "No plan yet"}
-                      </p>
-                    </div>
+                        <p className="text-xs text-muted-foreground">
+                          {groupPlan
+                            ? f2SetupCopy.setup.flavour.groupUsage(
+                                formatLitres(groupPlan.totalKombuchaMl)
+                              )
+                            : f2SetupCopy.common.noPlanYet}
+                        </p>
+                      </div>
 
                     <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-                      {RECIPE_MODE_OPTIONS.map((option) => (
+                      {f2SetupCopy.options.recipeModes.map((option) => (
                         <button
                           key={option.value}
                           type="button"
@@ -1548,8 +1446,8 @@ export default function F2SetupWizard({
                         <label className="block space-y-1">
                           <span className="text-sm text-muted-foreground">
                             {group.recipe.mode === "saved"
-                              ? "Saved recipe"
-                              : "Preset recipe"}
+                              ? f2SetupCopy.setup.flavour.savedRecipe
+                              : f2SetupCopy.setup.flavour.presetRecipe}
                           </span>
                           <select
                             value={group.recipe.selectedRecipeId || ""}
@@ -1562,7 +1460,7 @@ export default function F2SetupWizard({
                             }
                             className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                           >
-                            <option value="">Choose a recipe</option>
+                            <option value="">{f2SetupCopy.common.chooseRecipePlaceholder}</option>
                             {recipeOptions.map((recipe) => (
                               <option key={recipe.id} value={recipe.id}>
                                 {recipe.name}
@@ -1588,11 +1486,10 @@ export default function F2SetupWizard({
                             )}
                           >
                             <p className="text-sm font-semibold text-foreground">
-                              Keep guidance on
+                              {f2SetupCopy.setup.flavour.keepGuidanceOn}
                             </p>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              Let the planner tune this recipe for the carbonation
-                              target.
+                              {f2SetupCopy.setup.flavour.keepGuidanceOnDescription}
                             </p>
                           </button>
                           <button
@@ -1611,10 +1508,10 @@ export default function F2SetupWizard({
                             )}
                           >
                             <p className="text-sm font-semibold text-foreground">
-                              Use saved amounts
+                              {f2SetupCopy.setup.flavour.useSavedAmounts}
                             </p>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              Bottle this group with the exact stored recipe amounts.
+                              {f2SetupCopy.setup.flavour.useSavedAmountsDescription}
                             </p>
                           </button>
                         </div>
@@ -1622,7 +1519,9 @@ export default function F2SetupWizard({
                         {group.recipe.recipeItems.length > 0 ? (
                           <div className="rounded-2xl border border-border p-4">
                             <p className="text-sm font-medium text-foreground">
-                              This group will use {group.recipe.recipeName || "this recipe"}
+                              {f2SetupCopy.setup.flavour.thisGroupWillUse(
+                                group.recipe.recipeName || undefined
+                              )}
                             </p>
                             <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-muted-foreground">
                               {group.recipe.recipeItems.map((item) => (
@@ -1643,7 +1542,7 @@ export default function F2SetupWizard({
                         <div className="grid gap-3 md:grid-cols-2">
                           <label className="space-y-1">
                             <span className="text-sm text-muted-foreground">
-                              Recipe name
+                              {f2SetupCopy.setup.flavour.custom.recipeName}
                             </span>
                             <input
                               type="text"
@@ -1660,7 +1559,7 @@ export default function F2SetupWizard({
 
                           <label className="space-y-1">
                             <span className="text-sm text-muted-foreground">
-                              Save this as a reusable recipe
+                              {f2SetupCopy.setup.flavour.custom.saveReusableRecipe}
                             </span>
                             <select
                               value={group.recipe.saveRecipe ? "yes" : "no"}
@@ -1672,15 +1571,15 @@ export default function F2SetupWizard({
                               }
                               className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                             >
-                              <option value="no">No</option>
-                              <option value="yes">Yes</option>
+                              <option value="no">{f2SetupCopy.options.yesNo.no}</option>
+                              <option value="yes">{f2SetupCopy.options.yesNo.yes}</option>
                             </select>
                           </label>
                         </div>
 
                         <label className="block space-y-1">
                           <span className="text-sm text-muted-foreground">
-                            Description
+                            {f2SetupCopy.setup.flavour.custom.description}
                           </span>
                           <textarea
                             value={group.recipe.recipeDescription || ""}
@@ -1711,10 +1610,10 @@ export default function F2SetupWizard({
                             )}
                           >
                             <p className="text-sm font-semibold text-foreground">
-                              Keep guidance on
+                              {f2SetupCopy.setup.flavour.keepGuidanceOn}
                             </p>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              Use flavour presets and let the planner tune the amounts.
+                              {f2SetupCopy.setup.flavour.custom.keepGuidanceOnDescription}
                             </p>
                           </button>
                           <button
@@ -1733,10 +1632,10 @@ export default function F2SetupWizard({
                             )}
                           >
                             <p className="text-sm font-semibold text-foreground">
-                              Edit exact amounts
+                              {f2SetupCopy.setup.flavour.custom.editExactAmounts}
                             </p>
                             <p className="mt-2 text-sm text-muted-foreground">
-                              Set the ingredient amounts per 500ml yourself.
+                              {f2SetupCopy.setup.flavour.custom.editExactAmountsDescription}
                             </p>
                           </button>
                         </div>
@@ -1745,10 +1644,10 @@ export default function F2SetupWizard({
                           <div className="flex items-center justify-between gap-3">
                             <div>
                               <p className="text-sm font-medium text-foreground">
-                                Ingredients
+                                {f2SetupCopy.setup.flavour.custom.ingredientsTitle}
                               </p>
                               <p className="mt-1 text-sm text-muted-foreground">
-                                Add the ingredients you plan to bottle with this group.
+                                {f2SetupCopy.setup.flavour.custom.ingredientsDescription}
                               </p>
                             </div>
                             <Button
@@ -1756,7 +1655,7 @@ export default function F2SetupWizard({
                               variant="outline"
                               onClick={() => addRecipeItem(group.id)}
                             >
-                              Add ingredient
+                              {f2SetupCopy.setup.flavour.custom.addIngredient}
                             </Button>
                           </div>
 
@@ -1769,12 +1668,12 @@ export default function F2SetupWizard({
                                 <div className="flex items-center justify-between gap-3">
                                   <div>
                                     <p className="text-sm font-semibold text-foreground">
-                                      Ingredient {itemIndex + 1}
+                                      {f2SetupCopy.setup.flavour.custom.ingredient(itemIndex)}
                                     </p>
                                     <p className="mt-1 text-sm text-muted-foreground">
                                       {group.recipe.guidedMode
-                                        ? "Guidance can still tune this amount for the carbonation target."
-                                        : "These are the exact amounts that will be saved."}
+                                        ? f2SetupCopy.setup.flavour.custom.guidedIngredientDescription
+                                        : f2SetupCopy.setup.flavour.custom.exactIngredientDescription}
                                     </p>
                                   </div>
                                   {group.recipe.recipeItems.length > 1 ? (
@@ -1783,7 +1682,7 @@ export default function F2SetupWizard({
                                       variant="outline"
                                       onClick={() => removeRecipeItem(group.id, item.id)}
                                     >
-                                      Remove
+                                      {f2SetupCopy.setup.flavour.custom.remove}
                                     </Button>
                                   ) : null}
                                 </div>
@@ -1791,7 +1690,7 @@ export default function F2SetupWizard({
                                 <div className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Preset ingredient
+                                      {f2SetupCopy.setup.flavour.custom.fields.presetIngredient}
                                     </span>
                                     <select
                                       value={item.flavourPresetId || ""}
@@ -1804,7 +1703,9 @@ export default function F2SetupWizard({
                                       }
                                       className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                                     >
-                                      <option value="">Choose preset ingredient</option>
+                                      <option value="">
+                                        {f2SetupCopy.common.presetIngredientPlaceholder}
+                                      </option>
                                       {flavourPresets.map((preset) => (
                                         <option key={preset.id} value={preset.id}>
                                           {preset.displayName || preset.name}
@@ -1815,7 +1716,7 @@ export default function F2SetupWizard({
 
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Ingredient name
+                                      {f2SetupCopy.setup.flavour.custom.fields.ingredientName}
                                     </span>
                                     <input
                                       type="text"
@@ -1834,7 +1735,7 @@ export default function F2SetupWizard({
 
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Form
+                                      {f2SetupCopy.setup.flavour.custom.fields.form}
                                     </span>
                                     <select
                                       value={item.ingredientForm || "juice"}
@@ -1848,18 +1749,17 @@ export default function F2SetupWizard({
                                       }
                                       className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                                     >
-                                      <option value="juice">Juice</option>
-                                      <option value="puree">Puree</option>
-                                      <option value="whole_fruit">Whole fruit</option>
-                                      <option value="syrup">Syrup</option>
-                                      <option value="herbs_spices">Herbs / spices</option>
-                                      <option value="other">Other</option>
+                                      {f2SetupCopy.options.ingredientForms.map((option) => (
+                                        <option key={option.value} value={option.value}>
+                                          {option.label}
+                                        </option>
+                                      ))}
                                     </select>
                                   </label>
 
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Amount per 500ml
+                                      {f2SetupCopy.setup.flavour.custom.fields.amountPer500}
                                     </span>
                                     <input
                                       type="number"
@@ -1878,7 +1778,7 @@ export default function F2SetupWizard({
 
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Unit
+                                      {f2SetupCopy.setup.flavour.custom.fields.unit}
                                     </span>
                                     <input
                                       type="text"
@@ -1897,7 +1797,7 @@ export default function F2SetupWizard({
 
                                   <label className="space-y-1">
                                     <span className="text-sm text-muted-foreground">
-                                      Displaces bottle volume
+                                      {f2SetupCopy.setup.flavour.custom.fields.displacesBottleVolume}
                                     </span>
                                     <select
                                       value={item.displacesVolume ? "yes" : "no"}
@@ -1911,15 +1811,15 @@ export default function F2SetupWizard({
                                       }
                                       className="w-full rounded-xl border border-border bg-background px-3 py-2 text-sm"
                                     >
-                                      <option value="yes">Yes</option>
-                                      <option value="no">No</option>
+                                      <option value="yes">{f2SetupCopy.options.yesNo.yes}</option>
+                                      <option value="no">{f2SetupCopy.options.yesNo.no}</option>
                                     </select>
                                   </label>
                                 </div>
 
                                 <label className="mt-3 block space-y-1">
                                   <span className="text-sm text-muted-foreground">
-                                    Prep notes
+                                    {f2SetupCopy.setup.flavour.custom.fields.prepNotes}
                                   </span>
                                   <textarea
                                     value={item.prepNotes || ""}
@@ -1963,7 +1863,7 @@ export default function F2SetupWizard({
             {summary.validationErrors.length > 0 ? (
               <div className="rounded-2xl border border-red-300 bg-red-50 p-4">
                 <p className="text-sm font-semibold text-red-700">
-                  Fix these before you start F2
+                  {f2SetupCopy.setup.review.fixBeforeStart}
                 </p>
                 <ul className="mt-2 list-disc space-y-1 pl-5 text-sm text-red-700">
                   {summary.validationErrors.map((error) => (
@@ -1976,7 +1876,7 @@ export default function F2SetupWizard({
             <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Total from F1
+                  {f2SetupCopy.setup.review.totalFromF1}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.totalF1AvailableMl)}
@@ -1984,7 +1884,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Starter reserve
+                  {f2SetupCopy.setup.review.starterReserve}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.reserveForStarterMl)}
@@ -1992,7 +1892,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Available to bottle
+                  {f2SetupCopy.setup.review.availableToBottle}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.availableForBottlingMl)}
@@ -2000,7 +1900,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Bottles
+                  {f2SetupCopy.setup.review.bottles}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {summary.totalBottleCount}
@@ -2008,7 +1908,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Kombucha needed
+                  {f2SetupCopy.setup.review.kombuchaNeeded}
                 </p>
                 <p className="mt-2 font-semibold text-foreground">
                   {formatLitres(summary.totalKombuchaNeededMl)}
@@ -2016,7 +1916,7 @@ export default function F2SetupWizard({
               </div>
               <div className="rounded-2xl border border-border bg-background p-4">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                  Pressure watch
+                  {f2SetupCopy.setup.review.pressureWatch}
                 </p>
                 <p className="mt-2 font-semibold capitalize text-foreground">
                   {summary.riskLevel}
@@ -2027,12 +1927,12 @@ export default function F2SetupWizard({
             <div className="grid gap-4 xl:grid-cols-[1.15fr_0.85fr]">
               <div className="space-y-4 rounded-2xl border border-border bg-background p-5">
                 <div>
-                  <h4 className="text-base font-semibold text-foreground">
-                    Per-group bottling instructions
-                  </h4>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    This is the practical bottling plan for each group.
-                  </p>
+                    <h4 className="text-base font-semibold text-foreground">
+                      {f2SetupCopy.setup.review.groupInstructions}
+                    </h4>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      {f2SetupCopy.setup.review.groupInstructionsDescription}
+                    </p>
                 </div>
 
                 <div className="space-y-3">
@@ -2044,7 +1944,7 @@ export default function F2SetupWizard({
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <div>
                           <p className="text-sm font-semibold text-foreground">
-                            {group.groupLabel?.trim() || `Group ${index + 1}`}
+                            {group.groupLabel?.trim() || f2SetupCopy.common.groupLabel(index)}
                           </p>
                           <p className="mt-1 text-xs text-muted-foreground">
                             {group.bottleCount} x {group.bottleSizeMl}ml{" "}
@@ -2053,26 +1953,34 @@ export default function F2SetupWizard({
                         </div>
                         <p className="text-xs text-muted-foreground">
                           {group.recipeMode === "none"
-                            ? "No flavour"
-                            : group.recipeName || "Group flavour plan"}
+                            ? f2SetupCopy.common.noFlavour
+                            : group.recipeName || f2SetupCopy.common.groupFlavorPlan}
                         </p>
                       </div>
 
                       <ul className="mt-3 list-disc space-y-1 pl-5 text-sm text-foreground">
                         {group.scaledItemsPerBottle.map((item) => (
                           <li key={item.id}>
-                            Add {item.scaledAmount.toFixed(1)}
-                            {item.unit} {item.customIngredientName || "ingredient"}
+                            {f2SetupCopy.setup.review.addInstruction({
+                              amount: item.scaledAmount.toFixed(1),
+                              unit: item.unit,
+                              ingredientName:
+                                item.customIngredientName || f2SetupCopy.common.ingredientFallback,
+                            })}
                           </li>
                         ))}
-                        <li>Top with {group.kombuchaMlPerBottle.toFixed(1)}ml kombucha</li>
-                        <li>Leave {group.headspaceMl}ml headspace</li>
+                        <li>
+                          {f2SetupCopy.setup.review.topWith(
+                            group.kombuchaMlPerBottle.toFixed(1)
+                          )}
+                        </li>
+                        <li>{f2SetupCopy.setup.review.leaveHeadspace(group.headspaceMl)}</li>
                       </ul>
 
                       <div className="mt-4 grid gap-3 md:grid-cols-3">
                         <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                            Group kombucha
+                            {f2SetupCopy.setup.review.groupKombucha}
                           </p>
                           <p className="mt-2 font-semibold text-foreground">
                             {formatLitres(group.totalKombuchaMl)}
@@ -2080,7 +1988,7 @@ export default function F2SetupWizard({
                         </div>
                         <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                            Group additions
+                            {f2SetupCopy.setup.review.groupAdditions}
                           </p>
                           <p className="mt-2 font-semibold text-foreground">
                             {formatLitres(group.totalLiquidAdditionsMl)}
@@ -2088,7 +1996,7 @@ export default function F2SetupWizard({
                         </div>
                         <div className="rounded-2xl bg-muted/60 p-3 text-sm">
                           <p className="text-xs uppercase tracking-wider text-muted-foreground">
-                            Group total fill
+                            {f2SetupCopy.setup.review.groupTotalFill}
                           </p>
                           <p className="mt-2 font-semibold text-foreground">
                             {formatLitres(group.totalTargetFillMl)}
@@ -2098,9 +2006,9 @@ export default function F2SetupWizard({
 
                       {group.ingredientTotalsForGroup.length > 0 ? (
                         <div className="mt-4 rounded-2xl border border-border p-3">
-                          <p className="text-sm font-medium text-foreground">
-                            Ingredients for this group
-                          </p>
+                            <p className="text-sm font-medium text-foreground">
+                              {f2SetupCopy.setup.review.ingredientsForGroup}
+                            </p>
                           <ul className="mt-2 space-y-1 text-sm text-muted-foreground">
                             {group.ingredientTotalsForGroup.map((item) => (
                               <li key={`${group.groupId}-${item.name}-${item.unit}`}>
@@ -2120,10 +2028,10 @@ export default function F2SetupWizard({
                 <div className="space-y-4 rounded-2xl border border-border bg-background p-5">
                   <div>
                     <h4 className="text-base font-semibold text-foreground">
-                      Total ingredients for the whole bottling run
+                      {f2SetupCopy.setup.review.totalIngredientsTitle}
                     </h4>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      These totals now reflect every bottle in every group.
+                      {f2SetupCopy.setup.review.totalIngredientsDescription}
                     </p>
                   </div>
 
@@ -2138,7 +2046,7 @@ export default function F2SetupWizard({
                     </ul>
                   ) : (
                     <p className="text-sm text-muted-foreground">
-                      No extra ingredients are needed for this bottling run.
+                      {f2SetupCopy.common.noExtraIngredientsForRun}
                     </p>
                   )}
                 </div>
@@ -2146,11 +2054,10 @@ export default function F2SetupWizard({
                 <div className="space-y-4 rounded-2xl border border-border bg-background p-5">
                   <div>
                     <h4 className="text-base font-semibold text-foreground">
-                      Pressure watchouts
+                      {f2SetupCopy.setup.review.pressureWatchouts}
                     </h4>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Use these notes as safety cues while the bottles are at room
-                      temperature.
+                      {f2SetupCopy.setup.review.pressureWatchoutsDescription}
                     </p>
                   </div>
 
@@ -2162,9 +2069,7 @@ export default function F2SetupWizard({
 
                   <div className="rounded-2xl bg-muted/60 p-4">
                     <p className="text-sm text-muted-foreground">
-                      Starting F2 will save the group bottle plan, store each group's
-                      flavour snapshot, create the bottles, attach ingredient rows,
-                      and update the batch into the active F2 stage.
+                      {f2SetupCopy.setup.review.startDescription}
                     </p>
                   </div>
 
@@ -2174,7 +2079,9 @@ export default function F2SetupWizard({
                     disabled={isSubmitting || summary.validationErrors.length > 0}
                     className="w-full"
                   >
-                    {isSubmitting ? "Starting F2..." : "I bottled this and start F2"}
+                    {isSubmitting
+                      ? f2SetupCopy.setup.review.starting
+                      : f2SetupCopy.setup.review.startAction}
                   </Button>
                 </div>
               </div>
@@ -2189,16 +2096,17 @@ export default function F2SetupWizard({
             onClick={handleBack}
             disabled={step === 1}
           >
-            Back
+            {f2SetupCopy.common.back}
           </Button>
 
           {step < 5 ? (
             <Button type="button" onClick={handleNext} disabled={!canGoNext}>
-              {stepDefinition.nextLabel || "Continue"}
+              {("nextLabel" in stepDefinition && stepDefinition.nextLabel) ||
+                f2SetupCopy.common.continue}
             </Button>
           ) : (
             <p className="text-sm text-muted-foreground">
-              Start F2 once the bottling plan looks right.
+              {f2SetupCopy.setup.review.footerHint}
             </p>
           )}
         </div>

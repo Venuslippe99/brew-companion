@@ -3,6 +3,7 @@ import { BrewAgainLauncher } from "@/components/brew-again/BrewAgainLauncher";
 import { BatchHeroQuickActions } from "@/components/batch-detail/BatchHeroQuickActions";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
+import { batchDetailCopy } from "@/copy/batch-detail";
 import type {
   BatchReminder,
 } from "@/lib/batch-detail-view";
@@ -94,7 +95,7 @@ export function BatchDetailHero({
               {dayNumber}
             </p>
             <p className="mt-2 text-xs uppercase tracking-[0.18em] text-muted-foreground">
-              {dayNumber === 1 ? "Day" : "Days"}
+              {batchDetailCopy.hero.day(dayNumber)}
             </p>
           </div>
         </div>
@@ -109,7 +110,10 @@ export function BatchDetailHero({
             </p>
             {timing && (
               <p className="mt-2 text-xs text-muted-foreground">
-                {timing.statusLabel}. {timing.nextCheckText}.
+                {batchDetailCopy.hero.nextCheckSuffix({
+                  statusLabel: timing.statusLabel,
+                  nextCheckText: timing.nextCheckText,
+                })}
               </p>
             )}
           </div>
@@ -117,10 +121,10 @@ export function BatchDetailHero({
           {(batch.status === "completed" || batch.status === "archived") ? (
             <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Brew Again
+                {batchDetailCopy.hero.brewAgain}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Carry the useful parts of this batch forward without repeating the same mistakes.
+                {batchDetailCopy.hero.brewAgainDescription}
               </p>
               <div className="mt-3">
                 <BrewAgainLauncher
@@ -135,11 +139,11 @@ export function BatchDetailHero({
           ) : (
             <div className="rounded-2xl border border-border/60 bg-background/80 p-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                Why Kombloom is nudging you
+                {batchDetailCopy.hero.whyKombloomIsNudgingYou}
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
                 {timing?.explanation ||
-                  "The guidance here follows your saved stage, brew timing, and reminders, so you can stay calm and focus on the next useful check."}
+                  batchDetailCopy.hero.fallbackNudging}
               </p>
             </div>
           )}

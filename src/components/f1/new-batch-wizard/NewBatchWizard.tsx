@@ -22,6 +22,7 @@ import { TemperatureStep } from "@/components/f1/new-batch-wizard/steps/Temperat
 import { VesselStep } from "@/components/f1/new-batch-wizard/steps/VesselStep";
 import { VolumeStep } from "@/components/f1/new-batch-wizard/steps/VolumeStep";
 import { useNewBatchWizard } from "@/components/f1/new-batch-wizard/useNewBatchWizard";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
 
 type NewBatchWizardProps = {
@@ -179,17 +180,16 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
       <Dialog open={wizard.saveRecipeOpen} onOpenChange={wizard.setSaveRecipeOpen}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Save this setup as a recipe</DialogTitle>
+            <DialogTitle>{f1NewBatchCopy.page.saveRecipeDialog.title}</DialogTitle>
             <DialogDescription>
-              Save the starting point you want to reuse later. Today&apos;s batch is still its own
-              brew.
+              {f1NewBatchCopy.page.saveRecipeDialog.description}
             </DialogDescription>
           </DialogHeader>
 
           <F1RecipeEditor
             draft={wizard.recipeDraft}
             saving={wizard.recipeSaving}
-            submitLabel="Save recipe"
+            submitLabel={f1NewBatchCopy.page.saveRecipeDialog.submitLabel}
             availableVessels={wizard.availableVessels}
             onManageVessels={() => navigate("/f1-vessels")}
             onChange={wizard.setRecipeDraft}

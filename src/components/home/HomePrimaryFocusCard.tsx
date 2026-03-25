@@ -2,6 +2,7 @@ import { ArrowRight, Clock3, Sparkles } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
 import { Button } from "@/components/ui/button";
+import { homeCopy } from "@/copy/home";
 import { cn } from "@/lib/utils";
 import type {
   HomePrimaryFocus,
@@ -116,7 +117,7 @@ export function HomePrimaryFocusCard({
 
       <div className="mt-5 rounded-[22px] border border-border/70 bg-background/80 px-4 py-4">
         <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-          Why this matters today
+          {homeCopy.primaryFocus.whyThisMattersToday}
         </p>
         <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
         <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">

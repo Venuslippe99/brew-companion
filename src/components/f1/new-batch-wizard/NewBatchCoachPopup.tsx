@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import type { NewBatchCoachPopup as NewBatchCoachPopupModel } from "@/components/f1/new-batch-wizard/types";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 
 type NewBatchCoachPopupProps = {
   popup: NewBatchCoachPopupModel | null;
@@ -26,7 +27,7 @@ export function NewBatchCoachPopup({ popup, onDismiss }: NewBatchCoachPopupProps
             <p className="mt-1 text-sm text-muted-foreground">{popup.body}</p>
           </div>
           <Button type="button" variant="ghost" size="sm" onClick={onDismiss}>
-            Dismiss
+            {f1NewBatchCopy.coachPopup.dismiss}
           </Button>
         </div>
       </div>

@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { homeCopy } from "@/copy/home";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -50,15 +51,19 @@ export function HomeHeader({
             {stateSentence}
           </p>
         </div>
-
-        <Button variant="warm" size="icon" onClick={onOpenSettings} aria-label="Open settings">
+        <Button
+          variant="warm"
+          size="icon"
+          onClick={onOpenSettings}
+          aria-label={homeCopy.page.headerSettingsAria}
+        >
           <Settings className="h-4.5 w-4.5" />
         </Button>
       </div>
 
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
-          {activeBatchCount} active {activeBatchCount === 1 ? "brew" : "brews"}
+          {homeCopy.header.activeBrews(activeBatchCount)}
         </span>
       </div>
     </section>

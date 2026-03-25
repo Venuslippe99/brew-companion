@@ -10,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import { F1RecommendationSection } from "@/components/f1/F1RecommendationSection";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 import type { BatchTimingResult } from "@/lib/batch-timing";
 import type { F1RecipeGeneratorResult } from "@/lib/f1-generator-types";
 import type { F1RecommendationCard } from "@/lib/f1-recommendation-types";
@@ -59,9 +60,11 @@ export function RecipeStep({
     return (
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
         <NewBatchWizardProgress currentStep="recipe" />
-        <h2 className="mt-2 text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-foreground">
+          {f1NewBatchCopy.steps.recipe.title}
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          Finish the core setup questions first so the app can build a recipe for you.
+          {f1NewBatchCopy.steps.recipe.emptyDescription}
         </p>
       </div>
     );
@@ -80,64 +83,83 @@ export function RecipeStep({
     <>
       <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
         <NewBatchWizardProgress currentStep="recipe" />
-        <h2 className="mt-2 text-2xl font-semibold text-foreground">Your recommended F1 recipe</h2>
+        <h2 className="mt-2 text-2xl font-semibold text-foreground">
+          {f1NewBatchCopy.steps.recipe.title}
+        </h2>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Here&apos;s the recipe to brew. Your final batch size already includes the starter.
+          {f1NewBatchCopy.steps.recipe.description}
         </p>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <div className="rounded-2xl border border-border/80 bg-background p-4">
-            <p className="text-xs text-muted-foreground">Final batch volume</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.summary.finalBatchVolume}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.finalBatchVolumeMl}ml
             </p>
           </div>
           <div className="rounded-2xl border border-border/80 bg-background p-4">
-            <p className="text-xs text-muted-foreground">Fresh tea to brew</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.summary.freshTeaToBrew}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.freshTeaVolumeMl}ml
             </p>
           </div>
           <div className="rounded-2xl border border-border/80 bg-background p-4">
-            <p className="text-xs text-muted-foreground">Starter to add</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.summary.starterToAdd}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.recommendedStarterMl}ml
             </p>
           </div>
           <div className="rounded-2xl border border-border/80 bg-background p-4">
-            <p className="text-xs text-muted-foreground">Estimated first taste</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.summary.estimatedFirstTaste}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {estimatedF1Timing
                 ? `Day ${estimatedF1Timing.windowStartDay}-${estimatedF1Timing.windowEndDay}`
-                : "Day 6-9"}
+                : f1NewBatchCopy.steps.recipe.summary.fallbackTasteWindow}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              {estimatedF1Timing?.windowDateRangeText || "A rough first tasting window"}
+              {estimatedF1Timing?.windowDateRangeText ||
+                f1NewBatchCopy.steps.recipe.summary.fallbackTasteWindowDescription}
             </p>
           </div>
         </div>
 
         <div className="mt-4 grid gap-3 sm:grid-cols-2">
           <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-            <p className="text-xs text-muted-foreground">Tea</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.composition.tea}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.recommendedTeaG}g
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              About {generatedRecipe.recommendedTeaBagsApprox} tea bags
+              {f1NewBatchCopy.steps.recipe.composition.teaBags(
+                generatedRecipe.recommendedTeaBagsApprox
+              )}
             </p>
           </div>
           <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
-            <p className="text-xs text-muted-foreground">Sugar</p>
+            <p className="text-xs text-muted-foreground">
+              {f1NewBatchCopy.steps.recipe.composition.sugar}
+            </p>
             <p className="mt-1 text-lg font-semibold text-foreground">
               {generatedRecipe.recommendedSugarG === null
-                ? "Choose manually"
+                ? f1NewBatchCopy.steps.recipe.composition.chooseManually
                 : `${generatedRecipe.recommendedSugarG}g`}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               {generatedRecipe.recommendedSugarG === null
-                ? "This sugar type needs a manual amount."
-                : `${generatedRecipe.effectiveSugarTargetGPL} g/L starting target`}
+                ? f1NewBatchCopy.steps.recipe.composition.manualSugarNeeded
+                : f1NewBatchCopy.steps.recipe.composition.sugarTarget(
+                    generatedRecipe.effectiveSugarTargetGPL
+                  )}
             </p>
           </div>
         </div>
@@ -145,16 +167,18 @@ export function RecipeStep({
         <div className="mt-5 rounded-2xl border border-border/80 bg-background p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <h3 className="text-sm font-semibold text-foreground">Manual adjustments</h3>
+              <h3 className="text-sm font-semibold text-foreground">
+                {f1NewBatchCopy.steps.recipe.adjustments.title}
+              </h3>
               <p className="mt-1 text-sm text-muted-foreground">
-                Only open this if you want to change the recommendation.
+                {f1NewBatchCopy.steps.recipe.adjustments.description}
               </p>
             </div>
 
             <div className="flex flex-wrap items-center gap-2">
               {hasOverrides ? (
                 <span className="rounded-full bg-primary/10 px-2.5 py-1 text-[11px] font-medium text-primary">
-                  Adjusted from recommendation
+                  {f1NewBatchCopy.steps.recipe.adjustments.adjustedBadge}
                 </span>
               ) : null}
               {!adjustmentsLockedOpen ? (
@@ -165,7 +189,9 @@ export function RecipeStep({
                   onClick={() => setShowAdjustments((value) => !value)}
                 >
                   <SlidersHorizontal className="mr-2 h-4 w-4" />
-                  {showAdjustments ? "Hide manual edits" : "Adjust manually"}
+                  {showAdjustments
+                    ? f1NewBatchCopy.steps.recipe.adjustments.hideManualEdits
+                    : f1NewBatchCopy.steps.recipe.adjustments.adjustManually}
                   {showAdjustments ? (
                     <ChevronUp className="ml-2 h-4 w-4" />
                   ) : (
@@ -181,7 +207,7 @@ export function RecipeStep({
               <div className="grid gap-3 sm:grid-cols-3">
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Tea (g)
+                    {f1NewBatchCopy.steps.recipe.adjustments.fields.tea}
                   </label>
                   <input
                     type="number"
@@ -195,7 +221,7 @@ export function RecipeStep({
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Sugar (g)
+                    {f1NewBatchCopy.steps.recipe.adjustments.fields.sugar}
                   </label>
                   <input
                     type="number"
@@ -208,20 +234,20 @@ export function RecipeStep({
                     }
                     placeholder={
                       generatedRecipe.recommendedSugarG === null
-                        ? "Required"
+                        ? f1NewBatchCopy.steps.recipe.adjustments.fields.required
                         : generatedRecipe.recommendedSugarG.toString()
                     }
                     className="h-11 w-full rounded-xl border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                   />
                   {requiresManualSugar ? (
                     <p className="mt-1 text-xs text-muted-foreground">
-                      Add the sugar grams you want to use before you continue.
+                      {f1NewBatchCopy.steps.recipe.adjustments.fields.manualSugarRequired}
                     </p>
                   ) : null}
                 </div>
                 <div>
                   <label className="mb-1.5 block text-sm font-medium text-foreground">
-                    Starter (ml)
+                    {f1NewBatchCopy.steps.recipe.adjustments.fields.starter}
                   </label>
                   <input
                     type="number"
@@ -240,8 +266,11 @@ export function RecipeStep({
 
               {hasOverrides ? (
                 <p className="text-sm text-muted-foreground">
-                  Brewing {chosenFreshTeaVolumeMl}ml fresh sweet tea, then adding {chosenStarterMl}ml
-                  starter for a final {generatedRecipe.finalBatchVolumeMl}ml batch.
+                  {f1NewBatchCopy.steps.recipe.adjustments.overrideSummary({
+                    chosenFreshTeaVolumeMl,
+                    chosenStarterMl,
+                    finalBatchVolumeMl: generatedRecipe.finalBatchVolumeMl,
+                  })}
                 </p>
               ) : null}
             </div>
@@ -251,11 +280,11 @@ export function RecipeStep({
         <div className="mt-4 flex flex-wrap gap-2">
           <Button type="button" variant="ghost" size="sm" onClick={() => setDialogView("calculation")}>
             <Info className="mr-2 h-4 w-4" />
-            Why this recipe
+            {f1NewBatchCopy.steps.recipe.actions.whyThisRecipe}
           </Button>
           {hasMoreContext ? (
             <Button type="button" variant="ghost" size="sm" onClick={() => setDialogView("context")}>
-              More context
+              {f1NewBatchCopy.steps.recipe.actions.moreContext}
             </Button>
           ) : null}
         </div>
@@ -266,10 +295,9 @@ export function RecipeStep({
           {dialogView === "calculation" ? (
             <>
               <DialogHeader>
-                <DialogTitle>Why this recipe</DialogTitle>
+                <DialogTitle>{f1NewBatchCopy.steps.recipe.dialogs.calculation.title}</DialogTitle>
                 <DialogDescription>
-                  The recommendation starts from your answers, then folds in lineage, history, and
-                  any caution flags.
+                  {f1NewBatchCopy.steps.recipe.dialogs.calculation.description}
                 </DialogDescription>
               </DialogHeader>
 
@@ -285,7 +313,7 @@ export function RecipeStep({
                 {generatedRecipe.cautionFlags.length > 0 ? (
                   <div className="rounded-2xl border border-honey/40 bg-honey-light/70 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Worth checking
+                      {f1NewBatchCopy.steps.recipe.dialogs.calculation.cautionTitle}
                     </p>
                     <div className="mt-2 space-y-2">
                       {generatedRecipe.cautionFlags.map((flag) => (
@@ -301,9 +329,9 @@ export function RecipeStep({
           ) : (
             <>
               <DialogHeader>
-                <DialogTitle>More context</DialogTitle>
+                <DialogTitle>{f1NewBatchCopy.steps.recipe.dialogs.context.title}</DialogTitle>
                 <DialogDescription>
-                  Extra notes from similar batches and supporting setup guidance.
+                  {f1NewBatchCopy.steps.recipe.dialogs.context.description}
                 </DialogDescription>
               </DialogHeader>
 
@@ -313,14 +341,14 @@ export function RecipeStep({
                   loadingHistory={recommendationHistoryLoading}
                   appliedRecommendationIds={[]}
                   onApply={() => {}}
-                  eyebrow="Extra notes"
-                  title="A little more context"
-                  description="These notes stay secondary to the recipe itself."
+                  eyebrow={f1NewBatchCopy.steps.recipe.dialogs.context.eyebrow}
+                  title={f1NewBatchCopy.steps.recipe.dialogs.context.sectionTitle}
+                  description={f1NewBatchCopy.steps.recipe.dialogs.context.sectionDescription}
                   maxPrimary={2}
                 />
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  No extra notes are needed for this setup right now.
+                  {f1NewBatchCopy.steps.recipe.dialogs.context.empty}
                 </p>
               )}
             </>

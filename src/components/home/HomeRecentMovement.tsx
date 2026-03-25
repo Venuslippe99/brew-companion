@@ -1,5 +1,6 @@
 import { Clock3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { homeCopy } from "@/copy/home";
 import type { HomeRecentMovementItem } from "@/lib/home-command-center";
 
 export function HomeRecentMovement({
@@ -15,13 +16,13 @@ export function HomeRecentMovement({
     <section id={id} className="home-panel-surface px-5 py-5">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          Recent changes
+          {homeCopy.recentMovement.eyebrow}
         </p>
         <h2 className="mt-2 text-xl font-semibold text-foreground">
-          What changed lately
+          {homeCopy.recentMovement.title}
         </h2>
         <p className="mt-2 text-sm text-muted-foreground">
-          A quieter look at what changed across your brews.
+          {homeCopy.recentMovement.description}
         </p>
       </div>
 

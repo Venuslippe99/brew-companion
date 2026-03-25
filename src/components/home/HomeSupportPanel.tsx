@@ -1,18 +1,19 @@
 import { BookOpen, MessageCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { homeCopy } from "@/copy/home";
 import type { HomeSupportContext } from "@/lib/home-command-center";
 
 function getActionMeta(action: { label: string; to: string }) {
   if (action.to.startsWith("/assistant")) {
-    return {
-      icon: MessageCircle,
-      description: "Get a steady second opinion before you move on.",
-    };
+      return {
+        icon: MessageCircle,
+        description: homeCopy.support.assistantDescription,
+      };
   }
 
   return {
     icon: BookOpen,
-    description: "Open the best place to read more before you act.",
+    description: homeCopy.support.readingDescription,
   };
 }
 
@@ -32,7 +33,7 @@ export function HomeSupportPanel({
     <section className="home-panel-surface overflow-hidden px-5 py-5">
       <div className="max-w-2xl">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          Help
+          {homeCopy.support.eyebrow}
         </p>
         <h2 className="mt-2 text-xl font-semibold text-foreground">
           {context.title}
@@ -58,7 +59,7 @@ export function HomeSupportPanel({
         >
           <SecondaryIcon className="h-5 w-5 text-copper" />
           <p className="mt-3 text-sm font-semibold text-foreground">
-            {context.secondaryAction?.label || "Open assistant"}
+            {context.secondaryAction?.label || homeCopy.support.assistantFallback}
           </p>
           <p className="mt-1 text-sm text-muted-foreground">{secondaryMeta.description}</p>
         </button>

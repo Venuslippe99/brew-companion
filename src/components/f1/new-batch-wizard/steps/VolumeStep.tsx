@@ -2,6 +2,7 @@ import { Button } from "@/components/ui/button";
 import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
 import type { NewBatchWizardMode } from "@/components/f1/new-batch-wizard/types";
 import { StarterSourceSelector } from "@/components/lineage/StarterSourceSelector";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 import type { LineageBatchSummary } from "@/lib/lineage";
 
 type VolumeStepProps = {
@@ -19,13 +20,6 @@ type VolumeStepProps = {
   onChooseScratch: () => void;
   onChooseBrewAgain?: () => void;
 };
-
-const VOLUME_PRESETS = [
-  { label: "2L", value: 2000 },
-  { label: "3.8L", value: 3800 },
-  { label: "5L", value: 5000 },
-  { label: "8L", value: 8000 },
-] as const;
 
 export function VolumeStep({
   mode,
@@ -46,40 +40,39 @@ export function VolumeStep({
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
       <NewBatchWizardProgress currentStep="volume" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
-        What final batch size do you want to make?
+        {f1NewBatchCopy.steps.volume.title}
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        This is your final kombucha amount, including starter. The recipe will be built inside
-        that total.
+        {f1NewBatchCopy.steps.volume.description}
       </p>
 
       <div className="mt-5 rounded-2xl border border-border/80 bg-background p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-              Starting point
+              {f1NewBatchCopy.steps.volume.startingPoint.eyebrow}
             </p>
             <p className="mt-1 text-sm text-foreground">
-              {mode === "recipe" && recipeName
-                ? `Using ${recipeName} as the starting point.`
-                : mode === "brew_again" && brewAgainName
-                  ? `Using ${brewAgainName} as the starting point.`
-                  : "Starting from scratch."}
+              {f1NewBatchCopy.steps.volume.startingPoint.summary({
+                mode,
+                recipeName,
+                brewAgainName,
+              })}
             </p>
           </div>
 
           <div className="flex flex-wrap gap-2">
             {mode !== "scratch" ? (
               <Button type="button" variant="outline" size="sm" onClick={onChooseScratch}>
-                Start from scratch
+                {f1NewBatchCopy.steps.volume.startingPoint.startFromScratch}
               </Button>
             ) : null}
             <Button type="button" variant="outline" size="sm" onClick={onChooseRecipe}>
-              Use saved recipe
+              {f1NewBatchCopy.steps.volume.startingPoint.useSavedRecipe}
             </Button>
             {onChooseBrewAgain ? (
               <Button type="button" variant="ghost" size="sm" onClick={onChooseBrewAgain}>
-                Use brew again
+                {f1NewBatchCopy.steps.volume.startingPoint.useBrewAgain}
               </Button>
             ) : null}
           </div>
@@ -87,7 +80,7 @@ export function VolumeStep({
       </div>
 
       <div className="mt-6 flex flex-wrap gap-3">
-        {VOLUME_PRESETS.map((preset) => (
+        {f1NewBatchCopy.steps.volume.presets.map((preset) => (
           <button
             key={preset.value}
             type="button"
@@ -105,7 +98,7 @@ export function VolumeStep({
 
       <div className="mt-5 max-w-sm">
         <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Final batch volume (ml)
+          {f1NewBatchCopy.steps.volume.fields.finalBatchVolume}
         </label>
         <input
           type="number"
@@ -118,11 +111,10 @@ export function VolumeStep({
 
       <div className="mt-6 border-t border-border/70 pt-5">
         <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-          Optional starter link
+          {f1NewBatchCopy.steps.volume.starterLink.eyebrow}
         </p>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Add this if a previous batch is actually feeding today&apos;s brew. It helps the recipe use
-          the right culture line from the beginning.
+          {f1NewBatchCopy.steps.volume.starterLink.description}
         </p>
 
         <div className="mt-4 max-w-2xl">

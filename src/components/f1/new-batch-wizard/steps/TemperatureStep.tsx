@@ -1,4 +1,5 @@
 import { NewBatchWizardProgress } from "@/components/f1/new-batch-wizard/NewBatchWizardProgress";
+import { f1NewBatchCopy } from "@/copy/f1-new-batch";
 
 type TemperatureStepProps = {
   avgRoomTempC: number;
@@ -10,15 +11,15 @@ export function TemperatureStep({ avgRoomTempC, onChange }: TemperatureStepProps
     <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
       <NewBatchWizardProgress currentStep="temperature" />
       <h2 className="mt-2 text-2xl font-semibold text-foreground">
-        What room temperature do you expect?
+        {f1NewBatchCopy.steps.temperature.title}
       </h2>
       <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        A rough average is enough. It helps the app frame how quickly this batch may move.
+        {f1NewBatchCopy.steps.temperature.description}
       </p>
 
       <div className="mt-6 max-w-sm">
         <label className="mb-1.5 block text-sm font-medium text-foreground">
-          Average room temperature (°C)
+          {f1NewBatchCopy.steps.temperature.averageRoomTemp}
         </label>
         <input
           type="number"
