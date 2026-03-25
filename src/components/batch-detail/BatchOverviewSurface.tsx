@@ -369,17 +369,6 @@ export function BatchOverviewSurface({
                   </p>
                 </div>
 
-                {currentF2Setup && (
-                  <div className="rounded-2xl border border-border bg-background p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-                      Saved Second Fermentation summary
-                    </p>
-                    <div className="mt-3">
-                      <F2Snapshot setup={currentF2Setup} />
-                    </div>
-                  </div>
-                )}
-
                 <F2SetupWizard
                   batch={batch}
                   userId={userId}

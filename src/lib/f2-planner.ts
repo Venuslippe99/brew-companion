@@ -201,21 +201,26 @@ function getRiskLevel(
 }
 
 export function calculateF2SetupSummary(args: {
-  totalBatchVolumeMl: number;
-  reserveForSedimentMl: number;
+  totalF1AvailableMl: number;
+  reserveForStarterMl: number;
   ambientTempC: number;
   bottleGroups: F2BottleGroupDraft[];
   recipeItems: F2RecipeItemDraft[];
 }): F2SetupSummary {
   const {
-    totalBatchVolumeMl,
-    reserveForSedimentMl,
+    totalF1AvailableMl,
+    reserveForStarterMl,
     ambientTempC,
     bottleGroups,
     recipeItems,
   } = args;
 
-  const availableF1VolumeMl = Math.max(0, totalBatchVolumeMl - reserveForSedimentMl);
+  const normalizedTotalF1AvailableMl = Math.max(0, totalF1AvailableMl);
+  const normalizedReserveForStarterMl = Math.max(0, reserveForStarterMl);
+  const availableForBottlingMl = Math.max(
+    0,
+    normalizedTotalF1AvailableMl - normalizedReserveForStarterMl
+  );
 
   const validationErrors: string[] = [];
   const ingredientTotalsMap = new Map<string, F2IngredientTotal>();
@@ -278,7 +283,8 @@ export function calculateF2SetupSummary(args: {
     totalKombuchaNeededMl += groupTotalKombuchaMl;
   }
 
-  const remainingVolumeMl = availableF1VolumeMl - totalKombuchaNeededMl;
+  const remainingBottlingVolumeMl =
+    availableForBottlingMl - totalKombuchaNeededMl;
 
   if (bottleGroups.length === 0) {
     validationErrors.push("Add at least one bottle group.");
@@ -288,19 +294,27 @@ export function calculateF2SetupSummary(args: {
     validationErrors.push("Add at least one recipe ingredient.");
   }
 
-  if (remainingVolumeMl < 0) {
+  if (normalizedReserveForStarterMl > normalizedTotalF1AvailableMl) {
+    validationErrors.push(
+      "Starter reserve cannot be greater than the kombucha you have available."
+    );
+  }
+
+  if (remainingBottlingVolumeMl < 0) {
     validationErrors.push("Your bottle plan uses more kombucha than your F1 batch can provide.");
   }
 
   const { riskLevel, riskNotes } = getRiskLevel(ambientTempC, bottleGroups, recipeItems);
 
   return {
-    availableF1VolumeMl,
+    totalF1AvailableMl: normalizedTotalF1AvailableMl,
+    reserveForStarterMl: normalizedReserveForStarterMl,
+    availableForBottlingMl,
     totalBottleCount,
     totalPlannedBottleVolumeMl,
     totalTargetFillMl,
     totalKombuchaNeededMl,
-    remainingVolumeMl,
+    remainingBottlingVolumeMl,
     ingredientTotals: Array.from(ingredientTotalsMap.values()).map((item) => ({
       ...item,
       totalAmount: Number(item.totalAmount.toFixed(2)),

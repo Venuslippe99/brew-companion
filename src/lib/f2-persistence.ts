@@ -12,7 +12,7 @@ import type {
 type StartF2Args = {
   batch: KombuchaBatch;
   userId: string;
-  reserveForSedimentMl: number;
+  reserveForStarterMl: number;
   ambientTempC: number;
   desiredCarbonationLevel: F2CarbonationLevel;
   bottleGroups: F2BottleGroupDraft[];
@@ -61,7 +61,7 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
   const {
     batch,
     userId,
-    reserveForSedimentMl,
+    reserveForStarterMl,
     ambientTempC,
     desiredCarbonationLevel,
     bottleGroups,
@@ -185,8 +185,8 @@ export async function startF2FromWizard(args: StartF2Args): Promise<StartF2Resul
     ambient_temp_c: ambientTempC,
     desired_carbonation_level: desiredCarbonationLevel,
     estimated_pressure_risk: summary.riskLevel,
-    reserved_for_sediment_ml: toInt(reserveForSedimentMl),
-    available_f1_volume_ml: toInt(summary.availableF1VolumeMl),
+    reserved_for_sediment_ml: toInt(reserveForStarterMl),
+    available_f1_volume_ml: toInt(summary.availableForBottlingMl),
     bottle_count: toInt(summary.totalBottleCount),
     bottle_size_ml: toInt(bottleGroups[0]?.bottleSizeMl ?? 500),
     bottle_type: bottleGroups[0]?.bottleType ?? "swing_top",

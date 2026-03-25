@@ -35,8 +35,9 @@ export type LoadedF2Setup = {
   ambientTempC: number;
   desiredCarbonationLevel: "light" | "balanced" | "strong";
   estimatedPressureRisk: string | null;
-  reservedForSedimentMl: number | null;
-  availableF1VolumeMl: number | null;
+  reserveForStarterMl: number | null;
+  totalF1AvailableMl: number | null;
+  availableForBottlingMl: number | null;
   bottleCount: number;
   plannedBottleVolumeMl: number | null;
   plannedKombuchaFillMl: number | null;
@@ -166,13 +167,27 @@ export async function loadCurrentF2Setup(batchId: string): Promise<LoadedF2Setup
     ingredientsByBottleId.set(row.bottle_id, current);
   });
 
+  const reserveForStarterMl =
+    setupRow.reserved_for_sediment_ml != null
+      ? Number(setupRow.reserved_for_sediment_ml)
+      : null;
+  const availableForBottlingMl =
+    setupRow.available_f1_volume_ml != null
+      ? Number(setupRow.available_f1_volume_ml)
+      : null;
+  const totalF1AvailableMl =
+    reserveForStarterMl != null || availableForBottlingMl != null
+      ? (reserveForStarterMl ?? 0) + (availableForBottlingMl ?? 0)
+      : null;
+
   return {
     id: setupRow.id,
     ambientTempC: Number(setupRow.ambient_temp_c),
     desiredCarbonationLevel: setupRow.desired_carbonation_level,
     estimatedPressureRisk: setupRow.estimated_pressure_risk,
-    reservedForSedimentMl: setupRow.reserved_for_sediment_ml,
-    availableF1VolumeMl: setupRow.available_f1_volume_ml,
+    reserveForStarterMl,
+    totalF1AvailableMl,
+    availableForBottlingMl,
     bottleCount: Number(setupRow.bottle_count),
     plannedBottleVolumeMl: setupRow.planned_bottle_volume_ml,
     plannedKombuchaFillMl: setupRow.planned_kombucha_fill_ml,

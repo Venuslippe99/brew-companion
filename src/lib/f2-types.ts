@@ -46,7 +46,7 @@ export type F2RecipeDraft = {
 };
 
 export type F2SetupDraft = {
-  reserveForSedimentMl: number;
+  reserveForStarterMl: number;
   ambientTempC: number;
   desiredCarbonationLevel: F2CarbonationLevel;
   bottleGroups: F2BottleGroupDraft[];
@@ -84,12 +84,14 @@ export type F2IngredientTotal = {
 };
 
 export type F2SetupSummary = {
-  availableF1VolumeMl: number;
+  totalF1AvailableMl: number;
+  reserveForStarterMl: number;
+  availableForBottlingMl: number;
   totalBottleCount: number;
   totalPlannedBottleVolumeMl: number;
   totalTargetFillMl: number;
   totalKombuchaNeededMl: number;
-  remainingVolumeMl: number;
+  remainingBottlingVolumeMl: number;
   ingredientTotals: F2IngredientTotal[];
   bottleGroupPlans: F2BottleGroupPlan[];
   validationErrors: string[];
