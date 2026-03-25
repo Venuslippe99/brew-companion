@@ -138,7 +138,7 @@ export function NewBatchWizard({ userId, brewAgainState }: NewBatchWizardProps) 
   }, [wizard.state.step]);
 
   return (
-    <div className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl flex-col gap-4 px-4 pb-6 pt-6 lg:px-8 lg:pt-8">
+    <div className="mx-auto flex min-h-[calc(100vh-7rem)] w-full max-w-5xl flex-col gap-4 px-4 pb-6 pt-4 lg:px-8 lg:pt-5">
       <NewBatchWizardHeader
         mode={wizard.state.mode}
         recipeName={wizard.state.selectedRecipe?.name}

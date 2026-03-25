@@ -305,9 +305,13 @@ export default function Dashboard() {
   };
 
   return (
-    <AppLayout>
+    <AppLayout
+      shell={{
+        subtitle: loading ? homeCopy.page.loadingStateSentence : commandCenter.stateSentence,
+      }}
+    >
       <div className="home-canvas min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+        <div className="mx-auto max-w-6xl px-4 pb-28 pt-3 lg:px-8 lg:pb-10 lg:pt-4">
           <div className="space-y-4 sm:space-y-5 lg:space-y-6">
             <ScrollReveal>
               <HomeHeader

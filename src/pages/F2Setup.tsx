@@ -1,6 +1,5 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import F2SetupWizard from "@/components/f2/F2SetupWizard";
 import { Button } from "@/components/ui/button";
@@ -114,7 +113,7 @@ export default function F2Setup() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout shell={{ title: "F2 Setup", subtitle: "Loading bottling setup..." }}>
         <div className="mx-auto max-w-3xl px-4 pt-20 text-center">
           <p className="text-muted-foreground">Loading bottling setup...</p>
         </div>
@@ -124,7 +123,7 @@ export default function F2Setup() {
 
   if (!batch) {
     return (
-      <AppLayout>
+      <AppLayout shell={{ title: "F2 Setup", subtitle: "Batch not found." }}>
         <div className="mx-auto max-w-3xl px-4 pt-20 text-center">
           <p className="text-muted-foreground">Batch not found.</p>
           <Button className="mt-4" onClick={() => navigate("/batches")}>
@@ -138,16 +137,13 @@ export default function F2Setup() {
   const canOpenF2Chapter = ALLOWED_F2_STAGES.includes(batch.currentStage);
 
   return (
-    <AppLayout>
-      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 pt-4 lg:px-8 lg:pt-8">
-        <button
-          type="button"
-          onClick={() => navigate(`/batch/${batch.id}`)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to batch
-        </button>
-
+    <AppLayout
+      shell={{
+        title: batch.name,
+        subtitle: "Second Fermentation",
+      }}
+    >
+      <div className="mx-auto max-w-6xl space-y-6 px-4 pb-10 pt-2 lg:px-8 lg:pt-4">
         <div className="rounded-[32px] border border-border bg-gradient-to-br from-background via-card to-muted/60 p-6 lg:p-8">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
             <div className="space-y-3">
@@ -155,10 +151,7 @@ export default function F2Setup() {
                 Second Fermentation
               </p>
               <div>
-                <h1 className="text-3xl font-semibold text-foreground">
-                  Dedicated bottling setup
-                </h1>
-                <p className="mt-2 max-w-2xl text-sm leading-6 text-muted-foreground">
+                <p className="max-w-2xl text-sm leading-6 text-muted-foreground">
                   Build bottle groups, assign different flavour plans within the same
                   F1 batch, and save one clear bottling chapter for this brew.
                 </p>

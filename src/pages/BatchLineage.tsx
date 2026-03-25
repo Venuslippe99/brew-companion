@@ -15,7 +15,7 @@ import {
   loadFamilyGraph,
   type VisibleFamilyGraphNode,
 } from "@/lib/lineage-graph";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
 function groupNodesByDepth(
   nodes: VisibleFamilyGraphNode[],
@@ -219,16 +219,13 @@ export default function BatchLineage() {
   );
 
   return (
-    <AppLayout>
-      <div className="max-w-6xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-6 pb-8">
-        <button
-          type="button"
-          onClick={() => navigate(id ? `/batch/${id}` : "/batches")}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back to batch
-        </button>
-
+    <AppLayout
+      shell={{
+        title: rootNode ? `${rootNode.name} lineage` : "Batch lineage",
+        subtitle: "Explore how this batch connects to earlier and later brews.",
+      }}
+    >
+      <div className="max-w-6xl mx-auto px-4 pt-2 lg:pt-4 lg:px-8 space-y-6 pb-8">
         <ScrollReveal>
           <div className="rounded-2xl border border-border bg-card p-5 space-y-4">
             <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -236,9 +233,6 @@ export default function BatchLineage() {
                 <p className="text-xs font-semibold uppercase tracking-wider text-primary">
                   Lineage Explorer
                 </p>
-                <h1 className="mt-2 font-display text-2xl lg:text-3xl font-semibold text-foreground">
-                  {rootNode ? `${rootNode.name} lineage` : "Batch lineage"}
-                </h1>
                 <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
                   Past batches appear on the left, this focal batch stays in the center, and later batches appear on the right.
                 </p>

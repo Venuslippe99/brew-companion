@@ -25,13 +25,7 @@ export default function Settings() {
 
   return (
     <AppLayout>
-      <div className="max-w-2xl mx-auto px-4 pt-6 lg:pt-10 lg:px-8 space-y-6 pb-8">
-        <ScrollReveal>
-          <h1 className="font-display text-2xl lg:text-3xl font-semibold text-foreground">
-            {settingsCopy.page.title}
-          </h1>
-        </ScrollReveal>
-
+      <div className="max-w-2xl mx-auto px-4 pt-3 lg:pt-4 lg:px-8 space-y-6 pb-8">
         {/* Experience Level */}
         <ScrollReveal delay={0.05}>
           <div className="bg-card border border-border rounded-xl p-5 space-y-4">

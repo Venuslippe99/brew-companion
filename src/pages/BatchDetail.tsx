@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import AppLayout from "@/components/layout/AppLayout";
 import { Button } from "@/components/ui/button";
@@ -651,7 +650,7 @@ export default function BatchDetail() {
 
   if (loading) {
     return (
-      <AppLayout>
+      <AppLayout shell={{ title: "Batch", subtitle: "Loading batch..." }}>
         <div className="max-w-2xl mx-auto px-4 pt-20 text-center">
           <p className="text-muted-foreground">Loading batch...</p>
         </div>
@@ -661,7 +660,7 @@ export default function BatchDetail() {
 
   if (!batch) {
     return (
-      <AppLayout>
+      <AppLayout shell={{ title: "Batch", subtitle: "Not found" }}>
         <div className="max-w-2xl mx-auto px-4 pt-20 text-center">
           <p className="text-muted-foreground">Batch not found</p>
           <Button variant="ghost" className="mt-4" onClick={() => navigate("/batches")}>
@@ -675,16 +674,13 @@ export default function BatchDetail() {
   const dayNumber = getDayNumber(batch.brewStartedAt);
 
   return (
-    <AppLayout>
-      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-10 pt-4 lg:px-8 lg:pt-8">
-        <button
-          type="button"
-          onClick={() => navigate(-1)}
-          className="flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> Back
-        </button>
-
+    <AppLayout
+      shell={{
+        title: batch.name,
+        subtitle: `${getStageLabel(batch.currentStage)} • Day ${dayNumber}`,
+      }}
+    >
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-10 pt-2 lg:px-8 lg:pt-4">
         <BatchDetailHero
           batch={batch}
           dayNumber={dayNumber}

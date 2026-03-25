@@ -178,18 +178,12 @@ export default function MyBatches() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
+      <div className="mx-auto max-w-6xl px-4 pb-28 pt-3 lg:px-8 lg:pb-10 lg:pt-4">
         <ScrollReveal>
           <section className="rounded-[28px] border bg-card px-5 py-6 shadow-[0_14px_40px_-30px_hsl(var(--tea)/0.22)] lg:px-7 lg:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-                  {batchLibraryCopy.page.eyebrow}
-                </p>
-                <h1 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground lg:text-[2.6rem]">
-                  {batchLibraryCopy.page.title}
-                </h1>
-                <p className="mt-3 text-sm leading-6 text-muted-foreground lg:text-base">
+                <p className="text-sm leading-6 text-muted-foreground lg:text-base">
                   {batchLibraryCopy.page.description}
                 </p>
               </div>

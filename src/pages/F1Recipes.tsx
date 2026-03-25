@@ -178,14 +178,11 @@ export default function F1Recipes() {
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-6 lg:px-8 lg:pt-10">
+      <div className="mx-auto max-w-5xl space-y-6 px-4 pb-10 pt-3 lg:px-8 lg:pt-4">
         <ScrollReveal>
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h1 className="font-display text-2xl font-semibold text-foreground lg:text-3xl">
-                {f1LibraryCopy.recipes.page.title}
-              </h1>
-              <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+              <p className="max-w-2xl text-sm text-muted-foreground">
                 {f1LibraryCopy.recipes.page.description}
               </p>
             </div>
