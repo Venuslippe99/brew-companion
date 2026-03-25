@@ -8,6 +8,7 @@ import { F1RecipeEditor } from "@/components/f1/F1RecipeEditor";
 import { F1RecipePicker } from "@/components/f1/F1RecipePicker";
 import { F1SetupSummary } from "@/components/f1/F1SetupSummary";
 import { F1VesselPicker } from "@/components/f1/F1VesselPicker";
+import { NewBatchBrewRead } from "@/components/f1/new-batch/NewBatchBrewRead";
 import { NewBatchProgress } from "@/components/f1/new-batch/NewBatchProgress";
 import { NewBatchStepFooter } from "@/components/f1/new-batch/NewBatchStepFooter";
 import AppLayout from "@/components/layout/AppLayout";
@@ -29,6 +30,7 @@ import {
   buildF1Recommendations,
   loadF1RecommendationHistoryContext,
 } from "@/lib/f1-recommendations";
+import { buildF1BaselineMetrics } from "@/lib/f1-baseline-rules";
 import type {
   F1RecommendationCard,
   F1RecommendationSnapshot,
@@ -61,6 +63,7 @@ import {
   type FermentationVesselSummary,
   type SelectedF1Vessel,
 } from "@/lib/f1-vessel-types";
+import { buildF1VesselFitResult } from "@/lib/f1-vessel-fit";
 import { loadFermentationVessels, saveFermentationVessel } from "@/lib/f1-vessels";
 import { loadF1Recipes, saveF1Recipe } from "@/lib/f1-recipes";
 import { loadStarterSourceCandidates, type LineageBatchSummary } from "@/lib/lineage";
@@ -72,6 +75,11 @@ type NewBatchForm = F1BatchSetupFields & {
   name: string;
   brewDate: string;
   initialPh: string;
+};
+
+type FlowStepState = {
+  status: "blocked" | "warning" | "ready" | "complete";
+  helperText: string;
 };
 
 const teaSourceFormLabels: Record<NewBatchForm["teaSourceForm"], string> = {
@@ -86,6 +94,38 @@ const stepItems = [
   { id: "context", label: "Vessel and starter", shortLabel: "Context" },
   { id: "review", label: "Review and create", shortLabel: "Review" },
 ] satisfies { id: NewBatchStepId; label: string; shortLabel: string }[];
+
+const brewRecommendationCategories = new Set([
+  "starter_recommendation",
+  "sugar_recommendation",
+  "tea_amount_recommendation",
+  "tea_base_recommendation",
+  "timing_expectation",
+]);
+
+const contextRecommendationCategories = new Set([
+  "culture_transition_warning",
+  "sweetener_transition_warning",
+  "combined_transition_warning",
+  "vessel_recommendation",
+  "lineage_note",
+  "fit_note",
+]);
+
+const reviewRecommendationCategories = new Set(["similar_setup_note", "next_time_lesson"]);
+
+function dedupeRecommendationCards(cards: F1RecommendationCard[]) {
+  const seen = new Set<string>();
+
+  return cards.filter((card) => {
+    if (seen.has(card.id)) {
+      return false;
+    }
+
+    seen.add(card.id);
+    return true;
+  });
+}
 
 function buildInitialForm(brewAgainState: BrewAgainNavigationState | null): NewBatchForm {
   return {
@@ -123,18 +163,54 @@ function formatLiters(value: number) {
   return `${(value / 1000).toFixed(value % 1000 === 0 ? 1 : 2)}L`;
 }
 
-function formatTeaStrength(form: NewBatchForm) {
-  const liters = form.totalVolumeMl > 0 ? form.totalVolumeMl / 1000 : 0;
-
-  if (liters <= 0) {
+function formatMetricNumber(value: number | null) {
+  if (value === null) {
     return null;
   }
 
-  if (form.teaAmountUnit === "g") {
-    return `${(form.teaAmountValue / liters).toFixed(1)} g/L`;
+  return Number.isInteger(value) ? value.toString() : value.toFixed(1);
+}
+
+function formatTeaRead(args: {
+  form: NewBatchForm;
+  teaGramsPerLiter: number | null;
+  teaEstimateSource: "direct" | "approximate" | "none";
+}) {
+  if (args.teaGramsPerLiter !== null) {
+    return {
+      value: `${formatMetricNumber(args.teaGramsPerLiter)} g/L${
+        args.teaEstimateSource === "approximate" ? " approx." : ""
+      }`,
+      hint:
+        args.teaEstimateSource === "approximate"
+          ? `${args.form.teaAmountValue}${args.form.teaAmountUnit} for ${formatLiters(args.form.totalVolumeMl)}`
+          : "Normalized against your current batch volume",
+    };
   }
 
-  return `${form.teaAmountValue} ${form.teaAmountUnit} for ${formatLiters(form.totalVolumeMl)}`;
+  if (args.form.totalVolumeMl <= 0) {
+    return {
+      value: "Add a volume",
+      hint: "Tea strength becomes easier to compare once the batch size is set.",
+    };
+  }
+
+  return {
+    value: `${args.form.teaAmountValue}${args.form.teaAmountUnit}`,
+    hint: `${args.form.teaAmountValue}${args.form.teaAmountUnit} for ${formatLiters(args.form.totalVolumeMl)}`,
+  };
+}
+
+function joinWithAnd(values: string[]) {
+  if (values.length <= 1) {
+    return values[0] || "";
+  }
+
+  if (values.length === 2) {
+    return `${values[0]} and ${values[1]}`;
+  }
+
+  return `${values.slice(0, -1).join(", ")}, and ${values[values.length - 1]}`;
 }
 
 function getStartCardClasses(selected: boolean) {
@@ -160,6 +236,7 @@ export default function NewBatch() {
   const [currentStep, setCurrentStep] = useState<NewBatchStepId>("start");
   const [startMode, setStartMode] = useState<NewBatchStartMode>(initialStartMode);
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showBrewDetails, setShowBrewDetails] = useState(!isBeginner);
   const [showManualVesselDetails, setShowManualVesselDetails] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [recipePickerOpen, setRecipePickerOpen] = useState(false);
@@ -380,16 +457,55 @@ export default function NewBatch() {
     [appliedAdjustments, recommendationHistory, recommendationDraft]
   );
 
+  const brewRecommendationCards = useMemo(
+    () =>
+      recommendations.cards.filter((card) => brewRecommendationCategories.has(card.category)),
+    [recommendations.cards]
+  );
+  const contextRecommendationCards = useMemo(
+    () =>
+      recommendations.cards.filter((card) => contextRecommendationCategories.has(card.category)),
+    [recommendations.cards]
+  );
+  const reviewRecommendationCards = useMemo(
+    () =>
+      recommendations.cards.filter((card) => reviewRecommendationCategories.has(card.category)),
+    [recommendations.cards]
+  );
+  const finalCheckCards = useMemo(
+    () =>
+      dedupeRecommendationCards(
+        recommendations.cards.filter(
+          (card) => card.cautionLevel === "high" || card.cautionLevel === "moderate"
+        )
+      ),
+    [recommendations.cards]
+  );
+
   const summary = useMemo(
     () => buildF1SetupSummary(batchSetupFields, selectedVessel),
     [batchSetupFields, selectedVessel]
   );
+  const vesselFit = useMemo(
+    () =>
+      buildF1VesselFitResult({
+        totalVolumeMl: form.totalVolumeMl,
+        vessel: selectedVessel,
+      }),
+    [form.totalVolumeMl, selectedVessel]
+  );
+  const baselineMetrics = useMemo(() => buildF1BaselineMetrics(batchSetupFields), [batchSetupFields]);
 
-  const starterRatioPercent =
-    form.totalVolumeMl > 0 ? Math.round((form.starterLiquidMl / form.totalVolumeMl) * 100) : 0;
-  const sugarPerLiter =
-    form.totalVolumeMl > 0 ? Math.round((form.sugarG / form.totalVolumeMl) * 1000) : 0;
-  const teaStrength = formatTeaStrength(form);
+  const starterRatioPercent = baselineMetrics.starterRatioPercent ?? 0;
+  const sugarPerLiter = baselineMetrics.sugarPerLiter;
+  const teaRead = formatTeaRead({
+    form,
+    teaGramsPerLiter: baselineMetrics.teaGramsPerLiter,
+    teaEstimateSource: baselineMetrics.teaGramEstimateSource,
+  });
+  const tastingWindowText = recommendations.timing
+    ? `First tasting should likely land around Day ${recommendations.timing.windowStartDay}-${recommendations.timing.windowEndDay}. ${recommendations.timing.explanation}`
+    : "Add a brew date to see a first tasting estimate.";
 
   const syncManualSelection = (vesselType: string) => {
     const nextDraft = createManualDraftForVessel(vesselType);
@@ -478,7 +594,7 @@ export default function NewBatch() {
       });
 
       setSelectedVessel(buildSelectedVesselFromSaved(saved));
-      toast.success("Vessel saved and selected for this batch.");
+      toast.success("Vessel saved. This batch will use it.");
       await loadVessels();
     } catch (error) {
       console.error("Save manual vessel from New Batch error:", error);
@@ -504,7 +620,7 @@ export default function NewBatch() {
 
       setSelectedRecipe(saved);
       setSaveRecipeOpen(false);
-      toast.success("Recipe saved and linked to this batch setup.");
+      toast.success("Recipe saved. You can reuse this starting point next time.");
       await loadRecipes();
     } catch (error) {
       console.error("Save F1 recipe from New Batch error:", error);
@@ -534,7 +650,7 @@ export default function NewBatch() {
       return [...next, { recommendationId: card.id, field, value }];
     });
 
-    toast.success("Applied recommendation to today's brew.");
+    toast.success("Adjustment applied to today's brew.");
   };
 
   const handleCreate = async () => {
@@ -543,13 +659,35 @@ export default function NewBatch() {
       return;
     }
 
+    if (reviewStepState.status === "blocked") {
+      toast.error(reviewStepState.helperText);
+      return;
+    }
+
     if (!form.name.trim()) {
-      toast.error("Please enter a batch name.");
+      toast.error("Add a batch name to keep going.");
       return;
     }
 
     if (!form.brewDate) {
-      toast.error("Please select a brew date.");
+      toast.error("Choose the brew date first.");
+      return;
+    }
+
+    if (
+      form.totalVolumeMl <= 0 ||
+      form.teaAmountValue <= 0 ||
+      form.sugarG <= 0 ||
+      form.starterLiquidMl <= 0
+    ) {
+      toast.error("Finish the core brew details before you start the batch.");
+      return;
+    }
+
+    if (vesselFit.fitState === "overfilled") {
+      toast.error(
+        "This vessel looks too full for the planned volume. Adjust the batch size or switch vessels first."
+      );
       return;
     }
 
@@ -589,7 +727,7 @@ export default function NewBatch() {
 
     if (error || !createdBatch) {
       console.error("Create batch error:", error);
-      toast.error(error?.message || "Could not create batch.");
+      toast.error(error?.message || "Could not start the batch.");
       return;
     }
 
@@ -608,14 +746,14 @@ export default function NewBatch() {
         acceptedRecommendationIds: appliedAdjustments.map((item) => item.recommendationId),
       });
 
-      toast.success("Batch created.");
+      toast.success("Batch started.");
       navigate("/batches");
     } catch (snapshotError) {
       console.error("Save batch F1 setup snapshot error:", snapshotError);
       toast.message(
         snapshotError instanceof Error
-          ? `Batch created, but the detailed F1 setup snapshot could not be saved: ${snapshotError.message}`
-          : "Batch created, but the detailed F1 setup snapshot could not be saved."
+          ? `Batch started, but the detailed F1 setup snapshot could not be saved: ${snapshotError.message}`
+          : "Batch started, but the detailed F1 setup snapshot could not be saved."
       );
       navigate(`/batch/${createdBatch.id}`);
     }
@@ -625,16 +763,118 @@ export default function NewBatch() {
   const nextStep = stepItems[currentStepIndex + 1]?.id || null;
   const previousStep = stepItems[currentStepIndex - 1]?.id || null;
 
-  const canContinueFromStart = startMode !== "recipe" || !!selectedRecipe;
-  const canContinueFromBrew =
-    !!form.name.trim() &&
-    !!form.brewDate &&
-    form.totalVolumeMl > 0 &&
-    form.teaAmountValue > 0 &&
-    form.sugarG > 0 &&
-    form.starterLiquidMl > 0;
+  const startStepState: FlowStepState =
+    startMode === "recipe" && !selectedRecipe
+      ? {
+          status: "blocked",
+          helperText: "Choose a recipe or switch to another starting point.",
+        }
+      : {
+          status: "complete",
+          helperText:
+            startMode === "brew_again"
+              ? "You are starting from a past batch and can still change the setup."
+              : startMode === "recipe"
+                ? "You have a saved recipe ready as the starting point."
+                : "You are starting from scratch.",
+        };
 
-  const goToStep = (step: NewBatchStepId) => setCurrentStep(step);
+  const missingBrewFields = [
+    !form.name.trim() ? "a batch name" : null,
+    !form.brewDate ? "a brew date" : null,
+    form.totalVolumeMl <= 0 ? "a batch size" : null,
+    form.teaAmountValue <= 0 ? "a tea amount" : null,
+    form.sugarG <= 0 ? "a sugar amount" : null,
+    form.starterLiquidMl <= 0 ? "a starter amount" : null,
+  ].filter((value): value is string => !!value);
+  const topBrewCaution = brewRecommendationCards.find(
+    (card) => card.cautionLevel === "high" || card.cautionLevel === "moderate"
+  );
+  const brewStepState: FlowStepState =
+    missingBrewFields.length > 0
+      ? {
+          status: "blocked",
+          helperText: `Add ${joinWithAnd(missingBrewFields)} to keep going.`,
+        }
+      : topBrewCaution
+        ? {
+            status: "warning",
+            helperText: `${topBrewCaution.title}. You can continue, but it is worth double-checking first.`,
+          }
+        : {
+            status: "complete",
+            helperText: "The core brew setup looks ready for the next step.",
+          };
+
+  const topContextCaution = contextRecommendationCards.find(
+    (card) => card.cautionLevel === "high" || card.cautionLevel === "moderate"
+  );
+  const contextStepState: FlowStepState =
+    vesselFit.fitState === "overfilled"
+      ? {
+          status: "blocked",
+          helperText: "Your vessel looks too full for this batch size. Lower the volume or switch vessels before you continue.",
+        }
+      : topContextCaution
+        ? {
+            status: "warning",
+            helperText: `${topContextCaution.title}. This can still work, but it is worth checking before you start.`,
+          }
+        : {
+            status: "complete",
+            helperText: "Vessel and starter context look ready for the final check.",
+          };
+
+  const reviewStepState: FlowStepState =
+    startStepState.status === "blocked"
+      ? {
+          status: "blocked",
+          helperText: startStepState.helperText,
+        }
+      : brewStepState.status === "blocked"
+        ? {
+            status: "blocked",
+            helperText: brewStepState.helperText,
+          }
+        : contextStepState.status === "blocked"
+          ? {
+              status: "blocked",
+              helperText: contextStepState.helperText,
+            }
+          : finalCheckCards.length > 0
+            ? {
+                status: "warning",
+                helperText: `${finalCheckCards[0].title}. You can start the batch once you are comfortable with the remaining checks.`,
+              }
+            : {
+                status: "ready",
+                helperText: "This batch looks ready to start.",
+              };
+
+  const stepStateMap: Record<NewBatchStepId, FlowStepState> = {
+    start: startStepState,
+    brew: brewStepState,
+    context: contextStepState,
+    review: reviewStepState,
+  };
+
+  const canNavigateToStep = (step: NewBatchStepId) => {
+    const targetIndex = stepItems.findIndex((item) => item.id === step);
+
+    if (targetIndex <= currentStepIndex) {
+      return true;
+    }
+
+    return stepItems
+      .slice(0, targetIndex)
+      .every((item) => stepStateMap[item.id].status !== "blocked");
+  };
+
+  const goToStep = (step: NewBatchStepId) => {
+    if (canNavigateToStep(step)) {
+      setCurrentStep(step);
+    }
+  };
 
   const handlePrimaryAction = () => {
     if (currentStep === "review") {
@@ -642,28 +882,31 @@ export default function NewBatch() {
       return;
     }
 
-    if (nextStep) {
+    if (nextStep && canNavigateToStep(nextStep)) {
       setCurrentStep(nextStep);
     }
   };
 
   const primaryLabel =
     currentStep === "start"
-      ? "Continue"
+      ? "Continue to brew"
       : currentStep === "brew"
-        ? "Continue to context"
+        ? "Continue to vessel and starter"
         : currentStep === "context"
-          ? "Continue to review"
-          : "Create batch";
+          ? "Continue to final check"
+          : "Start batch";
 
   const primaryDisabled =
     currentStep === "start"
-      ? !canContinueFromStart
+      ? startStepState.status === "blocked"
       : currentStep === "brew"
-        ? !canContinueFromBrew
+        ? brewStepState.status === "blocked"
+        : currentStep === "context"
+          ? contextStepState.status === "blocked"
         : currentStep === "review"
-          ? !form.name.trim() || !form.brewDate || isSaving
+          ? reviewStepState.status === "blocked" || isSaving
           : false;
+  const currentStepState = stepStateMap[currentStep];
 
   return (
     <AppLayout>
@@ -679,7 +922,7 @@ export default function NewBatch() {
                   Start a new batch
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Set up first fermentation one step at a time.
+                  Set up today&apos;s first fermentation with guidance as you go.
                 </p>
               </div>
             </div>
@@ -689,6 +932,24 @@ export default function NewBatch() {
             <NewBatchProgress
               items={stepItems}
               currentStepId={currentStep}
+              itemStates={{
+                start: {
+                  status: startStepState.status,
+                  disabled: !canNavigateToStep("start"),
+                },
+                brew: {
+                  status: brewStepState.status,
+                  disabled: !canNavigateToStep("brew"),
+                },
+                context: {
+                  status: contextStepState.status,
+                  disabled: !canNavigateToStep("context"),
+                },
+                review: {
+                  status: reviewStepState.status,
+                  disabled: !canNavigateToStep("review"),
+                },
+              }}
               onSelect={(stepId) => goToStep(stepId as NewBatchStepId)}
             />
           </ScrollReveal>
@@ -712,11 +973,11 @@ export default function NewBatch() {
                     Step 1
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">
-                    How do you want to begin?
+                    Choose how to begin
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Choose the easiest starting point. You can still adjust today&apos;s brew before
-                    you create the batch.
+                    Pick the easiest starting point for today. You can still change the brew before
+                    you start the batch.
                   </p>
                 </div>
 
@@ -762,7 +1023,8 @@ export default function NewBatch() {
                           {selectedRecipe.defaultStarterLiquidMl}ml starter.
                         </p>
                         <p className="mt-2 text-xs text-muted-foreground">
-                          This recipe fills in the form, but today&apos;s batch stays fully editable.
+                          This fills in your starting point, but today&apos;s batch stays fully
+                          editable.
                         </p>
                       </div>
                     ) : null}
@@ -804,19 +1066,91 @@ export default function NewBatch() {
                     Step 2
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">
-                    What are you brewing today?
+                    Build today&apos;s brew
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Enter the actual setup for this batch. If you loaded a recipe, these are the
-                    values you want saved for today.
+                    Use the setup you are actually brewing today. Kombloom will keep reading the
+                    proportions as you go, so you can judge the brew before review.
                   </p>
                 </div>
 
+                <NewBatchBrewRead
+                  metrics={[
+                    {
+                      label: "Batch size",
+                      value: formatLiters(form.totalVolumeMl),
+                      hint:
+                        form.totalVolumeMl > 0
+                          ? `${form.totalVolumeMl}ml total volume`
+                          : "Set the batch size to compare the rest of the brew.",
+                    },
+                    {
+                      label: "Tea read",
+                      value: teaRead.value,
+                      hint: teaRead.hint,
+                    },
+                    {
+                      label: "Sugar read",
+                      value:
+                        sugarPerLiter !== null
+                          ? `${formatMetricNumber(sugarPerLiter)} g/L`
+                          : "Add a volume",
+                      hint:
+                        sugarPerLiter !== null
+                          ? "This makes it easier to judge how sweet the setup really is."
+                          : "Sugar is easier to compare once the batch size is set.",
+                    },
+                    {
+                      label: "Starter read",
+                      value: `${starterRatioPercent}% starter`,
+                      hint: "Around 10% is a calm everyday reference point.",
+                    },
+                  ]}
+                  summary={summary.brewReadSummary}
+                  timingLabel="Likely first taste"
+                  timingText={tastingWindowText}
+                />
+
+                {selectedRecipe ? (
+                  <div className="rounded-2xl border border-primary/10 bg-background p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      Starting from {selectedRecipe.name}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      These numbers came from your saved recipe. Keep what still fits today and
+                      change anything that does not.
+                    </p>
+                  </div>
+                ) : startMode === "brew_again" && brewAgainState ? (
+                  <div className="rounded-2xl border border-primary/10 bg-background p-4">
+                    <p className="text-sm font-semibold text-foreground">
+                      Starting from {brewAgainState.sourceSummary.sourceBatchName}
+                    </p>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      This batch already carries the last setup forward. Use this step to confirm
+                      what stayed the same and what changed today.
+                    </p>
+                  </div>
+                ) : null}
+
+                <F1RecommendationSection
+                  cards={brewRecommendationCards}
+                  loadingHistory={recommendationHistoryLoading}
+                  appliedRecommendationIds={appliedAdjustments.map((item) => item.recommendationId)}
+                  onApply={handleApplyRecommendation}
+                  eyebrow="Worth checking now"
+                  title="A few things to watch while you set the brew"
+                  description="These notes update from the tea, sugar, starter, and timing choices you are making in this step."
+                  secondaryTitle="Still useful to know"
+                  maxPrimary={2}
+                />
+
                 <section className="space-y-4 rounded-2xl border border-border/80 bg-background p-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">Batch basics</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Name and batch size</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Give the batch a name, date, and target volume.
+                      Give the brew a name, set the brew date, and confirm how much you are
+                      making.
                     </p>
                   </div>
 
@@ -863,9 +1197,9 @@ export default function NewBatch() {
 
                 <section className="space-y-4 rounded-2xl border border-border/80 bg-background p-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">Tea and sugar</h3>
+                    <h3 className="text-sm font-semibold text-foreground">Build the tea base</h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      Capture the tea base and sweetener you are using today.
+                      Set the tea and sugar in the proportions you actually want to start with.
                     </p>
                   </div>
 
@@ -886,23 +1220,10 @@ export default function NewBatch() {
                         ))}
                       </select>
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-foreground">
-                        Tea form
-                      </label>
-                      <select
-                        value={form.teaSourceForm}
-                        onChange={(event) =>
-                          update("teaSourceForm", event.target.value as NewBatchForm["teaSourceForm"])
-                        }
-                        className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                      >
-                        {F1_TEA_SOURCE_FORMS.map((option) => (
-                          <option key={option} value={option}>
-                            {teaSourceFormLabels[option]}
-                          </option>
-                        ))}
-                      </select>
+                    <div className="rounded-xl border border-border/80 bg-card p-3">
+                      <p className="text-xs text-muted-foreground">Tea read</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">{teaRead.value}</p>
+                      <p className="mt-1 text-xs text-muted-foreground">{teaRead.hint}</p>
                     </div>
                   </div>
 
@@ -938,9 +1259,6 @@ export default function NewBatch() {
                       </select>
                     </div>
                   </div>
-                  {teaStrength ? (
-                    <p className="text-xs text-muted-foreground">Tea strength: {teaStrength}</p>
-                  ) : null}
 
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
@@ -953,32 +1271,121 @@ export default function NewBatch() {
                         onChange={(event) => update("sugarG", Number(event.target.value))}
                         className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                       />
-                      <p className="mt-1 text-xs text-muted-foreground">{sugarPerLiter} g/L</p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {sugarPerLiter !== null
+                          ? `${formatMetricNumber(sugarPerLiter)} g/L`
+                          : "Add a volume to compare sugar per liter."}
+                      </p>
                     </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-foreground">
-                        Sugar type
-                      </label>
-                      <select
-                        value={form.sugarType}
-                        onChange={(event) => update("sugarType", event.target.value)}
-                        className="h-11 w-full rounded-lg border border-border bg-card px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                    <div className="rounded-xl border border-border/80 bg-card p-3">
+                      <p className="text-xs text-muted-foreground">Sugar read</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {sugarPerLiter !== null
+                          ? `${formatMetricNumber(sugarPerLiter)} g/L`
+                          : "Waiting for batch size"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        This is the clearest way to compare sweetener load against the batch size.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/80 bg-card p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">
+                          {showBrewDetails ? "Supporting brew details" : "More brew details"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          Tea form, sugar type, and SCOBY details still matter, but they do not
+                          need to crowd the main decisions.
+                        </p>
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowBrewDetails((current) => !current)}
                       >
-                        {F1_SUGAR_TYPES.map((option) => (
-                          <option key={option} value={option}>
-                            {option}
-                          </option>
-                        ))}
-                      </select>
+                        {showBrewDetails ? "Hide details" : "Show details"}
+                      </Button>
                     </div>
+
+                    {showBrewDetails ? (
+                      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Tea form
+                          </label>
+                          <select
+                            value={form.teaSourceForm}
+                            onChange={(event) =>
+                              update(
+                                "teaSourceForm",
+                                event.target.value as NewBatchForm["teaSourceForm"]
+                              )
+                            }
+                            className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {F1_TEA_SOURCE_FORMS.map((option) => (
+                              <option key={option} value={option}>
+                                {teaSourceFormLabels[option]}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            Sugar type
+                          </label>
+                          <select
+                            value={form.sugarType}
+                            onChange={(event) => update("sugarType", event.target.value)}
+                            className="h-11 w-full rounded-lg border border-border bg-background px-3 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                          >
+                            {F1_SUGAR_TYPES.map((option) => (
+                              <option key={option} value={option}>
+                                {option}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div className="sm:col-span-2">
+                          <label className="mb-1.5 block text-sm font-medium text-foreground">
+                            SCOBY present
+                          </label>
+                          <div className="grid gap-2 sm:grid-cols-2">
+                            {[true, false].map((value) => (
+                              <button
+                                key={String(value)}
+                                type="button"
+                                onClick={() => update("scobyPresent", value)}
+                                className={`h-11 rounded-lg text-sm font-medium transition-all ${
+                                  form.scobyPresent === value
+                                    ? "bg-primary text-primary-foreground"
+                                    : "border border-border bg-background text-muted-foreground"
+                                }`}
+                              >
+                                {value ? "Yes, culture mat on hand" : "No, starter liquid only"}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
                   </div>
                 </section>
 
                 <section className="space-y-4 rounded-2xl border border-border/80 bg-background p-4">
                   <div>
-                    <h3 className="text-sm font-semibold text-foreground">Starter and environment</h3>
+                    <h3 className="text-sm font-semibold text-foreground">
+                      Starter and fermentation pace
+                    </h3>
                     <p className="mt-1 text-sm text-muted-foreground">
-                      These details help the batch record stay useful later.
+                      Starter, room temperature, and taste target all change how quickly this brew
+                      may move.
                     </p>
                   </div>
 
@@ -1014,27 +1421,6 @@ export default function NewBatch() {
                   <div className="grid gap-3 sm:grid-cols-2">
                     <div>
                       <label className="mb-1.5 block text-sm font-medium text-foreground">
-                        SCOBY present
-                      </label>
-                      <div className="flex gap-2">
-                        {[true, false].map((value) => (
-                          <button
-                            key={String(value)}
-                            type="button"
-                            onClick={() => update("scobyPresent", value)}
-                            className={`h-11 flex-1 rounded-lg text-sm font-medium transition-all ${
-                              form.scobyPresent === value
-                                ? "bg-primary text-primary-foreground"
-                                : "border border-border bg-card text-muted-foreground"
-                            }`}
-                          >
-                            {value ? "Yes" : "No"}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-1.5 block text-sm font-medium text-foreground">
                         Taste target
                       </label>
                       <div className="grid grid-cols-3 gap-2">
@@ -1054,6 +1440,19 @@ export default function NewBatch() {
                         ))}
                       </div>
                     </div>
+                    <div className="rounded-xl border border-border/80 bg-card p-3">
+                      <p className="text-xs text-muted-foreground">Pace read</p>
+                      <p className="mt-1 text-sm font-medium text-foreground">
+                        {recommendations.timing
+                          ? `Day ${recommendations.timing.windowStartDay}-${recommendations.timing.windowEndDay}`
+                          : "Add a brew date"}
+                      </p>
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {recommendations.timing
+                          ? recommendations.timing.explanation
+                          : "The first tasting window appears once the brew date is set."}
+                      </p>
+                    </div>
                   </div>
 
                   <button
@@ -1061,8 +1460,12 @@ export default function NewBatch() {
                     onClick={() => setShowAdvanced((current) => !current)}
                     className="flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
                   >
-                    {showAdvanced ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-                    Advanced details
+                    {showAdvanced ? (
+                      <ChevronUp className="h-4 w-4" />
+                    ) : (
+                      <ChevronDown className="h-4 w-4" />
+                    )}
+                    Brew day notes and pH
                   </button>
 
                   {showAdvanced ? (
@@ -1088,7 +1491,7 @@ export default function NewBatch() {
                           rows={3}
                           value={form.initialNotes}
                           onChange={(event) => update("initialNotes", event.target.value)}
-                          placeholder="Anything you want to remember about this brew day."
+                          placeholder="Anything worth noting about this brew day."
                           className="w-full resize-none rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                         />
                       </div>
@@ -1107,11 +1510,11 @@ export default function NewBatch() {
                     Step 3
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">
-                    Vessel and starter context
+                    Confirm vessel and culture context
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Choose the vessel you are using today and link a starter batch if one actually
-                    feeds this brew.
+                    Confirm what this batch is going into and where the starter is coming from if a
+                    previous batch really feeds this brew.
                   </p>
                 </div>
 
@@ -1120,7 +1523,7 @@ export default function NewBatch() {
                     <div>
                       <h3 className="text-sm font-semibold text-foreground">Today&apos;s vessel</h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Pick a saved vessel or enter a custom one for this batch.
+                        Pick the vessel you are actually using today, then check how the batch will fit.
                       </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -1128,14 +1531,14 @@ export default function NewBatch() {
                         Choose saved vessel
                       </Button>
                       <Button type="button" variant="ghost" onClick={() => navigate("/f1-vessels")}>
-                        View vessel library
+                        Open vessel library
                       </Button>
                     </div>
                   </div>
 
                   <div className="rounded-2xl border border-primary/15 bg-primary/5 p-4">
                     <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
-                      Selected vessel
+                      Current vessel
                     </p>
                     <p className="mt-1 text-base font-semibold text-foreground">{selectedVessel.name}</p>
                     <p className="mt-1 text-sm text-muted-foreground">
@@ -1148,6 +1551,29 @@ export default function NewBatch() {
                         Your recipe has a preferred vessel saved, but you can still use something
                         different today.
                       </p>
+                    ) : null}
+                  </div>
+
+                  <div className="rounded-2xl border border-border/80 bg-card p-4">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-sm font-semibold text-foreground">
+                        {summary.fitStateLabel || "Add vessel capacity"}
+                      </p>
+                      {summary.suitabilityLabel ? (
+                        <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
+                          {summary.suitabilityLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="mt-2 text-sm text-muted-foreground">{summary.fitSummary}</p>
+                    {summary.cautionNotes.length > 0 ? (
+                      <div className="mt-3 space-y-2">
+                        {summary.cautionNotes.map((note) => (
+                          <p key={note} className="text-xs text-muted-foreground">
+                            {note}
+                          </p>
+                        ))}
+                      </div>
                     ) : null}
                   </div>
 
@@ -1289,6 +1715,18 @@ export default function NewBatch() {
                   recommendedBatchId={recommendedStarterSourceBatchId}
                   onChange={setStarterSourceBatchId}
                 />
+
+                <F1RecommendationSection
+                  cards={contextRecommendationCards}
+                  loadingHistory={recommendationHistoryLoading}
+                  appliedRecommendationIds={appliedAdjustments.map((item) => item.recommendationId)}
+                  onApply={handleApplyRecommendation}
+                  eyebrow="Context read"
+                  title="What the vessel and starter path change"
+                  description="These notes focus on fit, material, lineage, and any tea or sugar changes that matter once the culture source is known."
+                  secondaryTitle="Also useful context"
+                  maxPrimary={2}
+                />
               </div>
             </ScrollReveal>
           ) : null}
@@ -1301,11 +1739,11 @@ export default function NewBatch() {
                     Step 4
                   </p>
                   <h2 className="mt-1 text-xl font-semibold text-foreground">
-                    Review before you create
+                    Final check before you start
                   </h2>
                   <p className="mt-1 text-sm text-muted-foreground">
-                    Check the setup, see what Kombloom noticed, and make any last changes before
-                    this batch is saved.
+                    Look over the batch, check anything still worth your attention, and start when
+                    it feels right.
                   </p>
                 </div>
 
@@ -1315,20 +1753,41 @@ export default function NewBatch() {
                   selectedVessel={selectedVessel}
                 />
 
+                {finalCheckCards.length > 0 ? (
+                  <div className="rounded-2xl border border-honey/50 bg-honey-light/70 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
+                      Still worth a last look
+                    </p>
+                    <div className="mt-3 space-y-2">
+                      {finalCheckCards.slice(0, 3).map((card) => (
+                        <p key={card.id} className="text-sm text-foreground">
+                          {card.title}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
+
                 <F1RecommendationSection
-                  cards={recommendations.cards}
+                  cards={reviewRecommendationCards}
                   loadingHistory={recommendationHistoryLoading}
                   appliedRecommendationIds={appliedAdjustments.map((item) => item.recommendationId)}
                   onApply={handleApplyRecommendation}
+                  eyebrow="Final checks"
+                  title="Anything still worth a last look"
+                  description="This final pass keeps the bigger cautions and the most useful history-backed context in one place."
+                  secondaryTitle="Helpful context from past batches"
                 />
 
                 <div className="rounded-2xl border border-border/80 bg-background p-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <div>
-                      <h3 className="text-sm font-semibold text-foreground">Recipe help</h3>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Save this setup for later
+                      </h3>
                       <p className="mt-1 text-sm text-muted-foreground">
-                        Want to reuse this setup later? Save it as a recipe after you finish your
-                        review.
+                        If this feels like a good starting point to repeat, save it as a recipe
+                        before you start the batch.
                       </p>
                     </div>
                     <Button type="button" variant="outline" onClick={openSaveRecipeDialog}>
@@ -1349,16 +1808,13 @@ export default function NewBatch() {
         onPrimary={handlePrimaryAction}
         secondaryLabel={previousStep ? "Back" : undefined}
         onSecondary={previousStep ? () => goToStep(previousStep) : undefined}
-        helperText={
-          currentStep === "start"
-            ? startMode === "recipe" && !selectedRecipe
-              ? "Choose a recipe or switch to another starting point."
-              : "Choose a starting point first."
-            : currentStep === "brew"
-              ? "You can keep editing these values later in the flow."
-              : currentStep === "context"
-                ? "Starter links and vessel details stay optional."
-                : summary.plainLanguageSummary
+        helperText={currentStep === "review" ? reviewStepState.helperText : currentStepState.helperText}
+        helperTone={
+          currentStepState.status === "blocked"
+            ? "blocked"
+            : currentStepState.status === "warning"
+              ? "warning"
+              : "default"
         }
       />
 
@@ -1376,8 +1832,8 @@ export default function NewBatch() {
           <DialogHeader>
             <DialogTitle>Save this setup as a recipe</DialogTitle>
             <DialogDescription>
-              Save reusable defaults from this setup. The batch itself will still be created
-              separately.
+              Save the parts you want to reuse later. Starting today&apos;s batch is still a
+              separate step.
             </DialogDescription>
           </DialogHeader>
 

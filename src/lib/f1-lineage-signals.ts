@@ -52,11 +52,11 @@ export function buildF1LineageSignals(args: {
           id: "lineage-source-unresolved",
           category: "lineage_note",
           priority: 41,
-          title: "Lineage was selected, but the older setup is only partly readable",
+          title: "Starter path is linked, but the older setup is only partly readable",
           summary:
-            "The recommendation engine can still use baseline rules, but it has weaker continuity context for this source batch.",
+            "Kombloom can still guide this batch, but it has less history to compare against for that source batch.",
           explanation:
-            "This usually means the selected source batch predates the richer setup snapshot system or is outside the bounded recent history load.",
+            "This usually means the selected source batch predates the richer setup snapshot or sits outside the recent history window.",
           sourceType: "lineage",
           confidence: "low",
           evidenceCount: relatedBatches.length,
@@ -74,12 +74,12 @@ export function buildF1LineageSignals(args: {
       id: `lineage-starter-${args.draft.starterSourceBatchId}`,
       category: "lineage_note",
       priority: 46,
-      title: "Starter source gives this batch a clear lineage anchor",
+      title: "Starter source gives this batch a clear reference point",
       summary:
         relatedBatches.length > 0
-          ? `${relatedBatches.length} saved batch${relatedBatches.length === 1 ? "" : "es"} in recent history connect back to this lineage source.`
-          : "Using a previous batch as starter keeps the culture tied to a known lineage source.",
-      explanation: `The selected starter source is ${primaryReference.label}. That makes continuity easier to explain than a fully manual starter path, even when the current batch still introduces other changes.`,
+          ? `${relatedBatches.length} saved batch${relatedBatches.length === 1 ? "" : "es"} in recent history connect back to this starter path.`
+          : "Using a previous batch as starter gives this brew a real culture reference point.",
+      explanation: `The selected starter source is ${primaryReference.label}. That makes tea or sugar changes easier to compare against something real, even when this batch still introduces new choices.`,
       sourceType: "lineage",
       confidence: relatedBatches.length > 0 ? "moderate" : "low",
       evidenceCount: relatedBatches.length,
@@ -91,12 +91,12 @@ export function buildF1LineageSignals(args: {
       id: `lineage-brew-again-${args.draft.brewAgainSourceBatchId}`,
       category: "lineage_note",
       priority: 43,
-      title: "Brew Again keeps this batch tied to a previous result",
+      title: "Brew again gives this batch a clear reference point",
       summary:
         relatedBatches.length > 0
           ? `${relatedBatches.length} recent batch${relatedBatches.length === 1 ? "" : "es"} share this repeat-batch parent.`
           : "This draft starts from a known previous batch rather than from scratch.",
-      explanation: `The selected brew-again source is ${primaryReference.label}. That does not lock the recipe, but it does give the app a more concrete continuity reference when it interprets transitions.`,
+      explanation: `The selected brew-again source is ${primaryReference.label}. That does not lock the recipe, but it does give the app a clearer point of comparison when you change tea, sugar, or starter choices.`,
       sourceType: "lineage",
       confidence: relatedBatches.length > 0 ? "moderate" : "low",
       evidenceCount: relatedBatches.length,

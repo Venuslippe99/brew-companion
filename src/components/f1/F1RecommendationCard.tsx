@@ -11,28 +11,17 @@ type F1RecommendationCardProps = {
 function getSourceLabel(sourceType: F1RecommendationCardModel["sourceType"]) {
   switch (sourceType) {
     case "baseline":
-      return "Based on a standard kombucha setup";
+      return "General F1 guidance";
     case "transition":
-      return "Because this batch changes direction";
+      return "Compared with your chosen starter path";
     case "similar_setups":
-      return "Based on similar past batches";
+      return "Seen in similar batches";
     case "lineage":
-      return "Based on this culture line";
+      return "From this culture line";
     case "outcomes":
-      return "Based on how past batches turned out";
+      return "From past batch notes";
     default:
-      return "Based on a mix of setup and history";
-  }
-}
-
-function getConfidenceLabel(confidence: F1RecommendationCardModel["confidence"]) {
-  switch (confidence) {
-    case "high":
-      return "Strong signal";
-    case "moderate":
-      return "Fairly solid signal";
-    default:
-      return "Light signal";
+      return "From setup and history together";
   }
 }
 
@@ -63,12 +52,9 @@ export function F1RecommendationCard({
             <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
               {getSourceLabel(card.sourceType)}
             </span>
-            <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
-              {getConfidenceLabel(card.confidence)}
-            </span>
             {card.evidenceCount > 0 ? (
               <span className="rounded-full bg-background/90 px-2 py-1 text-muted-foreground">
-                {card.evidenceCount} similar batch
+                {card.evidenceCount} related batch
                 {card.evidenceCount === 1 ? "" : "es"}
               </span>
             ) : null}
@@ -86,7 +72,7 @@ export function F1RecommendationCard({
             size="sm"
             onClick={() => onApply(card)}
           >
-            {applied ? "Using this change" : card.applyAction.label || "Use this change"}
+            {applied ? "Using this adjustment" : card.applyAction.label || "Use this adjustment"}
           </Button>
         ) : null}
       </div>

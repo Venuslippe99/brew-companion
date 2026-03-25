@@ -29,9 +29,10 @@ export function StarterSourceSelector({
   return (
     <div className="rounded-xl border border-border bg-card p-4 space-y-3">
       <div>
-        <h3 className="text-sm font-semibold text-foreground">Starter from another batch</h3>
+        <h3 className="text-sm font-semibold text-foreground">Culture source for this batch</h3>
         <p className="mt-1 text-sm text-muted-foreground">
-          Link a previous batch only if its starter liquid or culture is actually feeding this new batch.
+          Link a previous batch only if its starter liquid or culture is actually feeding this new
+          batch today.
         </p>
       </div>
 
@@ -49,7 +50,7 @@ export function StarterSourceSelector({
           {options.map((option) => (
             <option key={option.id} value={option.id}>
               {option.name}
-              {option.id === recommendedBatchId ? " (recommended)" : ""}
+              {option.id === recommendedBatchId ? " (best match)" : ""}
             </option>
           ))}
         </select>
@@ -61,7 +62,8 @@ export function StarterSourceSelector({
 
       {!loading && options.length === 0 && (
         <p className="text-xs text-muted-foreground">
-          No previous batches are in a clearly reusable stage yet, so this batch will start without a linked starter source.
+          No previous batches are in a clearly reusable stage yet, so this batch will start
+          without a linked starter source.
         </p>
       )}
 
@@ -76,13 +78,13 @@ export function StarterSourceSelector({
             </div>
             {selectedBatch.id === recommendedBatchId && (
               <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
-                Recommended
+                Best match
               </span>
             )}
           </div>
           <p className="mt-2 text-xs text-muted-foreground">
-            This just keeps the batch history connected. You can still change the setup details on
-            their own.
+            This gives the app a real reference point if you change tea, sugar, or starter choices
+            from the last linked batch.
           </p>
         </div>
       )}

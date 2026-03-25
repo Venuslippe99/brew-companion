@@ -19,15 +19,15 @@ export function F1SetupSummary({
     <div className="rounded-2xl border border-primary/10 bg-primary/5 p-4 space-y-4">
       <div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-muted-foreground">
-          Batch review
+          Batch read
         </p>
         <h3 className="mt-1 text-lg font-semibold text-foreground">
-          What you are about to brew
+          Today&apos;s batch at a glance
         </h3>
         <p className="mt-1 text-sm text-muted-foreground">
           {selectedRecipeName
-            ? `${selectedRecipeName} gave you the starting point, and these details show what this batch will save today.`
-            : "These details reflect the setup you are about to save for this batch."}
+            ? `${selectedRecipeName} gave you the starting point, and this shows the batch you are actually about to start today.`
+            : "This is the setup you are about to start today."}
         </p>
       </div>
 

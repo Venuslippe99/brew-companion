@@ -45,7 +45,7 @@ function teaTransitionSeverity(referenceTea: F1TeaFamily, targetTea: F1TeaFamily
   if (referenceTea === targetTea) {
     return {
       severity: "continuity" as const,
-      summary: "Tea base stays inside the same continuity lane.",
+      summary: "Tea base stays in the same family.",
       suggestedBridgeTeaType: undefined,
     };
   }
@@ -56,8 +56,7 @@ function teaTransitionSeverity(referenceTea: F1TeaFamily, targetTea: F1TeaFamily
   ) {
     return {
       severity: "bridge" as const,
-      summary:
-        "This is a bridge shift away from all-black tea rather than a hard jump.",
+      summary: "This is a gentler step away from all-black tea rather than a full jump.",
       suggestedBridgeTeaType: undefined,
     };
   }
@@ -68,8 +67,7 @@ function teaTransitionSeverity(referenceTea: F1TeaFamily, targetTea: F1TeaFamily
   ) {
     return {
       severity: "caution" as const,
-      summary:
-        "This moves the culture from a black-tea lineage to a full green-tea target.",
+      summary: "This moves the culture from a black-tea batch to a full green-tea target.",
       suggestedBridgeTeaType: "Black & green blend",
     };
   }
@@ -81,7 +79,7 @@ function teaTransitionSeverity(referenceTea: F1TeaFamily, targetTea: F1TeaFamily
     return {
       severity: "high_caution" as const,
       summary:
-        "This shift moves outside the core Camellia sinensis lineage model, so guidance becomes less predictable.",
+        "This shift moves outside the usual kombucha tea range, so the result becomes less predictable.",
       suggestedBridgeTeaType: undefined,
     };
   }
@@ -98,15 +96,14 @@ function sugarTransitionSeverity(referenceSugar: F1SugarFamily, targetSugar: F1S
   if (referenceSugar === targetSugar) {
     return {
       severity: "continuity" as const,
-      summary: "Sweetener family stays in the same continuity lane.",
+      summary: "Sweetener family stays the same.",
     };
   }
 
   if (targetSugar === "honey" || referenceSugar === "honey") {
     return {
       severity: "caution" as const,
-      summary:
-        "Honey is a meaningful transition sweetener for a standard kombucha lineage.",
+      summary: "Honey is a meaningful change from the sugar this culture is used to.",
     };
   }
 
@@ -114,7 +111,7 @@ function sugarTransitionSeverity(referenceSugar: F1SugarFamily, targetSugar: F1S
     return {
       severity: "bridge" as const,
       summary:
-        "This changes sweetener family, but it stays closer to the standard sugar lane than a honey switch does.",
+        "This changes sweetener family, but it is a smaller step than switching all the way to honey.",
     };
   }
 
@@ -148,7 +145,7 @@ function combinedTransitionSeverity(args: {
       changed: true,
       severity: "high_caution" as const,
       summary:
-        "Changing tea base and sweetener together makes this a stronger transition. Black-tea lineage to green tea plus honey is the clearest high-caution example.",
+        "Changing tea base and sweetener together makes this much harder to predict. Black tea to green tea plus honey is the strongest example.",
     };
   }
 
@@ -161,7 +158,7 @@ function combinedTransitionSeverity(args: {
       changed: true,
       severity: "high_caution" as const,
       summary:
-        "Changing both tea base and sweetener together is a stronger transition than changing only one variable at a time.",
+        "Changing both tea base and sweetener together is harder to read than changing one variable at a time.",
     };
   }
 
@@ -169,7 +166,7 @@ function combinedTransitionSeverity(args: {
     changed: true,
     severity: "caution" as const,
     summary:
-      "This batch changes both tea base and sweetener together, which lowers predictability compared with a one-variable change.",
+      "This batch changes both tea base and sweetener together, which makes the result less predictable than a one-variable change.",
   };
 }
 
@@ -266,13 +263,13 @@ export function buildF1TransitionCards(args: {
       priority: analysis.teaTransition.severity === "high_caution" ? 97 : 80,
       title:
         analysis.teaTransition.severity === "bridge"
-          ? "Tea base acts like a bridge batch"
-          : "Tea base is asking the culture to adapt",
+          ? "Tea choice works as a bridge"
+          : "Tea choice asks the culture to adapt",
       summary: analysis.teaTransition.summary,
       explanation:
         analysis.teaTransition.severity === "bridge"
-          ? `${args.reference.label} was brewed with ${args.reference.teaType}. The current tea choice is a gentler bridge rather than a hard switch.`
-          : `${args.reference.label} was brewed with ${args.reference.teaType}. The current target uses ${args.setup.teaType}, so this is a meaningful culture transition.`,
+          ? `${args.reference.label} was brewed with ${args.reference.teaType}. The current tea choice is a gentler bridge rather than a full switch.`
+          : `${args.reference.label} was brewed with ${args.reference.teaType}. This batch uses ${args.setup.teaType}, so the culture is being asked to adapt.`,
       sourceType: "transition",
       confidence: analysis.teaTransition.severity === "bridge" ? "moderate" : "high",
       evidenceCount: args.reference.batchId ? 1 : 0,
@@ -299,10 +296,10 @@ export function buildF1TransitionCards(args: {
       priority: analysis.sweetenerTransition.severity === "caution" ? 79 : 56,
       title:
         analysis.sweetenerTransition.severity === "bridge"
-          ? "Sweetener change is modest but still worth noting"
-          : "Sweetener change is meaningful for continuity",
+          ? "Sweetener change is modest but worth noting"
+          : "Sweetener change is worth double-checking",
       summary: analysis.sweetenerTransition.summary,
-      explanation: `${args.reference.label} used ${args.reference.sugarType}. The current target uses ${args.setup.sugarType}, so the culture is not seeing the exact same sweetener family this time.`,
+      explanation: `${args.reference.label} used ${args.reference.sugarType}. This batch uses ${args.setup.sugarType}, so the culture is not seeing the same sweetener family this time.`,
       sourceType: "transition",
       confidence: "moderate",
       evidenceCount: args.reference.batchId ? 1 : 0,
@@ -321,11 +318,11 @@ export function buildF1TransitionCards(args: {
         analysis.combinedTransition.severity === "high_caution" ? 99 : 84,
       title:
         analysis.combinedTransition.severity === "high_caution"
-          ? "This is a high-caution combined transition"
-          : "This is a combined transition",
+          ? "Tea and sugar are both changing in a big way"
+          : "Tea and sugar are both changing",
       summary: analysis.combinedTransition.summary,
       explanation:
-        "If you want a calmer beginner-friendly path, it is usually easier to change one variable at a time instead of changing both tea base and sweetener together.",
+        "If you want a calmer beginner-friendly path, it is usually easier to change one variable at a time instead of changing both tea and sugar together.",
       sourceType: "transition",
       confidence: "moderate",
       evidenceCount: args.reference.batchId ? 1 : 0,

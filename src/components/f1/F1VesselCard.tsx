@@ -52,7 +52,7 @@ export function F1VesselCard({
 
         {onSelect ? (
           <Button type="button" size="sm" onClick={() => onSelect(vessel)}>
-            Use vessel
+            Use today
           </Button>
         ) : null}
       </div>

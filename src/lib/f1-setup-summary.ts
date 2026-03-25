@@ -13,6 +13,7 @@ export type F1SetupSummary = {
   sugarProfile: string;
   targetTaste: string;
   vesselProfile: string;
+  brewReadSummary: string;
   fitSummary: string;
   fitStateLabel: string | null;
   suitabilityLabel: string | null;
@@ -65,6 +66,7 @@ export function buildF1SetupSummary(
   const suitabilityLabel = selectedVessel
     ? getVesselSuitabilityLabel(selectedVessel.f1Suitability)
     : null;
+  const brewReadSummary = `${setup.totalVolumeMl}ml batch, ${starterRatioPercent}% starter, ${teaProfile.toLowerCase()}, ${sugarProfile.toLowerCase()}, aiming for a ${targetTaste} finish.`;
   const plainLanguageSummary = `${setup.totalVolumeMl}ml batch, ${starterRatioPercent}% starter, ${teaProfile.toLowerCase()}, ${sugarProfile.toLowerCase()}, aiming for a ${targetTaste} result. ${
     fit ? fit.plainLanguageSummary : `Using ${setup.vesselType.toLowerCase()} as the vessel.`
   }`;
@@ -75,6 +77,7 @@ export function buildF1SetupSummary(
     sugarProfile,
     targetTaste,
     vesselProfile,
+    brewReadSummary,
     fitSummary,
     fitStateLabel,
     suitabilityLabel,

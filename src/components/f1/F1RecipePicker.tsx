@@ -30,10 +30,10 @@ export function F1RecipePicker({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>Choose a recipe</SheetTitle>
+          <SheetTitle>Choose a starting recipe</SheetTitle>
           <SheetDescription>
-            A recipe fills in your usual defaults first. You can still change anything before you
-            create today&apos;s batch.
+            A recipe fills in your usual starting point first. You can still change anything before
+            you start today&apos;s batch.
           </SheetDescription>
         </SheetHeader>
 
@@ -52,7 +52,7 @@ export function F1RecipePicker({
             <div className="rounded-2xl border border-border bg-card p-6 text-center">
               <p className="text-sm text-muted-foreground">
                 You do not have any saved recipes yet. Start from scratch, then save a setup once
-                it feels worth reusing.
+                it becomes something you want to repeat.
               </p>
             </div>
           ) : (

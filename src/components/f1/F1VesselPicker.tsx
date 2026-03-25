@@ -30,7 +30,7 @@ export function F1VesselPicker({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent side="bottom" className="max-h-[85vh] overflow-y-auto rounded-t-3xl">
         <SheetHeader>
-          <SheetTitle>Choose a vessel</SheetTitle>
+          <SheetTitle>Choose today&apos;s vessel</SheetTitle>
           <SheetDescription>
             Pick one of your saved vessels for today, or keep using a custom vessel if that is
             easier.

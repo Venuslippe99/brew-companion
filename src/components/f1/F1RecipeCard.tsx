@@ -50,7 +50,7 @@ export function F1RecipeCard({
 
         {onSelect ? (
           <Button type="button" size="sm" onClick={() => onSelect(recipe)}>
-            Use recipe
+            Use as starting point
           </Button>
         ) : null}
       </div>

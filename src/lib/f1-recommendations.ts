@@ -56,16 +56,16 @@ function buildSimilarSetupCard(matches: ReturnType<typeof findSimilarF1Setups>) 
     priority: topMatch.tier === "very_close" ? 64 : 52,
     title:
       topMatch.tier === "very_close"
-        ? "You have a very similar saved F1 setup"
-        : "You have a close saved F1 setup to compare against",
+        ? "You have brewed something very close to this before"
+        : "You have a similar past setup to compare against",
     summary:
       relatedCount > 1
-        ? `${relatedCount} recent saved setups look meaningfully related to this draft.`
-        : `${topMatch.batchName} is the closest saved setup match right now.`,
+        ? `${relatedCount} recent saved setups look closely related to this brew.`
+        : `${topMatch.batchName} is the closest saved match right now.`,
     explanation:
       `${topMatch.batchName} matches this draft on ${topMatch.reasons.slice(0, 3).join(", ").toLowerCase()}.` +
       (balancedTopMatch
-        ? " That batch also landed in a balanced zone, which gives this comparison a little more weight."
+        ? " That batch also finished in a balanced range, so it is an especially useful comparison."
         : ""),
     sourceType: balancedTopMatch ? "mixed" : "similar_setups",
     confidence: topMatch.tier === "very_close" ? "moderate" : "low",
@@ -98,14 +98,20 @@ export function buildF1Recommendations(args: {
   history: F1RecommendationHistoryEntry[];
   appliedAdjustments?: F1RecommendationSnapshot["appliedAdjustments"];
 }) {
-  const timing = getBatchStageTiming({
-    brew_started_at: new Date(`${args.draft.brewDate}T12:00:00`).toISOString(),
-    current_stage: "f1_active",
-    avg_room_temp_c: args.draft.setup.avgRoomTempC,
-    target_preference: args.draft.setup.targetPreference,
-    starter_liquid_ml: args.draft.setup.starterLiquidMl,
-    total_volume_ml: args.draft.setup.totalVolumeMl,
-  });
+  const brewStartedAt = args.draft.brewDate
+    ? new Date(`${args.draft.brewDate}T12:00:00`)
+    : null;
+  const timing =
+    brewStartedAt && !Number.isNaN(brewStartedAt.getTime())
+      ? getBatchStageTiming({
+          brew_started_at: brewStartedAt.toISOString(),
+          current_stage: "f1_active",
+          avg_room_temp_c: args.draft.setup.avgRoomTempC,
+          target_preference: args.draft.setup.targetPreference,
+          starter_liquid_ml: args.draft.setup.starterLiquidMl,
+          total_volume_ml: args.draft.setup.totalVolumeMl,
+        })
+      : null;
 
   const baseline = buildF1BaselineRecommendationCards({
     setup: args.draft.setup,

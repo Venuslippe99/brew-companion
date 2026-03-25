@@ -9,6 +9,7 @@ type NewBatchStepFooterProps = {
   onSecondary?: () => void;
   secondaryDisabled?: boolean;
   helperText?: string;
+  helperTone?: "default" | "warning" | "blocked";
 };
 
 export function NewBatchStepFooter({
@@ -20,12 +21,23 @@ export function NewBatchStepFooter({
   onSecondary,
   secondaryDisabled = false,
   helperText,
+  helperTone = "default",
 }: NewBatchStepFooterProps) {
   return (
     <div className="sticky bottom-0 z-20 -mx-4 border-t border-border/80 bg-background/95 px-4 pb-safe pt-3 backdrop-blur supports-[backdrop-filter]:bg-background/85 lg:-mx-8 lg:px-8">
       <div className="mx-auto flex max-w-3xl flex-col gap-3 pb-3">
         {helperText ? (
-          <p className="text-xs text-muted-foreground">{helperText}</p>
+          <p
+            className={`text-xs ${
+              helperTone === "blocked"
+                ? "text-amber-800"
+                : helperTone === "warning"
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+            }`}
+          >
+            {helperText}
+          </p>
         ) : null}
 
         <div className="flex gap-3">

@@ -560,11 +560,11 @@ function buildTeaBaseCard(metrics: F1BaselineMetrics): F1RecommendationCard {
         id: "baseline-tea-base-outside-core",
         category: "tea_base_recommendation",
         priority: 78,
-        title: "Tea choice sits outside the core lineage model",
+        title: "Tea choice sits outside the usual kombucha tea range",
         summary:
-          "The clearest continuity guidance stays inside Camellia sinensis teas such as black, green, white, or oolong.",
+          "The clearest reference point stays inside teas such as black, green, white, or oolong.",
         explanation:
-          "That does not make this batch invalid, but it does lower confidence because the app can no longer rely on the same continuity assumptions.",
+          "That does not make the batch invalid, but it does make the result harder to compare against the most familiar kombucha patterns.",
         sourceType: "baseline",
         confidence: "low",
         evidenceCount: 0,
@@ -684,7 +684,7 @@ function buildTimingCard(timing: BatchTimingResult | null): F1RecommendationCard
     id: "baseline-timing-expectation",
     category: "timing_expectation",
     priority: 40,
-    title: "Timing is still a rough guide",
+    title: "This setup gives you a rough first-taste window",
     summary: `This setup points to a first tasting window around Day ${timing.windowStartDay}-${timing.windowEndDay}.`,
     explanation:
       `${timing.explanation} Practical F1 expectations often center around roughly 7 to 10 days, but temperature and starter ratio can move that window.`,
