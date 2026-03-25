@@ -4,7 +4,7 @@ import { ArrowLeft } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import F2SetupWizard from "@/components/f2/F2SetupWizard";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { BatchStage, KombuchaBatch } from "@/lib/batches";
 

@@ -1,7 +1,7 @@
 import { useLocation } from "react-router-dom";
 import AppLayout from "@/components/layout/AppLayout";
 import { NewBatchWizard } from "@/components/f1/new-batch-wizard/NewBatchWizard";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { isBrewAgainNavigationState } from "@/lib/brew-again";
 import type { BrewAgainNavigationState } from "@/lib/brew-again-types";
 

@@ -1,4 +1,4 @@
-import type { BrewingGoal, ExperienceLevel } from "@/contexts/UserContext";
+import type { BrewingGoal, ExperienceLevel } from "@/contexts/user-types";
 
 export const onboardingCopy = {
   steps: ["welcome", "experience", "goals", "start"] as const,

@@ -8,7 +8,7 @@ import { LineageExplorerLegend } from "@/components/lineage/LineageExplorerLegen
 import { LineageExplorerPanel } from "@/components/lineage/LineageExplorerPanel";
 import { LineageGenerationColumn } from "@/components/lineage/LineageGenerationColumn";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { buildLineageAnalytics } from "@/lib/lineage-analytics";
 import {
   getVisibleFamilyGraph,

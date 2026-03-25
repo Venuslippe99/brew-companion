@@ -3,6 +3,8 @@
 ## Summary
 Redesign the Home page from a dense command-center layout into a calmer brewing dashboard built around overview stats, one primary focus, a compact attention list, lighter quick actions, and a minimal recent activity/support layer.
 
+Update: the current calmer version still reads too much like a vertical stack of sections on mobile, so this plan now includes a second mobile-first restructuring pass.
+
 ## Why
 The current homepage tries to act like a control room and a second batch list at the same time. It repeats too much active-batch detail, lacks satisfying overview metrics, and gives too many sections similar visual weight. The redesign should make Home answer three questions more clearly: what the brewing world looks like right now, what to check next, and what else is worth knowing.
 
@@ -13,6 +15,7 @@ In scope:
 3. Redesign the major home surfaces in `src/components/home/*`.
 4. Update `src/copy/home.ts` for the new homepage structure and dynamic summary labels.
 5. Keep quick logging working from Home while making it visually lighter.
+6. Move quick-log launch actions directly onto the primary focus card and remove the visible quick-log dock from the homepage layout.
 
 Out of scope:
 1. Changes to batch lifecycle rules, stage logic, or timing calculations.
@@ -48,6 +51,7 @@ Home should become a calmer brewing overview with:
 5. A lighter quick-action strip that still opens the existing quick-log drawer flow.
 6. A much smaller recent activity summary.
 7. A demoted support/guides surface that does not compete with core brewing information.
+8. A mobile-first structure where the top overview block combines greeting, state sentence, and current stats instead of spreading those across stacked sections.
 
 ## Files and systems involved
 1. Route:
@@ -130,6 +134,33 @@ Validation:
 4. `npm run build`
 Status: completed
 
+### Milestone 3: Mobile-first restructure and embedded quick actions
+Goal:
+Reduce the homepage section count on mobile, embed quick-log launch actions into the primary focus card, and merge the greeting/state/current-stats area into one strong overview block.
+Acceptance criteria:
+1. The visible quick-log dock is removed from the homepage layout.
+2. Quick-log launch actions live on the main focus card.
+3. The top overview block combines greeting, state sentence, and current stats.
+4. Lifetime stats become their own compact section.
+5. Recent activity and support are lightweight enough not to feel like full competing modules.
+6. The page is shorter and calmer on mobile.
+Files expected:
+1. `src/pages/Index.tsx`
+2. `src/components/home/HomeHeader.tsx`
+3. `src/components/home/HomePrimaryFocusCard.tsx`
+4. `src/components/home/HomeQuickLogDock.tsx`
+5. `src/components/home/HomeRecentMovement.tsx`
+6. `src/components/home/HomeSupportPanel.tsx`
+7. `src/components/home/HomeTodayQueue.tsx`
+8. `src/components/home/HomeStatsGrid.tsx`
+9. `src/copy/home.ts`
+Validation:
+1. `npx tsc -b`
+2. `npm run lint`
+3. `npm run test`
+4. `npm run build`
+Status: completed
+
 ## Progress log
 1. Read `AGENTS.md` and `PLANS.md`.
 2. Inspected `src/pages/Index.tsx`, `src/lib/home-command-center.ts`, and the current home components under `src/components/home/`.
@@ -144,12 +175,24 @@ Status: completed
    - `npm run lint` passed with the same 9 pre-existing `react-refresh/only-export-components` warnings
    - `npm run test` passed
    - `npm run build` passed with the existing Browserslist age notice and Vite chunk-size warning
+10. Re-opened the current homepage after the first overhaul and confirmed that mobile still reads like too many stacked sections.
+11. Identified the next mobile-first changes: merge the overview area, move quick-log triggers onto the focus card, remove the visible quick-log dock, and further reduce the weight of recent activity/support.
+12. Merged the greeting, state sentence, and current stats into a single top overview block in `HomeHeader.tsx`.
+13. Moved quick-log launch actions directly onto `HomePrimaryFocusCard.tsx` and turned `HomeQuickLogDock.tsx` into a controller-only drawer layer.
+14. Reworked the lifetime stats, attention list, recent activity, and support surfaces to be shorter and lighter on mobile.
+15. Ran final validation:
+   - `npx tsc -b` passed
+   - `npm run lint` passed with the same 9 pre-existing `react-refresh/only-export-components` warnings
+   - `npm run test` passed
+   - `npm run build` passed with the existing Browserslist age notice and Vite chunk-size warning
 
 ## Decision log
 1. Keep the existing Home quick-log drawer flow so behavior stays familiar, but demote its visual weight in the new layout.
 2. Compute lifetime stats from real persisted data already available through `kombucha_batches` and `batch_bottles`, avoiding schema changes.
 3. Count `Completed batches` as saved batches with status `completed` or `archived`, while `Total batches brewed` counts all saved batches except `discarded`.
 4. Keep the existing quick-log drawer behavior for Home, but demote it to a lighter action strip instead of a dominant dock.
+5. For the mobile-first pass, keep the drawer interaction but turn `HomeQuickLogDock` into a controller-only layer so Home no longer spends a full visible section on quick logging.
+6. Keep the current and all-time stats split, but move only the current stats into the top overview block so the page reads faster on mobile.
 
 ## Open questions
 1. None currently blocking.
@@ -162,6 +205,8 @@ Status: completed
 5. The old heavy active-roster treatment is removed from Home.
 6. Quick actions still work but no longer dominate the page.
 7. Recent activity and support are both visibly lighter and secondary.
+8. The top of the page reads as one overview block on mobile instead of multiple stacked sections.
+9. Quick-log launch actions are directly available from the main focus card.
 
 ## Final validation
 1. `npx tsc -b`

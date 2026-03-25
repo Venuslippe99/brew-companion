@@ -1,5 +1,6 @@
-import { useUser, type ExperienceLevel, type BrewingGoal } from "@/contexts/UserContext";
-import { useAuth } from "@/contexts/AuthContext";
+import { useUser } from "@/contexts/use-user";
+import type { ExperienceLevel, BrewingGoal } from "@/contexts/user-types";
+import { useAuth } from "@/contexts/use-auth";
 import AppLayout from "@/components/layout/AppLayout";
 import { ScrollReveal } from "@/components/common/ScrollReveal";
 import { Button } from "@/components/ui/button";

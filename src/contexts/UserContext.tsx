@@ -1,9 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuth } from "@/contexts/AuthContext";
-
-export type ExperienceLevel = "beginner" | "intermediate" | "advanced";
-export type BrewingGoal = "sweeter" | "balanced" | "tart" | "carbonation" | "guided";
+import { useAuth } from "@/contexts/use-auth";
+import { BrewingGoal, ExperienceLevel, UserContext, UserPreferences } from "@/contexts/user-types";
 
 // Map frontend goal values to DB enum values
 const goalToDb: Record<BrewingGoal, string | null> = {
@@ -22,23 +20,6 @@ const dbToGoal: Record<string, BrewingGoal> = {
   safer_guided: "guided",
 };
 
-interface UserPreferences {
-  experienceLevel: ExperienceLevel;
-  brewingGoal: BrewingGoal;
-  prefersGuidedMode: boolean;
-  darkMode: boolean;
-  onboardingComplete: boolean;
-  displayName: string;
-}
-
-interface UserContextType {
-  preferences: UserPreferences;
-  updatePreferences: (updates: Partial<UserPreferences>) => void;
-  isBeginner: boolean;
-  isAdvanced: boolean;
-  profileLoading: boolean;
-}
-
 const defaultPreferences: UserPreferences = {
   experienceLevel: "beginner",
   brewingGoal: "balanced",
@@ -47,8 +28,6 @@ const defaultPreferences: UserPreferences = {
   onboardingComplete: false,
   displayName: "",
 };
-
-const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export function UserProvider({ children }: { children: React.ReactNode }) {
   const { user } = useAuth();
@@ -137,10 +116,4 @@ export function UserProvider({ children }: { children: React.ReactNode }) {
       {children}
     </UserContext.Provider>
   );
-}
-
-export function useUser() {
-  const context = useContext(UserContext);
-  if (!context) throw new Error("useUser must be used within UserProvider");
-  return context;
 }

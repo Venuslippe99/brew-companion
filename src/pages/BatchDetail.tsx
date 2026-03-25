@@ -11,7 +11,7 @@ import { BatchJournal } from "@/components/batch-detail/BatchJournal";
 import { BatchAssistantSurface } from "@/components/batch-detail/BatchAssistantSurface";
 import { BatchQuickLogDrawer } from "@/components/batch-detail/BatchQuickLogDrawer";
 import { PhaseOutcomeDrawer } from "@/components/outcomes/PhaseOutcomeDrawer";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { applyBrewAgainSelection } from "@/lib/brew-again";

@@ -1,74 +1,36 @@
 import { homeCopy } from "@/copy/home";
-import type { HomeCurrentStat, HomeLifetimeStat } from "@/lib/home-command-center";
+import type { HomeLifetimeStat } from "@/lib/home-command-center";
 
-function StatCard({
-  label,
-  value,
-  helper,
-}: {
-  label: string;
-  value: string | number;
-  helper: string;
-}) {
-  return (
-    <div className="rounded-[20px] border border-border/70 bg-background/90 px-4 py-4">
-      <p className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-        {label}
-      </p>
-      <p className="mt-3 text-2xl font-display font-semibold tracking-tight text-foreground">
-        {value}
-      </p>
-      <p className="mt-2 text-sm text-muted-foreground">{helper}</p>
-    </div>
-  );
-}
-
-function StatGroup({
-  title,
-  description,
+export function HomeStatsGrid({
   stats,
 }: {
-  title: string;
-  description: string;
-  stats: Array<HomeCurrentStat | HomeLifetimeStat>;
+  stats: HomeLifetimeStat[];
 }) {
   return (
-    <section className="home-panel-surface px-5 py-5 lg:px-6">
+    <section className="home-panel-surface px-4 py-4 sm:px-5 sm:py-5">
       <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          {title}
+          {homeCopy.stats.lifetimeTitle}
         </p>
-        <p className="mt-2 text-sm text-muted-foreground">{description}</p>
+        <p className="mt-2 text-sm text-muted-foreground">{homeCopy.stats.lifetimeDescription}</p>
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 sm:gap-3">
         {stats.map((stat) => (
-          <StatCard key={stat.key} label={stat.label} value={stat.value} helper={stat.helper} />
+          <div
+            key={stat.key}
+            className="rounded-[18px] border border-border/70 bg-background/90 px-3 py-3"
+          >
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-muted-foreground">
+              {stat.label}
+            </p>
+            <p className="mt-2 text-xl font-display font-semibold tracking-tight text-foreground sm:text-2xl">
+              {stat.value}
+            </p>
+            <p className="mt-2 text-xs text-muted-foreground">{stat.helper}</p>
+          </div>
         ))}
       </div>
     </section>
-  );
-}
-
-export function HomeStatsGrid({
-  currentStats,
-  lifetimeStats,
-}: {
-  currentStats: HomeCurrentStat[];
-  lifetimeStats: HomeLifetimeStat[];
-}) {
-  return (
-    <div className="grid gap-4 xl:grid-cols-2">
-      <StatGroup
-        title={homeCopy.stats.currentTitle}
-        description={homeCopy.stats.currentDescription}
-        stats={currentStats}
-      />
-      <StatGroup
-        title={homeCopy.stats.lifetimeTitle}
-        description={homeCopy.stats.lifetimeDescription}
-        stats={lifetimeStats}
-      />
-    </div>
   );
 }

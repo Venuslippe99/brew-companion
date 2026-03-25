@@ -30,20 +30,20 @@ export function HomeSupportPanel({
   const SecondaryIcon = secondaryMeta.icon;
 
   return (
-    <section className="home-panel-surface px-5 py-5">
-      <div className="max-w-2xl">
+    <section className="home-panel-surface px-4 py-4 sm:px-5 sm:py-5">
+      <div>
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
           {homeCopy.support.eyebrow}
         </p>
-        <h2 className="mt-2 text-lg font-semibold text-foreground">{context.title}</h2>
+        <h2 className="mt-2 text-base font-semibold text-foreground">{context.title}</h2>
         <p className="mt-2 text-sm text-muted-foreground">{context.summary}</p>
       </div>
 
-      <div className="mt-4 flex flex-wrap gap-2">
+      <div className="mt-3 flex flex-wrap gap-2">
         <button
           type="button"
           onClick={() => navigate(context.primaryAction.to)}
-          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-honey-light/55 px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5"
+          className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-honey-light/55 px-3 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5"
         >
           <PrimaryIcon className="h-4 w-4 text-primary" />
           {context.primaryAction.label}
@@ -52,7 +52,7 @@ export function HomeSupportPanel({
         <button
           type="button"
           onClick={() => navigate(secondaryAction.to)}
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/90 px-4 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5"
+          className="inline-flex items-center gap-2 rounded-full border border-border bg-background/90 px-3 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5"
         >
           <SecondaryIcon className="h-4 w-4 text-copper" />
           {context.secondaryAction?.label || homeCopy.support.assistantFallback}

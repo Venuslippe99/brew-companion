@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useUser, type ExperienceLevel, type BrewingGoal } from "@/contexts/UserContext";
+import { useUser } from "@/contexts/use-user";
+import type { ExperienceLevel, BrewingGoal } from "@/contexts/user-types";
 import { Button } from "@/components/ui/button";
 import { motion, AnimatePresence } from "framer-motion";
 import { FlaskConical, ChevronRight, ChevronLeft } from "lucide-react";

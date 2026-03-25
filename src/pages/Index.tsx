@@ -10,8 +10,8 @@ import { HomeRecentMovement } from "@/components/home/HomeRecentMovement";
 import { HomeStatsGrid } from "@/components/home/HomeStatsGrid";
 import { HomeSupportPanel } from "@/components/home/HomeSupportPanel";
 import { HomeTodayQueue } from "@/components/home/HomeTodayQueue";
-import { useAuth } from "@/contexts/AuthContext";
-import { useUser } from "@/contexts/UserContext";
+import { useAuth } from "@/contexts/use-auth";
+import { useUser } from "@/contexts/use-user";
 import { homeCopy } from "@/copy/home";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
@@ -249,9 +249,6 @@ export default function Dashboard() {
 
   const handlePrimaryQuickLog = (actionKey: HomeQuickLogAction["key"]) => {
     setRequestedQuickLogAction(actionKey);
-    document
-      .getElementById("home-quick-log")
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   const handleQuickLogSubmit = async ({
@@ -311,59 +308,46 @@ export default function Dashboard() {
     <AppLayout>
       <div className="home-canvas min-h-screen">
         <div className="mx-auto max-w-6xl px-4 pb-28 pt-6 lg:px-8 lg:pb-10 lg:pt-8">
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-5 lg:space-y-6">
             <ScrollReveal>
               <HomeHeader
                 stateSentence={
                   loading ? homeCopy.page.loadingStateSentence : commandCenter.stateSentence
                 }
                 displayName={commandCenter.greetingName}
+                currentStats={commandCenter.currentStats}
                 onOpenSettings={() => navigate("/settings")}
                 onStartBatch={() => navigate("/new-batch")}
                 onViewBatches={() => navigate("/batches")}
               />
             </ScrollReveal>
 
-            <ScrollReveal delay={0.04}>
-              <HomeStatsGrid
-                currentStats={commandCenter.currentStats}
-                lifetimeStats={commandCenter.lifetimeStats}
-              />
-            </ScrollReveal>
-
-            <div className="grid gap-6 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.82fr)] xl:items-start">
-              <div className="space-y-6">
+            <div className="grid gap-4 lg:gap-5 xl:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)] xl:items-start">
+              <div className="space-y-4 sm:space-y-5 lg:space-y-6">
                 <ScrollReveal delay={0.08}>
                   <HomePrimaryFocusCard
                     primaryFocus={commandCenter.primaryFocus}
+                    quickActions={commandCenter.quickActions}
                     onOpenQuickLog={handlePrimaryQuickLog}
                   />
                 </ScrollReveal>
 
                 <ScrollReveal delay={0.12}>
-                  <HomeTodayQueue id="home-attention-list" items={commandCenter.attentionList} />
+                  <HomeTodayQueue items={commandCenter.attentionList} />
                 </ScrollReveal>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-5 lg:space-y-6">
+                <ScrollReveal delay={0.04}>
+                  <HomeStatsGrid stats={commandCenter.lifetimeStats} />
+                </ScrollReveal>
+
                 {loading ? (
-                  <section className="home-panel-surface px-5 py-8 text-center">
+                  <section className="home-panel-surface px-4 py-6 text-center sm:px-5 sm:py-8">
                     <p className="text-sm text-muted-foreground">{homeCopy.page.loadingPanel}</p>
                   </section>
                 ) : (
-                  <>
-                    <ScrollReveal delay={0.14}>
-                      <HomeQuickLogDock
-                        id="home-quick-log"
-                        actions={commandCenter.quickActions}
-                        batches={batches.filter((batch) => batch.status === "active")}
-                        saving={quickLogSaving}
-                        requestedActionKey={requestedQuickLogAction}
-                        onRequestedActionHandled={() => setRequestedQuickLogAction(null)}
-                        onSubmit={handleQuickLogSubmit}
-                      />
-                    </ScrollReveal>
-
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-1">
                     <ScrollReveal delay={0.18}>
                       <HomeRecentMovement items={commandCenter.recentActivityMini} />
                     </ScrollReveal>
@@ -371,10 +355,19 @@ export default function Dashboard() {
                     <ScrollReveal delay={0.22}>
                       <HomeSupportPanel context={commandCenter.supportContext} />
                     </ScrollReveal>
-                  </>
+                  </div>
                 )}
               </div>
             </div>
+
+            <HomeQuickLogDock
+              actions={commandCenter.quickActions}
+              batches={batches.filter((batch) => batch.status === "active")}
+              saving={quickLogSaving}
+              requestedActionKey={requestedQuickLogAction}
+              onRequestedActionHandled={() => setRequestedQuickLogAction(null)}
+              onSubmit={handleQuickLogSubmit}
+            />
           </div>
         </div>
       </div>

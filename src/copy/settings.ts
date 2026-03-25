@@ -1,4 +1,4 @@
-import type { BrewingGoal, ExperienceLevel } from "@/contexts/UserContext";
+import type { BrewingGoal, ExperienceLevel } from "@/contexts/user-types";
 
 export const settingsCopy = {
   page: {

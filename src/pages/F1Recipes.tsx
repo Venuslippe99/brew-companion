@@ -14,7 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useAuth } from "@/contexts/AuthContext";
+import { useAuth } from "@/contexts/use-auth";
 import { f1LibraryCopy } from "@/copy/f1-library";
 import { supabase } from "@/integrations/supabase/client";
 import {
