@@ -15,7 +15,9 @@ export default function NewBatch() {
 
   return (
     <AppLayout>
-      <NewBatchWizard userId={user?.id} brewAgainState={brewAgainState} />
+      <div className="page-canvas">
+        <NewBatchWizard userId={user?.id} brewAgainState={brewAgainState} />
+      </div>
     </AppLayout>
   );
 }

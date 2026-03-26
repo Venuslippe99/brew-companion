@@ -583,6 +583,8 @@
   }
 
   .surface-tone-warm {
+    --surface-interactive-border-hover: hsl(var(--primary) / 0.28);
+
     border-color: hsl(var(--primary) / 0.18);
     background:
       radial-gradient(circle at top left, hsl(var(--honey-light) / 0.5), transparent 36%),
@@ -590,6 +592,8 @@
   }
 
   .surface-tone-calm {
+    --surface-interactive-border-hover: hsl(var(--sage) / 0.3);
+
     border-color: hsl(var(--sage) / 0.2);
     background:
       radial-gradient(circle at top right, hsl(var(--sage-light) / 0.55), transparent 38%),
@@ -597,6 +601,8 @@
   }
 
   .surface-tone-danger {
+    --surface-interactive-border-hover: hsl(var(--destructive) / 0.3);
+
     border-color: hsl(var(--destructive) / 0.2);
     background:
       radial-gradient(circle at top, hsl(var(--destructive) / 0.1), transparent 48%),
@@ -604,6 +610,8 @@
   }
 
   .surface-interactive {
+    --surface-interactive-border-hover: hsl(var(--border-emphasis));
+
     transition:
       transform var(--duration-medium) var(--ease-soft),
       box-shadow var(--duration-medium) var(--ease-soft),
@@ -613,7 +621,7 @@
 
   .surface-interactive:hover {
     transform: translateY(-1px);
-    border-color: hsl(var(--border-emphasis));
+    border-color: var(--surface-interactive-border-hover);
     box-shadow: var(--shadow-medium);
   }
 
