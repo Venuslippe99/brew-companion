@@ -651,8 +651,10 @@ export default function BatchDetail() {
   if (loading) {
     return (
       <AppLayout shell={{ title: "Batch", subtitle: "Loading batch..." }}>
-        <div className="max-w-2xl mx-auto px-4 pt-20 text-center">
-          <p className="text-muted-foreground">Loading batch...</p>
+        <div className="mx-auto max-w-3xl px-4 pt-6 lg:px-8">
+          <section className="surface-section-quiet px-6 py-8 text-center">
+            <p className="type-helper">Loading batch...</p>
+          </section>
         </div>
       </AppLayout>
     );
@@ -661,11 +663,13 @@ export default function BatchDetail() {
   if (!batch) {
     return (
       <AppLayout shell={{ title: "Batch", subtitle: "Not found" }}>
-        <div className="max-w-2xl mx-auto px-4 pt-20 text-center">
-          <p className="text-muted-foreground">Batch not found</p>
-          <Button variant="ghost" className="mt-4" onClick={() => navigate("/batches")}>
-            Back to batches
-          </Button>
+        <div className="mx-auto max-w-3xl px-4 pt-6 lg:px-8">
+          <section className="surface-section-quiet px-6 py-8 text-center">
+            <p className="type-helper">Batch not found</p>
+            <Button variant="ghost" className="mt-4" onClick={() => navigate("/batches")}>
+              Back to batches
+            </Button>
+          </section>
         </div>
       </AppLayout>
     );
@@ -677,10 +681,10 @@ export default function BatchDetail() {
     <AppLayout
       shell={{
         title: batch.name,
-        subtitle: `${getStageLabel(batch.currentStage)} • Day ${dayNumber}`,
+        subtitle: `${getStageLabel(batch.currentStage)} - Day ${dayNumber}`,
       }}
     >
-      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-10 pt-2 lg:px-8 lg:pt-4">
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-10 pt-3 lg:px-8 lg:pt-4">
         <BatchDetailHero
           batch={batch}
           dayNumber={dayNumber}
@@ -743,8 +747,8 @@ export default function BatchDetail() {
 
           {activeSurface === "journal" && (
             timelineLoading || outcomesLoading ? (
-              <div className="rounded-2xl border border-border bg-card p-8 text-center">
-                <p className="text-sm text-muted-foreground">Loading journal...</p>
+              <div className="surface-section-quiet p-8 text-center">
+                <p className="type-helper">Loading journal...</p>
               </div>
             ) : (
               <BatchJournal sections={journalSections} />
@@ -764,7 +768,7 @@ export default function BatchDetail() {
         contextSummary={
           activeOutcomePhase === "f2"
             ? currentF2Setup
-              ? `${currentF2Setup.bottleCount} bottles, ${currentF2Setup.desiredCarbonationLevel} carbonation target, saved at ${currentF2Setup.ambientTempC}°C.`
+              ? `${currentF2Setup.bottleCount} bottles, ${currentF2Setup.desiredCarbonationLevel} carbonation target, saved at ${currentF2Setup.ambientTempC} deg C.`
               : undefined
             : undefined
         }

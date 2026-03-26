@@ -13,12 +13,9 @@ import { cn } from "@/lib/utils";
 type FocusSecondaryAction = Extract<HomePrimaryFocus, { kind: "batch" }>["secondaryAction"];
 
 const toneClasses = {
-  urgent:
-    "border-destructive/20 bg-[radial-gradient(circle_at_top,_hsl(var(--destructive)/0.12),_transparent_55%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
-  warm:
-    "border-primary/20 bg-[radial-gradient(circle_at_top,_hsl(var(--honey-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
-  calm:
-    "border-sage/25 bg-[radial-gradient(circle_at_top,_hsl(var(--sage-light)),_transparent_60%),linear-gradient(180deg,hsl(var(--card)),hsl(var(--card)))]",
+  urgent: "surface-tone-danger",
+  warm: "surface-tone-warm",
+  calm: "surface-tone-calm",
 };
 
 const quickActionIcons = {
@@ -52,17 +49,13 @@ export function HomePrimaryFocusCard({
   if (primaryFocus.kind === "empty") {
     return (
       <section
-        className={cn("home-hero-surface px-4 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
+        className={cn("surface-hero px-4 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
       >
-        <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-          {primaryFocus.eyebrow}
-        </p>
+        <p className="type-section-kicker">{primaryFocus.eyebrow}</p>
         <h2 className="mt-2 max-w-2xl font-display text-3xl font-semibold tracking-tight text-foreground lg:text-[2.6rem]">
           {primaryFocus.title}
         </h2>
-        <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
-          {primaryFocus.summary}
-        </p>
+        <p className="mt-3 max-w-2xl type-helper">{primaryFocus.summary}</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <Button onClick={() => navigate(primaryFocus.primaryAction.to)}>
             {primaryFocus.primaryAction.label}
@@ -88,11 +81,9 @@ export function HomePrimaryFocusCard({
 
   return (
     <section
-      className={cn("home-hero-surface px-4 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
+      className={cn("surface-hero px-4 py-5 sm:px-5 sm:py-6 lg:px-7 lg:py-7", toneClasses[primaryFocus.tone])}
     >
-      <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-        {primaryFocus.eyebrow}
-      </p>
+      <p className="type-section-kicker">{primaryFocus.eyebrow}</p>
       <h2 className="mt-2 font-display text-3xl font-semibold tracking-tight text-foreground lg:text-[2.8rem]">
         {primaryFocus.title}
       </h2>
@@ -100,24 +91,22 @@ export function HomePrimaryFocusCard({
       <div className="mt-3 flex flex-wrap items-center gap-2">
         <StageIndicator stage={primaryFocus.batch.currentStage} size="md" />
         <CautionBadge level={primaryFocus.batch.cautionLevel} />
-        <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
+        <span className="status-badge border-border/70 bg-background/80 text-foreground">
           Day {dayNumber}
         </span>
       </div>
 
-      <p className="mt-4 max-w-2xl text-sm leading-6 text-muted-foreground">
-        {primaryFocus.summary}
-      </p>
+      <p className="mt-4 max-w-2xl type-helper">{primaryFocus.summary}</p>
 
-      <div className="mt-4 space-y-3 rounded-[20px] border border-border/70 bg-background/85 px-4 py-4">
+      <div className="surface-utility mt-4 space-y-3 px-4 py-4">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="type-stat-label">
             {homeCopy.primaryFocus.whyThisNext}
           </p>
           <p className="mt-2 text-sm text-foreground">{primaryFocus.explanation}</p>
         </div>
         <div>
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+          <p className="type-stat-label">
             {homeCopy.primaryFocus.statusLine}
           </p>
           <p className="mt-2 text-sm text-foreground">{primaryFocus.statusLine}</p>
@@ -145,9 +134,7 @@ export function HomePrimaryFocusCard({
 
       {batchQuickActions.length > 0 ? (
         <div className="mt-5">
-          <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            {homeCopy.primaryFocus.quickActionsLabel}
-          </p>
+          <p className="type-stat-label">{homeCopy.primaryFocus.quickActionsLabel}</p>
           <div className="mt-3 flex flex-wrap gap-2">
             {batchQuickActions.map((action) => {
               const Icon = quickActionIcons[action.key];
@@ -156,7 +143,7 @@ export function HomePrimaryFocusCard({
                   key={action.key}
                   type="button"
                   onClick={() => onOpenQuickLog(action.key)}
-                  className="inline-flex items-center gap-2 rounded-full border border-primary/20 bg-background/85 px-3 py-2 text-sm font-medium text-foreground transition-all duration-200 hover:-translate-y-0.5"
+                  className="status-badge gap-2 border-primary/20 bg-background/85 px-3 py-2 text-sm text-foreground transition-all duration-200 hover:-translate-y-0.5"
                 >
                   <Icon className="h-4 w-4 text-primary" />
                   {action.label}

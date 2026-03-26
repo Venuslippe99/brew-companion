@@ -582,6 +582,27 @@
     box-shadow: var(--shadow-soft);
   }
 
+  .surface-tone-warm {
+    border-color: hsl(var(--primary) / 0.18);
+    background:
+      radial-gradient(circle at top left, hsl(var(--honey-light) / 0.5), transparent 36%),
+      linear-gradient(180deg, hsl(var(--surface-hero)), hsl(var(--surface-1)));
+  }
+
+  .surface-tone-calm {
+    border-color: hsl(var(--sage) / 0.2);
+    background:
+      radial-gradient(circle at top right, hsl(var(--sage-light) / 0.55), transparent 38%),
+      linear-gradient(180deg, hsl(var(--surface-1)), hsl(var(--surface-2)));
+  }
+
+  .surface-tone-danger {
+    border-color: hsl(var(--destructive) / 0.2);
+    background:
+      radial-gradient(circle at top, hsl(var(--destructive) / 0.1), transparent 48%),
+      linear-gradient(180deg, hsl(var(--surface-1)), hsl(var(--surface-2)));
+  }
+
   .surface-interactive {
     transition:
       transform var(--duration-medium) var(--ease-soft),

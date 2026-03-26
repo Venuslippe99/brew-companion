@@ -2,6 +2,7 @@ import { ArrowUpRight, Clock3 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { KombuchaBatch, getDayNumber, getNextAction } from "@/lib/batches";
 import { CautionBadge, StageIndicator } from "@/components/common/StageIndicator";
+import { cn } from "@/lib/utils";
 
 interface BatchCardProps {
   batch: KombuchaBatch;
@@ -52,6 +53,22 @@ function getCardCopy(batch: KombuchaBatch, nextAction: string) {
   }
 }
 
+function getSurfaceTone(batch: KombuchaBatch) {
+  if (batch.status === "active") {
+    return batch.cautionLevel === "high" ? "surface-tone-danger" : "surface-tone-warm";
+  }
+
+  if (batch.status === "completed") {
+    return "surface-tone-calm";
+  }
+
+  if (batch.status === "discarded") {
+    return "surface-tone-danger";
+  }
+
+  return "";
+}
+
 export function BatchCard({ batch, compact = false }: BatchCardProps) {
   const navigate = useNavigate();
   const dayNum = getDayNumber(batch.brewStartedAt);
@@ -70,24 +87,22 @@ export function BatchCard({ batch, compact = false }: BatchCardProps) {
         : updatedOnLabel
           ? `Updated ${updatedOnLabel}`
           : "Saved";
-  const surfaceTone =
-    batch.status === "active"
-      ? batch.cautionLevel === "high"
-        ? "border-destructive/20 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--destructive)/0.03))]"
-        : "border-primary/10 bg-[linear-gradient(180deg,hsl(var(--card)),hsl(var(--honey-light)/0.22))]"
-      : "border-border/70 bg-card";
+  const outerSurfaceClass = batch.status === "active" ? "surface-section" : "surface-section-quiet";
+  const statusMetaClass = "status-badge border-border/70 bg-background/85 text-muted-foreground";
 
   return (
     <button
       type="button"
       onClick={() => navigate(`/batch/${batch.id}`)}
-      className={`group w-full rounded-[24px] border p-5 text-left transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_14px_32px_-24px_hsl(var(--tea)/0.22)] active:scale-[0.99] ${surfaceTone}`}
+      className={cn(
+        "group w-full p-5 text-left motion-press surface-interactive",
+        outerSurfaceClass,
+        getSurfaceTone(batch),
+      )}
     >
       <div className="flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-copper/80">
-            {cardCopy.eyebrow}
-          </p>
+          <p className="type-section-kicker">{cardCopy.eyebrow}</p>
           <h3 className="mt-2 truncate font-display text-xl font-semibold text-foreground transition-colors group-hover:text-primary">
             {batch.name}
           </h3>
@@ -96,15 +111,15 @@ export function BatchCard({ batch, compact = false }: BatchCardProps) {
             <CautionBadge level={batch.cautionLevel} />
           </div>
         </div>
-        <div className="shrink-0 rounded-full border border-border/70 bg-background/85 px-3 py-1 text-xs font-medium text-muted-foreground">
+        <div className={cn("shrink-0", statusMetaClass)}>
           {statusMetaLabel}
         </div>
       </div>
 
       {!compact ? (
         <div className="mt-4">
-          <div className="rounded-[20px] border border-border/70 bg-background/80 px-4 py-4">
-            <p className="text-[11px] font-semibold uppercase tracking-[0.22em] text-muted-foreground">
+          <div className="surface-list-compact px-4 py-4">
+            <p className="type-stat-label">
               {cardCopy.summaryLabel}
             </p>
             <p className="mt-2 text-sm font-medium leading-6 text-foreground">

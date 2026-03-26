@@ -17,6 +17,7 @@ import {
   matchesBatchLibrarySearch,
   sortBatchLibraryBatches,
 } from "@/lib/batch-library";
+import { cn } from "@/lib/utils";
 
 const tabs = batchLibraryCopy.tabs;
 const activeFilters = batchLibraryCopy.activeFilters;
@@ -175,17 +176,18 @@ export default function MyBatches() {
 
   const hasActiveNarrowing = activeTab === "active" && activeFilter !== "all";
   const hasSearch = search.trim().length > 0;
+  const neutralBadgeClass = "status-badge border-border/70 bg-background/80 text-muted-foreground";
+  const emphasisBadgeClass = "status-badge border-border/70 bg-background/80 text-foreground";
+  const summaryBadgeClass = "status-badge border-border/70 bg-card text-muted-foreground";
 
   return (
     <AppLayout>
-      <div className="mx-auto max-w-6xl px-4 pb-28 pt-3 lg:px-8 lg:pb-10 lg:pt-4">
+      <div className="mx-auto max-w-6xl space-y-5 px-4 pb-28 pt-3 lg:px-8 lg:pb-10 lg:pt-4">
         <ScrollReveal>
-          <section className="rounded-[28px] border bg-card px-5 py-6 shadow-[0_14px_40px_-30px_hsl(var(--tea)/0.22)] lg:px-7 lg:py-7">
+          <section className="surface-hero px-5 py-6 lg:px-7 lg:py-7">
             <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
               <div className="max-w-2xl">
-                <p className="text-sm leading-6 text-muted-foreground lg:text-base">
-                  {batchLibraryCopy.page.description}
-                </p>
+                <p className="type-page-subtitle">{batchLibraryCopy.page.description}</p>
               </div>
 
               <Button size="lg" onClick={() => navigate("/new-batch")}>
@@ -195,13 +197,13 @@ export default function MyBatches() {
             </div>
 
             <div className="mt-5 flex flex-wrap gap-2">
-              <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-foreground">
+              <span className={emphasisBadgeClass}>
                 {batchLibraryCopy.page.totalBatches(batches.length)}
               </span>
-              <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className={neutralBadgeClass}>
                 {batchLibraryCopy.page.activeCount(statusCounts.active)}
               </span>
-              <span className="rounded-full border border-border/70 bg-background/80 px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className={neutralBadgeClass}>
                 {batchLibraryCopy.page.finishedCount(statusCounts.completed)}
               </span>
             </div>
@@ -209,9 +211,9 @@ export default function MyBatches() {
         </ScrollReveal>
 
         <ScrollReveal delay={0.05}>
-          <section className="mt-6 rounded-[28px] border bg-card px-5 py-5 shadow-[0_12px_32px_-28px_hsl(var(--tea)/0.18)] lg:px-6">
+          <section className="surface-toolbar px-5 py-5 lg:px-6">
             <div className="flex flex-col gap-4">
-              <div className="flex flex-wrap gap-2 rounded-2xl bg-muted/70 p-1">
+              <div className="surface-list-compact flex flex-wrap gap-2 p-1">
                 {tabs.map((tab) => {
                   const count = statusCounts[tab.value];
 
@@ -220,18 +222,20 @@ export default function MyBatches() {
                       key={tab.value}
                       type="button"
                       onClick={() => setActiveTab(tab.value)}
-                      className={`flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 sm:flex-none ${
+                      className={cn(
+                        "flex-1 rounded-xl px-3 py-2 text-sm font-medium transition-all duration-200 sm:flex-none",
                         activeTab === tab.value
-                          ? "bg-card text-foreground shadow-sm"
-                          : "text-muted-foreground hover:text-foreground"
-                      }`}
+                          ? "bg-background text-foreground shadow-sm"
+                          : "text-muted-foreground hover:text-foreground",
+                      )}
                     >
                       {tab.label}
                       {count > 0 ? (
                         <span
-                          className={`ml-1.5 text-xs ${
-                            activeTab === tab.value ? "text-primary" : "text-muted-foreground"
-                          }`}
+                          className={cn(
+                            "ml-1.5 text-xs",
+                            activeTab === tab.value ? "text-primary" : "text-muted-foreground",
+                          )}
                         >
                           {count}
                         </span>
@@ -276,11 +280,12 @@ export default function MyBatches() {
                       key={filterOption.value}
                       type="button"
                       onClick={() => setActiveFilter(filterOption.value)}
-                      className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
+                      className={cn(
+                        "status-badge border-transparent px-3 py-1.5 text-sm transition-colors",
                         activeFilter === filterOption.value
                           ? "bg-primary text-primary-foreground"
-                          : "bg-background text-muted-foreground hover:text-foreground"
-                      }`}
+                          : "bg-background text-muted-foreground hover:text-foreground",
+                      )}
                     >
                       {filterOption.label}
                     </button>
@@ -292,43 +297,41 @@ export default function MyBatches() {
         </ScrollReveal>
 
         <ScrollReveal delay={0.08}>
-          <section className="mt-5 flex flex-col gap-3 rounded-[24px] border border-border/70 bg-background/85 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
+          <section className="surface-section-quiet flex flex-col gap-3 px-5 py-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-copper/80">
-                {batchLibraryCopy.page.showingEyebrow}
-              </p>
-              <h2 className="mt-2 text-xl font-semibold text-foreground">{resultsHeading}</h2>
-              <p className="mt-2 text-sm text-muted-foreground">{resultsSummary}</p>
+              <p className="type-section-kicker">{batchLibraryCopy.page.showingEyebrow}</p>
+              <h2 className="mt-2 type-section-title">{resultsHeading}</h2>
+              <p className="mt-2 type-helper">{resultsSummary}</p>
             </div>
 
             <div className="flex flex-wrap gap-2">
-              <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-foreground">
-                {tabs.find((tab) => tab.value === activeTab)?.label}
+              <span className={emphasisBadgeClass}>
+                {activeTabDefinition.label}
               </span>
               {hasActiveNarrowing ? (
-                <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-foreground">
+                <span className={emphasisBadgeClass}>
                   {activeFilterLabel}
                 </span>
               ) : null}
               {hasSearch ? (
-                <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-foreground">
+                <span className={emphasisBadgeClass}>
                   {batchLibraryCopy.page.searchChip(search.trim())}
                 </span>
               ) : null}
-              <span className="rounded-full border border-border/70 bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
+              <span className={summaryBadgeClass}>
                 {batchLibraryCopy.page.sortedBy(currentSortLabel)}
               </span>
             </div>
           </section>
         </ScrollReveal>
 
-        <div className="mt-5">
+        <div>
           {loading ? (
             <div className="grid gap-4 xl:grid-cols-2">
               {Array.from({ length: 4 }).map((_, index) => (
                 <div
                   key={index}
-                  className="rounded-[24px] border border-border/70 bg-card px-5 py-5 animate-pulse"
+                  className="surface-section animate-pulse px-5 py-5"
                 >
                   <div className="h-4 w-24 rounded bg-muted" />
                   <div className="mt-4 h-6 w-2/3 rounded bg-muted" />
@@ -339,8 +342,8 @@ export default function MyBatches() {
             </div>
           ) : errorMessage ? (
             <ScrollReveal>
-              <section className="rounded-[28px] border border-destructive/25 bg-card px-6 py-8 text-center">
-                <CircleAlert className="mx-auto h-8 w-8 text-destructive/70" />
+              <section className="status-surface status-surface--danger px-6 py-8 text-center">
+                <CircleAlert className="mx-auto h-8 w-8 text-current" />
                 <h3 className="mt-3 font-display text-xl font-semibold text-foreground">
                   {batchLibraryCopy.loading.title}
                 </h3>
@@ -354,7 +357,7 @@ export default function MyBatches() {
             </ScrollReveal>
           ) : filtered.length === 0 ? (
             <ScrollReveal>
-              <section className="rounded-[28px] border bg-card px-6 py-8 text-center">
+              <section className="surface-section-quiet px-6 py-8 text-center">
                 {activeTab === "active" ? (
                   <Leaf className="mx-auto h-8 w-8 text-muted-foreground/40" />
                 ) : activeTab === "archived" ? (

@@ -37,19 +37,15 @@ export function VolumeStep({
   onChooseBrewAgain,
 }: VolumeStepProps) {
   return (
-    <div className="rounded-3xl border border-border bg-card p-6 shadow-sm shadow-black/5">
+    <div className="surface-section-elevated p-6">
       <NewBatchWizardProgress currentStep="volume" />
-      <h2 className="mt-2 text-2xl font-semibold text-foreground">
-        {f1NewBatchCopy.steps.volume.title}
-      </h2>
-      <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-        {f1NewBatchCopy.steps.volume.description}
-      </p>
+      <h2 className="mt-2 text-2xl font-semibold text-foreground">{f1NewBatchCopy.steps.volume.title}</h2>
+      <p className="mt-2 max-w-2xl type-helper">{f1NewBatchCopy.steps.volume.description}</p>
 
-      <div className="mt-5 rounded-2xl border border-border/80 bg-background p-4">
+      <div className="surface-utility mt-5 p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+            <p className="type-stat-label">
               {f1NewBatchCopy.steps.volume.startingPoint.eyebrow}
             </p>
             <p className="mt-1 text-sm text-foreground">
@@ -85,10 +81,10 @@ export function VolumeStep({
             key={preset.value}
             type="button"
             onClick={() => onChange(preset.value)}
-            className={`rounded-2xl border px-4 py-3 text-left transition-colors ${
+            className={`surface-list-compact surface-interactive px-4 py-3 text-left transition-colors ${
               totalVolumeMl === preset.value
-                ? "border-primary/30 bg-primary/10"
-                : "border-border bg-background hover:border-primary/20 hover:bg-primary/5"
+                ? "border-primary/30 bg-primary/10 shadow-none"
+                : "hover:border-primary/20 hover:bg-primary/5"
             }`}
           >
             <p className="text-sm font-medium text-foreground">{preset.label}</p>
@@ -110,10 +106,10 @@ export function VolumeStep({
       </div>
 
       <div className="mt-6 border-t border-border/70 pt-5">
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+        <p className="type-stat-label">
           {f1NewBatchCopy.steps.volume.starterLink.eyebrow}
         </p>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
+        <p className="mt-2 max-w-2xl type-helper">
           {f1NewBatchCopy.steps.volume.starterLink.description}
         </p>
 
