@@ -56,10 +56,11 @@ function MobileNav({
   }
 
   return (
-    <nav className="fixed inset-x-0 bottom-0 z-50 px-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] lg:hidden">
+    <nav className="mobile-nav-shell">
       <div
         className={cn(
-          "pointer-events-auto mx-auto grid max-w-md grid-cols-5 items-center gap-1 rounded-[28px] border px-2 py-2 backdrop-blur-2xl transition-all duration-200",
+          "mobile-nav-tray",
+          tone === "subdued" && "mobile-nav-tray--subdued",
           getBottomNavClasses(tone),
         )}
       >
@@ -71,13 +72,13 @@ function MobileNav({
               key={item.to}
               to={item.to}
               className={cn(
-                "flex min-h-[3.1rem] flex-col items-center justify-center gap-1 rounded-2xl px-2 py-1.5 text-center transition-all duration-200",
+                "mobile-nav-item",
                 item.emphasized
                   ? isActive
-                    ? "bg-primary text-primary-foreground shadow-[0_16px_28px_-18px_hsl(var(--primary)/0.75)]"
-                    : "border border-primary/20 bg-primary/8 text-primary"
+                    ? "mobile-nav-item--emphasis-active"
+                    : "mobile-nav-item--emphasis"
                   : isActive
-                    ? "bg-foreground/[0.06] text-foreground"
+                    ? "mobile-nav-item--active"
                     : "text-muted-foreground/75 hover:text-foreground",
               )}
             >
@@ -95,7 +96,7 @@ function MobileNav({
 
 function DesktopSidebar({ activeNavKey }: { activeNavKey: ShellNavKey }) {
   return (
-    <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-72 lg:flex-col border-r border-sidebar-border bg-sidebar z-40">
+    <aside className="desktop-sidebar-shell hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-72 lg:flex-col z-40">
       <div className="border-b border-sidebar-border px-6 py-6">
         <h1 className="font-display text-xl font-semibold tracking-tight text-sidebar-foreground">
           {shellCopy.brand.name}
@@ -197,10 +198,10 @@ export default function AppLayout({ children, shell }: AppLayoutProps) {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="app-shell">
       <DesktopSidebar activeNavKey={routeShell.navKey} />
 
-      <main className="min-h-screen pb-28 lg:pl-72 lg:pb-0">
+      <main className="app-shell-main pb-28 lg:pl-72 lg:pb-0">
         {resolvedShell.showHeader ? (
           <PageShellHeader
             shell={resolvedShell}

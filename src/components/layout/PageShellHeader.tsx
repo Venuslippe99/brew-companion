@@ -23,32 +23,27 @@ function getVariantClasses(variant: ShellVariant, compact: boolean) {
   switch (variant) {
     case "flow":
       return {
-        wrapper:
-          "border-b border-primary/12 bg-background/86 supports-[backdrop-filter]:bg-background/72",
+        wrapper: "page-header-surface page-header-surface--flow",
         title: compact ? "text-base lg:text-lg" : "text-xl lg:text-2xl",
       };
     case "detail":
       return {
-        wrapper:
-          "border-b border-border/70 bg-background/90 supports-[backdrop-filter]:bg-background/78",
+        wrapper: "page-header-surface page-header-surface--detail",
         title: compact ? "text-base lg:text-lg" : "text-lg lg:text-xl",
       };
     case "settings":
       return {
-        wrapper:
-          "border-b border-border/60 bg-background/90 supports-[backdrop-filter]:bg-background/80",
+        wrapper: "page-header-surface page-header-surface--settings",
         title: compact ? "text-base lg:text-lg" : "text-lg lg:text-xl",
       };
     case "overview":
       return {
-        wrapper:
-          "border-b border-border/60 bg-background/92 supports-[backdrop-filter]:bg-background/80",
+        wrapper: "page-header-surface page-header-surface--overview",
         title: compact ? "text-base lg:text-lg" : "text-xl lg:text-2xl",
       };
     default:
       return {
-        wrapper:
-          "border-b border-border/60 bg-background/90 supports-[backdrop-filter]:bg-background/80",
+        wrapper: "page-header-surface",
         title: compact ? "text-base lg:text-lg" : "text-lg lg:text-xl",
       };
   }
@@ -67,9 +62,9 @@ export function PageShellHeader({
   return (
     <header
       className={cn(
-        "sticky top-0 z-40 w-full backdrop-blur-xl transition-[background-color,border-color,box-shadow] duration-200",
+        "sticky top-0 z-40 w-full transition-[background-color,border-color,box-shadow] duration-200",
         variantClasses.wrapper,
-        compact && "shadow-[0_12px_30px_-26px_hsl(var(--tea)/0.35)]",
+        compact && "page-header-surface--compact",
       )}
     >
       <div className="mx-auto flex w-full max-w-6xl items-start justify-between gap-3 px-4 pb-3 pt-[max(0.9rem,env(safe-area-inset-top))] lg:px-8 lg:pb-4 lg:pt-4">
